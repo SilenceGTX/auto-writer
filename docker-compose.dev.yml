@@ -1,0 +1,30 @@
+version: "3.9"
+
+# Dev-local environment — one-command hot-reload setup for local testing.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  backend:
+    build:
+      context: ./backend
+      target: dev
+    volumes:
+      - ./backend/app:/app/app:ro
+    environment:
+      - AW_DEBUG=true
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src:ro
+      - ./frontend/index.html:/app/index.html:ro
+      - ./frontend/vite.config.ts:/app/vite.config.ts:ro
+    environment:
+      - NODE_ENV=development
+      - VITE_API_TARGET=http://backend:8000
+    depends_on:
+      - backend

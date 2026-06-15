@@ -1,0 +1,11 @@
+# Auto-Writer 配置文件
+# 修改后重启后端生效
+
+# 作品文件存储路径，留空则使用默认位置（项目目录下的 data/ 文件夹）
+save_path: ""
+
+# LLM 配置（也可通过环境变量 AW_LLM_* 设置）
+llm:
+  api_base: ""
+  api_key: ""
+  model: "gpt-4"
