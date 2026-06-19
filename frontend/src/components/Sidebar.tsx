@@ -8,11 +8,9 @@ interface NavItem {
 }
 
 const topItems: NavItem[] = [
-  { to: "/", label: "总览", icon: "🏠" },
   { to: "/stories", label: "作品", icon: "📖" },
   { to: "/outline", label: "大纲", icon: "🗺️" },
   { to: "/write", label: "写作", icon: "✍️" },
-  { to: "/characters", label: "角色", icon: "👤" },
   { to: "/worldbuilding", label: "设定", icon: "🌍" },
   { to: "/inspiration", label: "灵感", icon: "💡" },
   { to: "/review", label: "审阅", icon: "🔍" },

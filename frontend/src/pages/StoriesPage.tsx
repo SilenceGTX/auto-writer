@@ -10,6 +10,7 @@ import {
   type Series,
   type Story,
 } from "../api";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 type Tab = "recent" | "all";
 
@@ -32,6 +33,9 @@ function StoriesPage() {
   // new series inline
   const [showNewSeries, setShowNewSeries] = useState(false);
   const [newSeriesName, setNewSeriesName] = useState("");
+
+  // delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; title: string } | null>(null);
 
   const fetchData = useCallback(async () => {
     const [s, series] = await Promise.all([listStories(), listSeries()]);
@@ -74,8 +78,10 @@ function StoriesPage() {
     setNewSeriesId(s.id);
   };
 
-  const handleDelete = async (id: number) => {
-    await deleteStory(id);
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    await deleteStory(deleteTarget.id);
+    setDeleteTarget(null);
     fetchData();
   };
 
@@ -130,8 +136,9 @@ function StoriesPage() {
                   最后编辑：{s.updated_at ? s.updated_at.slice(0, 10) : "-"}
                 </div>
                 <div className="story-card-actions">
+                  <button onClick={() => navigate(`/outline?story=${s.id}`)}>编写大纲</button>
                   <button onClick={() => navigate(`/write?story=${s.id}`)}>继续写作</button>
-                  <button className="danger" onClick={() => handleDelete(s.id)}>
+                  <button className="danger" onClick={() => setDeleteTarget({ id: s.id, title: s.title })}>
                     删除
                   </button>
                 </div>
@@ -205,8 +212,9 @@ function StoriesPage() {
                     </td>
                     <td>{s.updated_at ? s.updated_at.slice(0, 10) : "-"}</td>
                     <td className="story-table-actions">
+                      <button onClick={() => navigate(`/outline?story=${s.id}`)}>大纲</button>
                       <button onClick={() => navigate(`/write?story=${s.id}`)}>写作</button>
-                      <button className="danger" onClick={() => handleDelete(s.id)}>
+                      <button className="danger" onClick={() => setDeleteTarget({ id: s.id, title: s.title })}>
                         删除
                       </button>
                     </td>
@@ -270,6 +278,20 @@ function StoriesPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="确认删除"
+        message={
+          <>
+            确定要删除作品「<strong>{deleteTarget?.title}</strong>」吗？此操作不可撤销。
+          </>
+        }
+        confirmLabel="删除"
+        danger
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

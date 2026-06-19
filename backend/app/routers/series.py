@@ -1,6 +1,6 @@
 """CRUD API routes for series management."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,8 +40,8 @@ async def get_series(series_id: int, db: AsyncSession = Depends(get_db)):
 @router.patch("/{series_id}")
 async def update_series(
     series_id: int,
-    name: str | None = None,
-    description: str | None = None,
+    name: str | None = Body(None),
+    description: str | None = Body(None),
     db: AsyncSession = Depends(get_db),
 ):
     """Update series name or description."""

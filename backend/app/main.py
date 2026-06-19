@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core import settings
 from app.database import Base, engine
-from app.routers import llm, series, stories
+from app.routers import chapters, llm, plot_items, scenes, series, stories, world
 
 
 @asynccontextmanager
@@ -30,6 +30,10 @@ app.add_middleware(
 
 app.include_router(stories.router)
 app.include_router(series.router)
+app.include_router(chapters.router)
+app.include_router(scenes.router)
+app.include_router(plot_items.router)
+app.include_router(world.router)
 app.include_router(llm.router)
 
 

@@ -1,4 +1,4 @@
-"""SQLAlchemy ORM models for series, stories, characters, chapters, and scenes."""
+"""SQLAlchemy ORM models for series, stories, characters, chapters, scenes, and plot items."""
 
 from datetime import datetime
 
@@ -6,6 +6,9 @@ from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.database import Base
+
+# Plot item type constants
+PLOT_ITEM_TYPES = ["目标", "铺垫", "推进", "冲突", "反转", "高潮", "结尾"]
 
 
 class Series(Base):
@@ -59,6 +62,7 @@ class Chapter(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     story = relationship("Story", back_populates="chapters")
+    scenes = relationship("Scene", back_populates="chapter", cascade="all, delete-orphan", order_by="Scene.order")
 
 
 class Character(Base):
@@ -80,7 +84,7 @@ class Character(Base):
 
 
 class Scene(Base):
-    """A scene plan or outline entry."""
+    """A scene plan or outline entry within a chapter, containing plot items."""
 
     __tablename__ = "scenes"
 
@@ -90,5 +94,48 @@ class Scene(Base):
     description = Column(Text, default="")
     order = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    chapter = relationship("Chapter")
+    chapter = relationship("Chapter", back_populates="scenes")
+    plot_items = relationship("PlotItem", back_populates="scene", cascade="all, delete-orphan", order_by="PlotItem.order")
+
+
+class PlotItem(Base):
+    """A plot element within a scene (goal, foreshadowing, climax, etc.)."""
+
+    __tablename__ = "plot_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    scene_id = Column(Integer, ForeignKey("scenes.id"), nullable=False)
+    item_type = Column(String(20), nullable=False, default="推进")  # 目标/铺垫/推进/冲突/反转/高潮/结尾
+    description = Column(Text, default="")
+    order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    scene = relationship("Scene", back_populates="plot_items")
+
+
+class WorldEntity(Base):
+    """A world-building entity (character, location, item, organization, etc.)."""
+
+    __tablename__ = "world_entities"
+
+    id = Column(Integer, primary_key=True, index=True)
+    story_id = Column(Integer, ForeignKey("stories.id"), nullable=False)
+    entity_type = Column(String(50), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    properties = Column(Text, default="{}")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    story = relationship("Story")
+
+# Default world entity types
+DEFAULT_ENTITY_TYPES = ["chara", "location", "item", "org"]
+ENTITY_TYPE_LABELS: dict[str, str] = {
+    "chara": "人物",
+    "location": "地点",
+    "item": "物品",
+    "org": "组织",
+}

@@ -1,6 +1,6 @@
 """CRUD API routes for story management with series support and filtering."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -59,12 +59,12 @@ async def get_story(story_id: int, db: AsyncSession = Depends(get_db)):
 @router.patch("/{story_id}")
 async def update_story(
     story_id: int,
-    title: str | None = None,
-    series_id: int | None = None,
-    status: str | None = None,
-    description: str | None = None,
-    genre: str | None = None,
-    save_path: str | None = None,
+    title: str | None = Body(None),
+    series_id: int | None = Body(None),
+    status: str | None = Body(None),
+    description: str | None = Body(None),
+    genre: str | None = Body(None),
+    save_path: str | None = Body(None),
     db: AsyncSession = Depends(get_db),
 ):
     """Update story fields."""
