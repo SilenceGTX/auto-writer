@@ -424,8 +424,8 @@ function WritePage() {
                   }
                 }}
               />
-              <button className="btn-export" onClick={handleExport}>📥 导出 YAML</button>
-              <button className="btn-add" onClick={handleCreateScene}>+ 添加场景</button>
+              <button className="btn-tool" onClick={handleCreateScene}>+ 添加场景</button>
+              <button className="btn-tool" onClick={handleExport}>开始生成</button>
             </div>
 
             <div className="scene-cards">
@@ -472,6 +472,7 @@ interface SceneCardProps {
 function SceneCard(props: SceneCardProps) {
   const { scene, items, itemTypes } = props;
   const [title, setTitle] = useState(scene.title);
+  const [folded, setFolded] = useState(false);
 
   const handleTitleSave = () => {
     if (title.trim() && title.trim() !== scene.title) {
@@ -493,6 +494,13 @@ function SceneCard(props: SceneCardProps) {
     >
       <div className="scene-header">
         <span className="drag-handle" title="拖拽排序">⠿</span>
+        <button
+          className="scene-fold-btn"
+          onClick={() => setFolded(!folded)}
+          title={folded ? "展开" : "折叠"}
+        >
+          {folded ? "▶" : "▼"}
+        </button>
         <input
           className="scene-title-input"
           value={title}
@@ -504,24 +512,28 @@ function SceneCard(props: SceneCardProps) {
         <button className="btn-delete-small" onClick={() => props.onDelete(scene.id)}>×</button>
       </div>
 
-      <div className="plot-items">
-        {items.map((item, idx) => (
-          <PlotItemRow
-            key={item.id}
-            item={item}
-            index={idx}
-            sceneId={scene.id}
-            itemTypes={itemTypes}
-            onUpdate={props.onUpdateItem}
-            onDelete={props.onDeleteItem}
-            onDrop={props.onItemDrop}
-          />
-        ))}
-      </div>
+      {!folded && (
+        <>
+          <div className="plot-items">
+            {items.map((item, idx) => (
+              <PlotItemRow
+                key={item.id}
+                item={item}
+                index={idx}
+                sceneId={scene.id}
+                itemTypes={itemTypes}
+                onUpdate={props.onUpdateItem}
+                onDelete={props.onDeleteItem}
+                onDrop={props.onItemDrop}
+              />
+            ))}
+          </div>
 
-      <button className="btn-add-item" onClick={() => props.onCreateItem(scene.id)}>
-        + 添加情节点
-      </button>
+          <button className="btn-add-item" onClick={() => props.onCreateItem(scene.id)}>
+            + 添加情节点
+          </button>
+        </>
+      )}
     </div>
   );
 }

@@ -667,6 +667,22 @@ button.secondary:hover {
   background: #2f855a;
 }
 
+.btn-tool {
+  width: auto;
+  padding: 8px 16px;
+  background: #1a56db;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.btn-tool:hover {
+  background: #1647b8;
+}
+
 /* scene cards */
 
 .scene-cards {
@@ -709,6 +725,22 @@ button.secondary:hover {
 
 .drag-handle:active {
   cursor: grabbing;
+}
+
+.scene-fold-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.7rem;
+  color: #999;
+  padding: 2px 4px;
+  border-radius: 3px;
+  line-height: 1;
+}
+
+.scene-fold-btn:hover {
+  color: #333;
+  background: #eee;
 }
 
 .scene-title-input {
