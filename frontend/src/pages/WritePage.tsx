@@ -82,6 +82,8 @@ function WritePage() {
 
   const sidebarRef = useRef<HTMLElement>(null);
   const draggingRef = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartWidth = useRef(0);
 
   // Load chapters
   const loadChapters = useCallback(async () => {
@@ -127,7 +129,8 @@ function WritePage() {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!draggingRef.current) return;
-      const w = Math.max(160, Math.min(500, e.clientX));
+      const delta = e.clientX - dragStartX.current;
+      const w = Math.max(160, Math.min(500, dragStartWidth.current + delta));
       setSidebarWidth(w);
       localStorage.setItem("aw-sidebar-width", String(w));
     };
@@ -367,8 +370,10 @@ function WritePage() {
 
       <div
         className="sidebar-resize-handle"
-        onMouseDown={() => {
+        onMouseDown={(e) => {
           draggingRef.current = true;
+          dragStartX.current = e.clientX;
+          dragStartWidth.current = sidebarWidth;
           document.body.classList.add("resizing");
         }}
       />

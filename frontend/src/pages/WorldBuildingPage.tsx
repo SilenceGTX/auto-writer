@@ -1,5 +1,5 @@
 /** World-building page — left entity list + right tab & detail panel. */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   type EntityType,
@@ -20,6 +20,35 @@ function WorldBuildingPage() {
     const saved = localStorage.getItem("aw-wb-story");
     return saved ? Number(saved) : 0;
   });
+
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem("aw-wb-sidebar");
+    return saved ? Number(saved) : 220;
+  });
+  const draggingRef = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartWidth = useRef(0);
+
+  // Resize sidebar
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!draggingRef.current) return;
+      const delta = e.clientX - dragStartX.current;
+      const w = Math.max(160, Math.min(500, dragStartWidth.current + delta));
+      setSidebarWidth(w);
+      localStorage.setItem("aw-wb-sidebar", String(w));
+    };
+    const handleMouseUp = () => {
+      draggingRef.current = false;
+      document.body.classList.remove("resizing");
+    };
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
 
   const [types, setTypes] = useState<EntityType[]>([]);
   const [activeType, setActiveType] = useState("");
@@ -47,6 +76,9 @@ function WorldBuildingPage() {
   // delete
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [deleteTypeTarget, setDeleteTypeTarget] = useState<{ code: string; label: string; count: number } | null>(null);
+
+  // inline name edit
+  const [editingEntityId, setEditingEntityId] = useState<number | null>(null);
 
   useEffect(() => { listStories().then(setStories); }, []);
 
@@ -95,9 +127,13 @@ function WorldBuildingPage() {
     setSelected(e);
     setEditName(e.name);
     try {
-      setEditProps(Object.entries(JSON.parse(e.properties)) as [string, string][]);
+      const props = Object.entries(JSON.parse(e.properties)) as [string, string][];
+      // Ensure "描述" exists and is last
+      const filtered = props.filter(([k]) => k !== "desc");
+      const desc = props.find(([k]) => k === "desc");
+      setEditProps([...filtered, ["desc", desc ? desc[1] : ""]]);
     } catch {
-      setEditProps([]);
+      setEditProps([["desc", ""]]);
     }
   };
 
@@ -105,9 +141,10 @@ function WorldBuildingPage() {
     if (!selected || !editName.trim()) return;
     const obj: Record<string, string> = {};
     editProps.forEach(([k, v]) => { if (k.trim()) obj[k.trim()] = v; });
-    await updateWorldEntity(selected.id, { name: editName.trim(), properties: JSON.stringify(obj) });
-    setSelected(null);
-    loadData();
+    const updated = await updateWorldEntity(selected.id, { name: editName.trim(), properties: JSON.stringify(obj) });
+    setSelected(updated);
+    setEditName(updated.name);
+    setEntities((prev) => prev.map((e) => e.id === updated.id ? updated : e));
   };
 
   const handleCreate = async () => {
@@ -149,6 +186,16 @@ function WorldBuildingPage() {
     for (const e of toDelete) await deleteWorldEntity(e.id);
   };
 
+  const handleInlineNameSave = async (entityId: number, name: string) => {
+    const updated = await updateWorldEntity(entityId, { name });
+    setEditingEntityId(null);
+    setEntities((prev) => prev.map((e) => e.id === entityId ? updated : e));
+    if (selected?.id === entityId) {
+      setSelected(updated);
+      setEditName(updated.name);
+    }
+  };
+
   const handleCreateType = async () => {
     if (!newTypeCode.trim() || !newTypeLabel.trim()) return;
     const code = newTypeCode.trim();
@@ -180,17 +227,35 @@ function WorldBuildingPage() {
   }
   knownKeys.sort();
 
-  const addProp = () => setEditProps([...editProps, ["", ""]]);
+  const addProp = () => {
+    // Insert before the last item (which is always "描述")
+    setEditProps((prev) => {
+      const copy = [...prev];
+      copy.splice(copy.length - 1, 0, ["", ""]);
+      return copy;
+    });
+  };
+  const addNewProp = () => {
+    setNewProps((prev) => {
+      const copy = [...prev];
+      copy.splice(copy.length - 1, 0, ["", ""]);
+      return copy;
+    });
+  };
   const updateProp = (i: number, k: string, v: string) => {
     const next = [...editProps]; next[i] = [k, v]; setEditProps(next);
   };
-  const removeProp = (i: number) => setEditProps(editProps.filter((_, idx) => idx !== i));
+  const removeProp = (i: number) => {
+    // Never remove the last item (always "描述")
+    if (i === editProps.length - 1) return;
+    setEditProps(editProps.filter((_, idx) => idx !== i));
+  };
   const isDefaultType = (code: string) => ["chara", "location", "item", "org"].includes(code);
 
   return (
     <div className="write-workspace">
       {/* Left: entity list */}
-      <aside className="chapter-sidebar wb-left" style={{ width: 220, minWidth: 220 }}>
+      <aside className="chapter-sidebar wb-left" style={{ width: sidebarWidth, minWidth: sidebarWidth }}>
         <select
           className="story-select"
           value={storyId || ""}
@@ -216,7 +281,45 @@ function WorldBuildingPage() {
               className={selected?.id === e.id ? "active" : ""}
               onClick={() => selectEntity(e)}
             >
-              <span>{e.name}</span>
+              {editingEntityId === e.id ? (
+                <input
+                  className="chapter-inline-input"
+                  autoFocus
+                  defaultValue={e.name}
+                  onBlur={(ev) => {
+                    const val = ev.target.value.trim();
+                    if (val && val !== e.name) {
+                      handleInlineNameSave(e.id, val);
+                    } else {
+                      setEditingEntityId(null);
+                    }
+                  }}
+                  onKeyDown={(ev) => {
+                    if (ev.key === "Enter") {
+                      ev.preventDefault();
+                      const val = (ev.target as HTMLInputElement).value.trim();
+                      if (val && val !== e.name) {
+                        handleInlineNameSave(e.id, val);
+                      } else {
+                        setEditingEntityId(null);
+                      }
+                    } else if (ev.key === "Escape") {
+                      setEditingEntityId(null);
+                    }
+                  }}
+                  onClick={(ev) => ev.stopPropagation()}
+                />
+              ) : (
+                <span
+                  onDoubleClick={(ev) => {
+                    ev.stopPropagation();
+                    setEditingEntityId(e.id);
+                  }}
+                  title="双击编辑名称"
+                >
+                  {e.name}
+                </span>
+              )}
               <button
                 className="btn-delete-small"
                 onClick={(ev) => { ev.stopPropagation(); setDeleteTarget({ id: e.id, name: e.name }); }}
@@ -227,6 +330,16 @@ function WorldBuildingPage() {
           ))}
         </ul>
       </aside>
+
+      <div
+        className="sidebar-resize-handle"
+        onMouseDown={(e) => {
+          draggingRef.current = true;
+          dragStartX.current = e.clientX;
+          dragStartWidth.current = sidebarWidth;
+          document.body.classList.add("resizing");
+        }}
+      />
 
       {/* Right: tabs + detail */}
       <main className="scene-workspace">
@@ -253,7 +366,7 @@ function WorldBuildingPage() {
           ))}
           <button className="wb-tab wb-tab-add" onClick={() => setShowNewType(true)}>+</button>
           <div className="wb-tabs-spacer" />
-          <button className="wb-btn-new" onClick={() => { setNewName(""); setNewProps([]); setShowNew(true); }}>+ 新建条目</button>
+          <button className="wb-btn-new" onClick={() => { setNewName(""); setNewProps([["desc", ""]]); setShowNew(true); }}>+ 新建条目</button>
         </div>
 
         {selected ? (
@@ -265,13 +378,33 @@ function WorldBuildingPage() {
               placeholder="条目名称"
             />
             <div className="kv-editor">
-              {editProps.map(([k, v], i) => (
-                <div key={i} className="kv-row">
-                  <input placeholder="键" value={k} list="wb-key-list" onChange={(e) => updateProp(i, e.target.value, v)} />
-                  <input placeholder="值" value={v} onChange={(e) => updateProp(i, k, e.target.value)} />
-                  <button className="btn-delete-small" onClick={() => removeProp(i)}>×</button>
+              {editProps.map(([k, v], i) => {
+                const isDesc = i === editProps.length - 1;
+                return (
+                <div key={i} className={"kv-row" + (isDesc ? " kv-row-desc" : "")}>
+                  {isDesc ? (
+                    <span className="kv-key-label">描述</span>
+                  ) : (
+                    <input placeholder="名称" value={k} list="wb-key-list" onChange={(e) => updateProp(i, e.target.value, v)} />
+                  )}
+                  {isDesc ? (
+                    <textarea
+                      className="kv-desc-textarea"
+                      value={v}
+                      onChange={(e) => updateProp(i, k, e.target.value)}
+                      placeholder="输入描述..."
+                      rows={3}
+                    />
+                  ) : (
+                    <input placeholder="值" value={v} onChange={(e) => updateProp(i, k, e.target.value)} />
+                  )}
+                  <button
+                    className="btn-delete-small"
+                    onClick={() => removeProp(i)}
+                    style={isDesc ? { visibility: "hidden" as const } : undefined}
+                  >×</button>
                 </div>
-              ))}
+              );})}
               <button className="btn-add-item" onClick={addProp}>+ 添加属性</button>
             </div>
             <div className="modal-actions">
@@ -321,23 +454,43 @@ function WorldBuildingPage() {
               </div>
               <label>属性</label>
               <div className="kv-editor">
-                {newProps.map(([k, v], i) => (
-                  <div key={i} className="kv-row">
-                    <input
-                      placeholder="键"
-                      value={k}
-                      list="wb-key-list"
-                      onChange={(e) => { const next = [...newProps]; next[i] = [e.target.value, v]; setNewProps(next); }}
-                    />
-                    <input
-                      placeholder="值"
-                      value={v}
-                      onChange={(e) => { const next = [...newProps]; next[i] = [k, e.target.value]; setNewProps(next); }}
-                    />
-                    <button className="btn-delete-small" onClick={() => setNewProps(newProps.filter((_, idx) => idx !== i))}>×</button>
+                {newProps.map(([k, v], i) => {
+                  const isDesc = i === newProps.length - 1;
+                  return (
+                  <div key={i} className={"kv-row" + (isDesc ? " kv-row-desc" : "")}>
+                    {isDesc ? (
+                      <span className="kv-key-label">描述</span>
+                    ) : (
+                      <input
+                        placeholder="名称"
+                        value={k}
+                        list="wb-key-list"
+                        onChange={(e) => { const next = [...newProps]; next[i] = [e.target.value, v]; setNewProps(next); }}
+                      />
+                    )}
+                    {isDesc ? (
+                      <textarea
+                        className="kv-desc-textarea"
+                        value={v}
+                        onChange={(e) => { const next = [...newProps]; next[i] = [k, e.target.value]; setNewProps(next); }}
+                        placeholder="输入描述..."
+                        rows={3}
+                      />
+                    ) : (
+                      <input
+                        placeholder="值"
+                        value={v}
+                        onChange={(e) => { const next = [...newProps]; next[i] = [k, e.target.value]; setNewProps(next); }}
+                      />
+                    )}
+                    <button
+                      className="btn-delete-small"
+                      onClick={() => setNewProps(newProps.filter((_, idx) => idx !== i))}
+                      style={isDesc ? { visibility: "hidden" as const } : undefined}
+                    >×</button>
                   </div>
-                ))}
-                <button className="btn-add-item" onClick={() => setNewProps([...newProps, ["", ""]])}>+ 添加属性</button>
+                );})}
+                <button className="btn-add-item" onClick={addNewProp}>+ 添加属性</button>
               </div>
               <div className="modal-actions">
                 <button onClick={handleCreate}>创建</button>
