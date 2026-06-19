@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import StoriesPage from "./pages/StoriesPage";
 import OutlinePage from "./pages/OutlinePage";
+import WritePage from "./pages/WritePage";
 import WorldBuildingPage from "./pages/WorldBuildingPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 
@@ -15,7 +16,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/stories" replace />} />
             <Route path="/stories" element={<StoriesPage />} />
-            <Route path="/write" element={<PlaceholderPage title="写作" />} />
+            <Route path="/write" element={<WritePage />} />
             <Route path="/outline" element={<OutlinePage />} />
             <Route path="/worldbuilding" element={<WorldBuildingPage />} />
             <Route path="/inspiration" element={<PlaceholderPage title="灵感" />} />
