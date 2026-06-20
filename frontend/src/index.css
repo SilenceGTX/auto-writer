@@ -501,8 +501,72 @@ button.secondary {
   color: #333;
 }
 
-button.secondary:hover {
-  background: #ddd;
+.create-synopsis {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+}
+
+.create-synopsis:focus {
+  border-color: #1a56db;
+}
+
+.structure-tag {
+  background: #edf2f7;
+  color: #4a5568;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+}
+
+.structure-phases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.phase-tag {
+  background: #e8f0fe;
+  color: #1a56db;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+}
+
+.structure-info {
+  margin-top: 6px;
+}
+
+.structure-desc {
+  margin: 8px 0;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-left: 3px solid #1a56db;
+  font-size: 0.82rem;
+  color: #555;
+  line-height: 1.5;
+  border-radius: 0 4px 4px 0;
+}
+
+.inline-form-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.inline-form-col input {
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.85rem;
 }
 
 /* ---- write-workspace (chapter sidebar + scene cards) ---- */

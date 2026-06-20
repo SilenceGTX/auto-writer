@@ -34,10 +34,19 @@ async def list_stories(
 async def create_story(
     title: str,
     series_id: int | None = None,
+    structure: str = "",
+    description: str = "",
+    chapter_goal: int = 0,
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new story, optionally under a series."""
-    story = Story(title=title, series_id=series_id)
+    story = Story(
+        title=title,
+        series_id=series_id,
+        structure=structure,
+        description=description,
+        chapter_goal=chapter_goal,
+    )
     db.add(story)
     await db.commit()
     await db.refresh(story)
@@ -65,6 +74,8 @@ async def update_story(
     description: str | None = Body(None),
     genre: str | None = Body(None),
     save_path: str | None = Body(None),
+    structure: str | None = Body(None),
+    chapter_goal: int | None = Body(None),
     db: AsyncSession = Depends(get_db),
 ):
     """Update story fields."""
@@ -84,6 +95,10 @@ async def update_story(
         story.genre = genre
     if save_path is not None:
         story.save_path = save_path
+    if structure is not None:
+        story.structure = structure
+    if chapter_goal is not None:
+        story.chapter_goal = chapter_goal
     await db.commit()
     await db.refresh(story)
     return story

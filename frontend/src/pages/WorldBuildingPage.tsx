@@ -252,6 +252,15 @@ function WorldBuildingPage() {
   };
   const isDefaultType = (code: string) => ["chara", "location", "item", "org"].includes(code);
 
+  if (stories.length === 0) {
+    return (
+      <div className="write-page">
+        <h1>设定</h1>
+        <p className="placeholder-hint">还没有作品，请先前往「作品」页面新建作品。</p>
+      </div>
+    );
+  }
+
   return (
     <div className="write-workspace">
       {/* Left: entity list */}

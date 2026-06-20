@@ -19,6 +19,7 @@ import {
   listPlotItemTypes,
   listPlotItems,
   listScenes,
+  listStories,
   reorderPlotItems,
   reorderScenes,
   updateChapter,
@@ -48,10 +49,15 @@ function OutlinePage() {
     if (storyId) {
       localStorage.setItem("aw-last-story", String(storyId));
     } else {
-      const last = localStorage.getItem("aw-last-story");
-      if (last) {
-        navigate(`${location.pathname}?story=${last}`, { replace: true });
-      }
+      listStories().then((s) => {
+        setStoryCount(s.length);
+        if (s.length > 0) {
+          const last = localStorage.getItem("aw-last-story");
+          if (last) {
+            navigate(`${location.pathname}?story=${last}`, { replace: true });
+          }
+        }
+      });
     }
   }, [storyId, navigate]);
 
@@ -79,6 +85,7 @@ function OutlinePage() {
     const saved = localStorage.getItem("aw-sidebar-width");
     return saved ? Number(saved) : 220;
   });
+  const [storyCount, setStoryCount] = useState<number | null>(null);
 
   const sidebarRef = useRef<HTMLElement>(null);
   const draggingRef = useRef(false);
@@ -286,7 +293,15 @@ function OutlinePage() {
   };
 
   if (!storyId) {
-    return <div className="write-page"><p>请先从作品列表进入写作页面。</p></div>;
+    if (storyCount === 0) {
+      return (
+        <div className="write-page">
+          <h1>大纲</h1>
+          <p className="placeholder-hint">还没有作品，请先前往「作品」页面新建作品。</p>
+        </div>
+      );
+    }
+    return <div className="write-page"><p>请先从作品列表选择作品。</p></div>;
   }
 
   return (

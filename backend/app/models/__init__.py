@@ -36,6 +36,8 @@ class Story(Base):
     description = Column(Text, default="")
     genre = Column(String(100), default="")
     status = Column(String(20), default="连载")  # 连载 / 完结
+    structure = Column(String(100), default="")
+    chapter_goal = Column(Integer, default=0)
     word_count = Column(Integer, default=0)
     current_chapter = Column(Integer, default=0)
     save_path = Column(String(512), default="")

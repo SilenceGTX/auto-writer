@@ -29,6 +29,57 @@ function StoriesPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newSeriesId, setNewSeriesId] = useState<number | undefined>();
+  const [newStructure, setNewStructure] = useState("");
+  const [newChapterGoal, setNewChapterGoal] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+
+  // structure options
+  interface StructureDef {
+    name: string;
+    phases: string[];
+    desc?: string;
+  }
+  const DEFAULT_STRUCTURES: StructureDef[] = [
+    {
+      name: "经典三幕式",
+      phases: ["铺垫", "对抗", "结局"],
+      desc: "最通用的故事骨架。「铺垫—对抗—结局」三部分讲述一个完整的故事，广泛应用于小说和电影。如果不知道选什么结构，选这个就好。",
+    },
+    {
+      name: "起承转合",
+      phases: ["起", "承", "转", "合"],
+      desc: "东方故事的经典范式。「起（开篇）—承（发展）—转（转折/高潮）—合（结尾）」，适合短中篇、注重意境和节奏的作品。",
+    },
+    {
+      name: "英雄之旅",
+      phases: ["平凡世界", "冒险的召唤", "拒绝召唤", "遇见导师", "跨越第一道门槛", "考验、盟友与敌人", "接近深洞穴", "严峻考验", "获得奖赏", "返回之路", "复活与净化", "带着灵药归来"],
+      desc: "「平凡人成为英雄」的标准模板。用 12 个阶段刻画主角从普通世界出发、历经磨难、成长蜕变、最终归来的全过程。特别适合玄幻、奇幻、成长冒险。",
+    },
+    {
+      name: "斯奈德节拍表",
+      phases: ["开场画面", "主题陈述", "铺垫", "催化剂", "行动决策", "第二幕衔接", "B 故事", "趣味与游戏", "中点", "反派之路", "一败涂地", "灵魂暗夜", "第三幕衔接", "结局", "终场画面"],
+      desc: "好莱坞编剧写作指南。用 15 个关键节拍精确控制节奏，每个节拍都有明确的时长占比。适合追求商业节奏和编排的写作。",
+    },
+  ];
+  const [structureOptions, setStructureOptions] = useState<StructureDef[]>(() => {
+    const saved = localStorage.getItem("aw-structures");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Merge: keep user custom structures, ensure defaults have descriptions
+        const defaultMap = new Map(DEFAULT_STRUCTURES.map((d) => [d.name, d]));
+        const custom = parsed.filter((s: StructureDef) => !defaultMap.has(s.name));
+        return [...DEFAULT_STRUCTURES, ...custom];
+      } catch {
+        return DEFAULT_STRUCTURES;
+      }
+    }
+    return DEFAULT_STRUCTURES;
+  });
+  const [showNewStructure, setShowNewStructure] = useState(false);
+  const [newStructureName, setNewStructureName] = useState("");
+  const [newStructurePhases, setNewStructurePhases] = useState("");
+  const [newStructureDesc, setNewStructureDesc] = useState("");
 
   // new series inline
   const [showNewSeries, setShowNewSeries] = useState(false);
@@ -62,11 +113,36 @@ function StoriesPage() {
 
   const handleCreate = async () => {
     if (!newTitle.trim()) return;
-    await createStory(newTitle.trim(), newSeriesId);
+    await createStory(
+      newTitle.trim(),
+      newSeriesId,
+      newStructure || undefined,
+      newDescription.trim() || undefined,
+      newChapterGoal ? Number(newChapterGoal) : undefined,
+    );
     setNewTitle("");
     setNewSeriesId(undefined);
+    setNewStructure("");
+    setNewChapterGoal("");
+    setNewDescription("");
     setShowCreate(false);
     fetchData();
+  };
+
+  const handleAddStructure = () => {
+    if (!newStructureName.trim()) return;
+    const phases = newStructurePhases
+      .split("-")
+      .map((p) => p.trim())
+      .filter(Boolean);
+    const updated = [...structureOptions, { name: newStructureName.trim(), phases }];
+    setStructureOptions(updated);
+    localStorage.setItem("aw-structures", JSON.stringify(updated));
+    setNewStructure(newStructureName.trim());
+    setNewStructureName("");
+    setNewStructurePhases("");
+    setNewStructureDesc("");
+    setShowNewStructure(false);
   };
 
   const handleCreateSeries = async () => {
@@ -128,6 +204,7 @@ function StoriesPage() {
                 <div className="story-card-meta">
                   <span>第 {s.current_chapter || 0} 章</span>
                   <span>{(s.word_count || 0).toLocaleString()} 字</span>
+                  {s.structure && <span className="structure-tag">{s.structure}</span>}
                   <span className={"status-tag" + (s.status === "完结" ? " done" : "")}>
                     {s.status || "连载"}
                   </span>
@@ -237,7 +314,6 @@ function StoriesPage() {
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
               placeholder="输入作品标题..."
-              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
             />
             <label>所属系列（可选）</label>
             <div className="series-pick">
@@ -269,6 +345,83 @@ function StoriesPage() {
                 <button onClick={handleCreateSeries}>确认</button>
               </div>
             )}
+            <label>故事结构</label>
+            <div className="series-pick">
+              <select
+                value={newStructure}
+                onChange={(e) => setNewStructure(e.target.value)}
+              >
+                <option value="">（不选）</option>
+                {structureOptions.map((s) => (
+                  <option key={s.name} value={s.name} title={s.desc || s.name}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+              <button className="link-btn" onClick={() => setShowNewStructure(!showNewStructure)}>
+                + 新结构
+              </button>
+            </div>
+            {newStructure && structureOptions.find((o) => o.name === newStructure)?.desc && (
+              <div className="structure-desc">
+                {structureOptions.find((o) => o.name === newStructure)!.desc}
+              </div>
+            )}
+            {newStructure && (
+              <div className="structure-phases">
+                {structureOptions.find((o) => o.name === newStructure)?.phases.map((p, i) => (
+                  <span key={i} className="phase-tag">{p}</span>
+                ))}
+              </div>
+            )}
+            {showNewStructure && (
+              <div className="modal-overlay" onClick={() => setShowNewStructure(false)}>
+                <div className="modal" onClick={(e) => e.stopPropagation()}>
+                  <h2>新建故事结构</h2>
+                  <label>结构名称</label>
+                  <input
+                    autoFocus
+                    value={newStructureName}
+                    onChange={(e) => setNewStructureName(e.target.value)}
+                    placeholder="如 五幕式"
+                  />
+                  <label>具体结构（阶段以 - 分隔）</label>
+                  <input
+                    value={newStructurePhases}
+                    onChange={(e) => setNewStructurePhases(e.target.value)}
+                    placeholder="如 开端-发展-高潮-回落-结局"
+                  />
+                  <label>额外描述（可选）</label>
+                  <textarea
+                    className="create-synopsis"
+                    value={newStructureDesc}
+                    onChange={(e) => setNewStructureDesc(e.target.value)}
+                    placeholder="简要描述这个结构..."
+                    rows={3}
+                  />
+                  <div className="modal-actions">
+                    <button onClick={handleAddStructure}>保存</button>
+                    <button className="secondary" onClick={() => setShowNewStructure(false)}>取消</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            <label>大致章节数量（可选）</label>
+            <input
+              type="number"
+              value={newChapterGoal}
+              onChange={(e) => setNewChapterGoal(e.target.value)}
+              placeholder="如 12"
+              min="0"
+            />
+            <label>故事简介</label>
+            <textarea
+              className="create-synopsis"
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              placeholder="简要描述故事内容..."
+              rows={4}
+            />
             <div className="modal-actions">
               <button onClick={handleCreate}>创建作品</button>
               <button className="secondary" onClick={() => setShowCreate(false)}>

@@ -19,6 +19,8 @@ export interface Story {
   description: string;
   genre: string;
   status: string;
+  structure: string;
+  chapter_goal: number;
   word_count: number;
   current_chapter: number;
   save_path: string;
@@ -97,9 +99,18 @@ export async function listStories(filters?: StoryFilters): Promise<Story[]> {
   return res.json();
 }
 
-export async function createStory(title: string, series_id?: number): Promise<Story> {
+export async function createStory(
+  title: string,
+  series_id?: number,
+  structure?: string,
+  description?: string,
+  chapter_goal?: number,
+): Promise<Story> {
   const params = new URLSearchParams({ title });
   if (series_id) params.set("series_id", String(series_id));
+  if (structure) params.set("structure", structure);
+  if (description) params.set("description", description);
+  if (chapter_goal) params.set("chapter_goal", String(chapter_goal));
   const res = await fetch(`${BASE}/stories/?${params}`, { method: "POST" });
   if (!res.ok) throw new Error("Failed to create story");
   return res.json();
@@ -107,7 +118,7 @@ export async function createStory(title: string, series_id?: number): Promise<St
 
 export async function updateStory(
   id: number,
-  data: Partial<Pick<Story, "title" | "series_id" | "status" | "description" | "genre" | "save_path">>,
+  data: Partial<Pick<Story, "title" | "series_id" | "status" | "description" | "genre" | "save_path" | "structure" | "chapter_goal">>,
 ): Promise<Story> {
   const res = await fetch(`${BASE}/stories/${id}`, {
     method: "PATCH",
