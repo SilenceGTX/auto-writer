@@ -1,4 +1,4 @@
-/** Left sidebar navigation component. */
+/** Left sidebar navigation component — NextUI themed. */
 import { NavLink } from "react-router-dom";
 
 interface NavItem {
@@ -22,36 +22,55 @@ const bottomItems: NavItem[] = [
 
 function Sidebar() {
   return (
-    <aside className="sidebar">
-      <div className="sidebar-brand">Auto-Writer</div>
-      <nav className="sidebar-nav">
-        <ul className="sidebar-nav-top">
+    <aside
+      className="
+        flex flex-col w-[200px] min-w-[200px] h-full
+        bg-zinc-900 text-zinc-300 overflow-y-auto
+        border-r border-zinc-700
+      "
+    >
+      {/* Brand */}
+      <div className="px-4 pt-5 pb-3 text-base font-bold tracking-wide text-white border-b border-white/10">
+        Auto-Writer
+      </div>
+
+      {/* Top nav */}
+      <nav className="flex flex-col flex-1 py-3">
+        <ul className="flex flex-col gap-0.5 px-2">
           {topItems.map((item) => (
             <li key={item.to}>
               <NavLink
                 to={item.to}
                 end
                 className={({ isActive }) =>
-                  "sidebar-link" + (isActive ? " active" : "")
+                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors" +
+                  (isActive
+                    ? " bg-blue-600 text-white font-medium"
+                    : " text-zinc-400 hover:text-white hover:bg-white/5")
                 }
               >
-                <span className="sidebar-icon">{item.icon}</span>
-                <span className="sidebar-label">{item.label}</span>
+                <span className="text-base w-5 text-center">{item.icon}</span>
+                <span>{item.label}</span>
               </NavLink>
             </li>
           ))}
         </ul>
-        <ul className="sidebar-nav-bottom">
+
+        {/* Bottom nav — pushed to bottom */}
+        <ul className="flex flex-col gap-0.5 px-2 mt-auto mb-2">
           {bottomItems.map((item) => (
             <li key={item.to}>
               <NavLink
                 to={item.to}
                 className={({ isActive }) =>
-                  "sidebar-link" + (isActive ? " active" : "")
+                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors" +
+                  (isActive
+                    ? " bg-blue-600 text-white font-medium"
+                    : " text-zinc-400 hover:text-white hover:bg-white/5")
                 }
               >
-                <span className="sidebar-icon">{item.icon}</span>
-                <span className="sidebar-label">{item.label}</span>
+                <span className="text-base w-5 text-center">{item.icon}</span>
+                <span>{item.label}</span>
               </NavLink>
             </li>
           ))}
