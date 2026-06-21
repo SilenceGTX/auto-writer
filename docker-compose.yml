@@ -1,23 +1,21 @@
-version: "3.9"
-
 services:
   backend:
     build:
       context: ./backend
       target: prod
-    ports:
-      - "8000:8000"
     environment:
-      - AW_DATABASE_URL=sqlite+aiosqlite:///./data/auto_writer.db
-      - AW_LLM_API_KEY=${AW_LLM_API_KEY:-}
+      AW_DATABASE_URL: sqlite+aiosqlite:///./data/auto_writer.db
+      AW_CORS_ORIGINS: http://localhost:5173,http://localhost:8080
     volumes:
       - ./data:/app/data
+    ports:
+      - "8000:8000"
 
-  frontend:
+  app:
     build:
       context: ./frontend
       target: prod
-    ports:
-      - "80:80"
     depends_on:
       - backend
+    ports:
+      - "8080:80"

@@ -1,1 +1,1 @@
-"""Auto-Writer backend application."""
+"""Backend package for the Auto-Writer FastAPI application."""

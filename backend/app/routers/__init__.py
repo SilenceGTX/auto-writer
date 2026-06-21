@@ -1,1 +1,1 @@
-"""API router aggregation."""
+"""API router package for Auto-Writer backend endpoints."""

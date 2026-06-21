@@ -1,14 +1,16 @@
-import { defineConfig } from "vite";
+/** Vite configuration for the Auto-Writer React frontend. */
 import react from "@vitejs/plugin-react";
-
-const apiTarget = process.env.VITE_API_TARGET ?? "http://localhost:8000";
+import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
     proxy: {
-      "/api": apiTarget,
+      "/api": {
+        target: process.env.VITE_API_TARGET ?? "http://localhost:8000",
+        changeOrigin: true,
+      },
     },
   },
 });
