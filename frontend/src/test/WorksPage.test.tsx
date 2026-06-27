@@ -1,10 +1,13 @@
 /** Integration test for the works list rendering (table, progress, search). */
+import { useState, type ReactElement } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Work } from "../api";
 import { AppProvider } from "../context/AppContext";
 import { AssistantProvider } from "../context/AssistantContext";
+import { AssistantPanel } from "../components/AssistantPanel";
 import { ToastProvider } from "../components/Toast";
 import { WorksPage } from "../pages/WorksPage";
 
@@ -42,9 +45,23 @@ vi.mock("../api", () => ({
   listWorks: vi.fn().mockResolvedValue({ items: sampleWorks, total: 2 }),
   listSeries: vi.fn().mockResolvedValue([]),
   listStructures: vi.fn().mockResolvedValue([]),
+  createWork: vi.fn(),
+  createSeries: vi.fn(),
+  createStructure: vi.fn(),
   updateWork: vi.fn(),
   deleteWork: vi.fn(),
 }));
+
+/** Render WorksPage together with the assistant panel that hosts its portal. */
+function Harness(): ReactElement {
+  const [collapsed, setCollapsed] = useState(false);
+  return (
+    <div>
+      <WorksPage />
+      <AssistantPanel collapsed={collapsed} onToggle={() => setCollapsed((value) => !value)} />
+    </div>
+  );
+}
 
 function renderPage() {
   return render(
@@ -52,7 +69,7 @@ function renderPage() {
       <AppProvider>
         <AssistantProvider>
           <ToastProvider>
-            <WorksPage />
+            <Harness />
           </ToastProvider>
         </AssistantProvider>
       </AppProvider>
@@ -79,5 +96,15 @@ describe("WorksPage", () => {
     renderPage();
     await waitFor(() => expect(screen.getByText("前期作品")).toBeInTheDocument());
     expect(screen.getByRole("button", { name: "新建作品" })).toBeInTheDocument();
+  });
+
+  it("opens the create form in the assistant panel when clicking 新建作品", async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getByText("前期作品")).toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole("button", { name: "新建作品" }));
+
+    expect(await screen.findByRole("heading", { name: "新建作品" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "创建作品" })).toBeInTheDocument();
   });
 });

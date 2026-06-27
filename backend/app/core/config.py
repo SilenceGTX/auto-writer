@@ -1,9 +1,10 @@
 """Application configuration loaded from environment variables."""
 
 from functools import lru_cache
+from typing import Annotated
 
 from pydantic import field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -12,7 +13,12 @@ class Settings(BaseSettings):
     app_name: str = "Auto-Writer"
     debug: bool = False
     database_url: str = "sqlite+aiosqlite:///../data/auto_writer.db"
-    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:8080"]
+    # NoDecode stops pydantic-settings from JSON-decoding the env value so the
+    # validator below can accept a plain comma-separated string.
+    cors_origins: Annotated[list[str], NoDecode] = [
+        "http://localhost:5173",
+        "http://localhost:8080",
+    ]
 
     model_config = SettingsConfigDict(env_file=".env", env_prefix="AW_")
 

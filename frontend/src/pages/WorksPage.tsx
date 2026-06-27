@@ -59,7 +59,7 @@ export function WorksPage(): ReactElement {
   const navigate = useNavigate();
   const { notify } = useToast();
   const { setCurrentWorkId } = useApp();
-  const { slot, setPageOwnsPanel } = useAssistant();
+  const { slot, setPageOwnsPanel, setCollapsed } = useAssistant();
 
   const [works, setWorks] = useState<Work[]>([]);
   const [total, setTotal] = useState(0);
@@ -75,6 +75,14 @@ export function WorksPage(): ReactElement {
   const [structures, setStructures] = useState<StoryStructure[]>([]);
   const [panel, setPanel] = useState<PanelState>({ mode: "none" });
   const [pendingDelete, setPendingDelete] = useState<Work | null>(null);
+
+  const openPanel = useCallback(
+    (next: PanelState) => {
+      setCollapsed(false);
+      setPanel(next);
+    },
+    [setCollapsed],
+  );
 
   useEffect(() => {
     setPageOwnsPanel(true);
@@ -206,7 +214,7 @@ export function WorksPage(): ReactElement {
         <Button
           color="primary"
           startContent={<Plus size={18} />}
-          onPress={() => setPanel({ mode: "create" })}
+          onPress={() => openPanel({ mode: "create" })}
         >
           新建作品
         </Button>
@@ -261,7 +269,7 @@ export function WorksPage(): ReactElement {
                   <button
                     type="button"
                     className="link-button"
-                    onClick={() => setPanel({ mode: "detail", work })}
+                    onClick={() => openPanel({ mode: "detail", work })}
                   >
                     {work.title}
                   </button>

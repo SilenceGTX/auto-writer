@@ -19,18 +19,21 @@ interface AssistantContextValue {
   setSlot: (element: HTMLDivElement | null) => void;
   pageOwnsPanel: boolean;
   setPageOwnsPanel: (owns: boolean) => void;
+  collapsed: boolean;
+  setCollapsed: (collapsed: boolean) => void;
 }
 
 const AssistantContext = createContext<AssistantContextValue | null>(null);
 
-/** Provide the assistant-panel slot and ownership flag to the app tree. */
+/** Provide the assistant-panel slot, ownership flag, and collapse state. */
 export function AssistantProvider(props: { children: ReactNode }): ReactElement {
   const [slot, setSlot] = useState<HTMLDivElement | null>(null);
   const [pageOwnsPanel, setPageOwnsPanel] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   const value = useMemo<AssistantContextValue>(
-    () => ({ slot, setSlot, pageOwnsPanel, setPageOwnsPanel }),
-    [slot, pageOwnsPanel],
+    () => ({ slot, setSlot, pageOwnsPanel, setPageOwnsPanel, collapsed, setCollapsed }),
+    [slot, pageOwnsPanel, collapsed],
   );
 
   return <AssistantContext.Provider value={value}>{props.children}</AssistantContext.Provider>;

@@ -1,9 +1,10 @@
 /** Root application component: routed three-pane workspace shell. */
-import { useState, type ReactElement } from "react";
+import type { ReactElement } from "react";
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { AssistantPanel } from "./components/AssistantPanel";
 import { Sidebar } from "./components/Sidebar";
 import { useApp } from "./context/AppContext";
+import { useAssistant } from "./context/AssistantContext";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { WorksPage } from "./pages/WorksPage";
 
@@ -38,18 +39,19 @@ const placeholderPages: Record<string, { title: string; summary: string; steps: 
 /** Render the persistent three-pane layout with a routed central workspace. */
 function Layout(): ReactElement {
   const { isDark } = useApp();
-  const [assistantCollapsed, setAssistantCollapsed] = useState(false);
+  const { collapsed, setCollapsed } = useAssistant();
 
   return (
-    <div className={`app-root ${isDark ? "dark" : "light"}`}>
+    <div
+      className={`app-root ${isDark ? "dark" : "light"} ${
+        collapsed ? "assistant-collapsed" : ""
+      }`}
+    >
       <Sidebar />
       <main className="workspace-main">
         <Outlet />
       </main>
-      <AssistantPanel
-        collapsed={assistantCollapsed}
-        onToggle={() => setAssistantCollapsed((current) => !current)}
-      />
+      <AssistantPanel collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
     </div>
   );
 }
