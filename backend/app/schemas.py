@@ -53,6 +53,14 @@ class StoryStructureRead(BaseModel):
         return value
 
 
+class StoryStructureCreate(BaseModel):
+    """Request body for creating a custom (user-defined) story structure."""
+
+    name: str = Field(min_length=1, max_length=120)
+    stages: list[str] = Field(default_factory=list)
+    description: str | None = None
+
+
 class WorkCreate(BaseModel):
     """Request body for creating a work."""
 
@@ -63,13 +71,26 @@ class WorkCreate(BaseModel):
     summary: str = ""
 
 
+class WorkUpdate(BaseModel):
+    """Request body for partially updating a work (only set fields are applied)."""
+
+    title: str | None = Field(default=None, min_length=1, max_length=240)
+    series_id: int | None = None
+    structure_id: int | None = None
+    planned_chapter_count: int | None = Field(default=None, ge=0)
+    status: str | None = Field(default=None, min_length=1, max_length=40)
+    summary: str | None = None
+
+
 class WorkRead(BaseModel):
-    """Serialized work data returned by the API."""
+    """Serialized work data returned by the API, including display names."""
 
     id: int
     title: str
     series_id: int | None
     structure_id: int | None
+    series_name: str | None = None
+    structure_name: str | None = None
     planned_chapter_count: int | None
     actual_chapter_count: int | None
     current_chapter: int
@@ -80,3 +101,10 @@ class WorkRead(BaseModel):
     updated_at: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class WorkListResponse(BaseModel):
+    """Paginated list of works with the total count for the current filter."""
+
+    items: list[WorkRead]
+    total: int

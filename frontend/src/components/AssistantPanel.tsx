@@ -2,14 +2,21 @@
 import type { ReactElement } from "react";
 import { Button, Divider, Textarea } from "@heroui/react";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
+import { useAssistant } from "../context/AssistantContext";
 
 interface AssistantPanelProps {
   collapsed: boolean;
   onToggle: () => void;
 }
 
-/** Render collapsible assistant notes and quick action controls. */
+/** Render the collapsible assistant panel.
+ *
+ * Always renders a portal slot that pages render their contextual content into.
+ * The default quick-action content is shown only when no page owns the panel.
+ */
 export function AssistantPanel(props: AssistantPanelProps): ReactElement {
+  const { setSlot, pageOwnsPanel } = useAssistant();
+
   if (props.collapsed) {
     return (
       <aside className="assistant-panel collapsed">
@@ -34,20 +41,26 @@ export function AssistantPanel(props: AssistantPanelProps): ReactElement {
 
       <Divider />
 
-      <section className="assistant-section">
-        <h2>快速操作</h2>
-        <Button color="primary" variant="flat" fullWidth>
-          生成大纲建议
-        </Button>
-        <Button color="secondary" variant="flat" fullWidth>
-          梳理角色近况
-        </Button>
-      </section>
+      <div ref={setSlot} className="assistant-slot" />
 
-      <section className="assistant-section">
-        <h2>灵感暂存</h2>
-        <Textarea minRows={8} placeholder="记录一句对白、一个转折或一个设定碎片..." />
-      </section>
+      {!pageOwnsPanel && (
+        <>
+          <section className="assistant-section">
+            <h2>快速操作</h2>
+            <Button color="primary" variant="flat" fullWidth>
+              生成大纲建议
+            </Button>
+            <Button color="secondary" variant="flat" fullWidth>
+              梳理角色近况
+            </Button>
+          </section>
+
+          <section className="assistant-section">
+            <h2>灵感暂存</h2>
+            <Textarea minRows={8} placeholder="记录一句对白、一个转折或一个设定碎片..." />
+          </section>
+        </>
+      )}
     </aside>
   );
 }

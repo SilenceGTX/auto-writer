@@ -30,3 +30,14 @@ async def create_series(payload: SeriesCreate, db: AsyncSession = Depends(get_db
     await db.commit()
     await db.refresh(series)
     return series
+
+
+@router.delete("/{series_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_series(series_id: int, db: AsyncSession = Depends(get_db)) -> None:
+    """Delete a series; member works keep their data with series_id set to NULL."""
+    series = await db.get(Series, series_id)
+    if series is None:
+        raise HTTPException(status_code=404, detail="Series not found")
+
+    await db.delete(series)
+    await db.commit()

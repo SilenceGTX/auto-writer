@@ -360,6 +360,113 @@ textarea {
   color: #b9c4d6;
 }
 
+.assistant-slot:empty {
+  display: none;
+}
+
+.work-form {
+  gap: 12px;
+}
+
+.inline-field {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.inline-field > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.structure-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stage-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.detail-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+}
+
+.app-root.dark .detail-stats {
+  border-color: #26334d;
+}
+
+.detail-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detail-stat span {
+  color: #667085;
+  font-size: 0.78rem;
+}
+
+.detail-stat strong {
+  font-size: 0.92rem;
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #2563eb;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+.app-root.dark .link-button {
+  color: #93c5fd;
+}
+
+.progress-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+
+.progress-cell span {
+  font-size: 0.8rem;
+  color: #667085;
+  white-space: nowrap;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.pagination-row {
+  display: flex;
+  justify-content: center;
+}
+
 .modal-form,
 .form-grid {
   display: grid;

@@ -22,6 +22,8 @@ export interface Work {
   title: string;
   series_id: number | null;
   structure_id: number | null;
+  series_name: string | null;
+  structure_name: string | null;
   planned_chapter_count: number | null;
   actual_chapter_count: number | null;
   current_chapter: number;
@@ -38,6 +40,34 @@ export interface CreateWorkInput {
   structure_id?: number | null;
   planned_chapter_count?: number | null;
   summary?: string;
+}
+
+export interface UpdateWorkInput {
+  title?: string;
+  series_id?: number | null;
+  structure_id?: number | null;
+  planned_chapter_count?: number | null;
+  status?: string;
+  summary?: string;
+}
+
+export interface CreateStructureInput {
+  name: string;
+  stages: string[];
+  description?: string;
+}
+
+export interface WorkListParams {
+  search?: string;
+  sortBy?: string;
+  order?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
+}
+
+export interface WorkListResponse {
+  items: Work[];
+  total: number;
 }
 
 /** Error raised for non-OK HTTP responses, carrying the status code. */
@@ -80,19 +110,47 @@ export async function createSeries(name: string): Promise<Series> {
   return requestJson<Series>("/series", { method: "POST", body: JSON.stringify({ name }) });
 }
 
+/** Delete a series by id (member works keep their data, series_id cleared). */
+export async function deleteSeries(seriesId: number): Promise<void> {
+  await requestJson<void>(`/series/${seriesId}`, { method: "DELETE" });
+}
+
 /** List all story structures (presets first). */
 export async function listStructures(): Promise<StoryStructure[]> {
   return requestJson<StoryStructure[]>("/structures");
 }
 
-/** List works (most recently updated first). */
-export async function listWorks(): Promise<Work[]> {
-  return requestJson<Work[]>("/works");
+/** Create a user-defined story structure. */
+export async function createStructure(input: CreateStructureInput): Promise<StoryStructure> {
+  return requestJson<StoryStructure>("/structures", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+/** List works with optional search, sorting, and pagination. */
+export async function listWorks(params: WorkListParams = {}): Promise<WorkListResponse> {
+  const query = new URLSearchParams();
+  if (params.search) query.set("search", params.search);
+  if (params.sortBy) query.set("sort_by", params.sortBy);
+  if (params.order) query.set("order", params.order);
+  if (params.page) query.set("page", String(params.page));
+  if (params.pageSize) query.set("page_size", String(params.pageSize));
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  return requestJson<WorkListResponse>(`/works${suffix}`);
 }
 
 /** Create a new work. */
 export async function createWork(input: CreateWorkInput): Promise<Work> {
   return requestJson<Work>("/works", { method: "POST", body: JSON.stringify(input) });
+}
+
+/** Partially update a work. */
+export async function updateWork(workId: number, input: UpdateWorkInput): Promise<Work> {
+  return requestJson<Work>(`/works/${workId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
 }
 
 /** Delete a work by id. */
