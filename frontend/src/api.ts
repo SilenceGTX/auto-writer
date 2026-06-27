@@ -1,4 +1,4 @@
-/** API client helpers for communicating with the Auto-Writer backend. */
+/** API client and shared types for communicating with the Auto-Writer backend. */
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "/api";
 
@@ -6,32 +6,53 @@ export interface Series {
   id: number;
   name: string;
   created_at: string;
+  updated_at: string;
 }
 
-export interface Story {
+export interface StoryStructure {
+  id: number;
+  name: string;
+  stages: string[];
+  description: string | null;
+  is_preset: number;
+}
+
+export interface Work {
   id: number;
   title: string;
-  description: string;
-  structure: string;
-  status: string;
-  chapter_goal: number;
-  word_count: number;
   series_id: number | null;
-  series: Series | null;
+  structure_id: number | null;
+  planned_chapter_count: number | null;
+  actual_chapter_count: number | null;
+  current_chapter: number;
+  total_word_count: number;
+  status: string;
+  summary: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface CreateStoryInput {
+export interface CreateWorkInput {
   title: string;
-  description: string;
-  structure: string;
-  chapter_goal: number;
-  series_id: number | null;
+  series_id?: number | null;
+  structure_id?: number | null;
+  planned_chapter_count?: number | null;
+  summary?: string;
 }
 
-/** Fetch JSON from the backend and raise readable errors for non-OK responses. */
-async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+/** Error raised for non-OK HTTP responses, carrying the status code. */
+export class ApiError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+/** Fetch JSON from the backend and raise ApiError for non-OK responses. */
+export async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
     ...init,
@@ -39,7 +60,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const message = await response.text();
-    throw new Error(message || `Request failed with ${response.status}`);
+    throw new ApiError(response.status, message || `请求失败（${response.status}）`);
   }
 
   if (response.status === 204) {
@@ -49,34 +70,32 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-/** Fetch all available story series. */
+/** List all series (newest first). */
 export async function listSeries(): Promise<Series[]> {
   return requestJson<Series[]>("/series");
 }
 
-/** Create a new story series. */
+/** Create a new series. */
 export async function createSeries(name: string): Promise<Series> {
-  return requestJson<Series>("/series", {
-    method: "POST",
-    body: JSON.stringify({ name }),
-  });
+  return requestJson<Series>("/series", { method: "POST", body: JSON.stringify({ name }) });
 }
 
-/** Fetch stories, optionally filtered by title text. */
-export async function listStories(search?: string): Promise<Story[]> {
-  const params = search ? `?search=${encodeURIComponent(search)}` : "";
-  return requestJson<Story[]>(`/stories${params}`);
+/** List all story structures (presets first). */
+export async function listStructures(): Promise<StoryStructure[]> {
+  return requestJson<StoryStructure[]>("/structures");
 }
 
-/** Create a new story project. */
-export async function createStory(input: CreateStoryInput): Promise<Story> {
-  return requestJson<Story>("/stories", {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
+/** List works (most recently updated first). */
+export async function listWorks(): Promise<Work[]> {
+  return requestJson<Work[]>("/works");
 }
 
-/** Delete a story project by ID. */
-export async function deleteStory(storyId: number): Promise<void> {
-  await requestJson<void>(`/stories/${storyId}`, { method: "DELETE" });
+/** Create a new work. */
+export async function createWork(input: CreateWorkInput): Promise<Work> {
+  return requestJson<Work>("/works", { method: "POST", body: JSON.stringify(input) });
+}
+
+/** Delete a work by id. */
+export async function deleteWork(workId: number): Promise<void> {
+  await requestJson<void>(`/works/${workId}`, { method: "DELETE" });
 }

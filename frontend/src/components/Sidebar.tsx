@@ -1,5 +1,6 @@
 /** Left navigation sidebar for the Auto-Writer workspace. */
 import type { ReactElement } from "react";
+import { NavLink } from "react-router-dom";
 import {
   BookOpen,
   FileText,
@@ -10,27 +11,27 @@ import {
   Sparkles,
   SunMoon,
 } from "lucide-react";
+import { useApp } from "../context/AppContext";
 
-export type PageKey = "stories" | "world" | "outline" | "write" | "inspiration" | "review";
-
-interface SidebarProps {
-  activePage: PageKey;
-  isDark: boolean;
-  onNavigate: (page: PageKey) => void;
-  onToggleTheme: () => void;
+interface NavItem {
+  to: string;
+  label: string;
+  icon: ReactElement;
 }
 
-const navItems: Array<{ key: PageKey; label: string; icon: ReactElement }> = [
-  { key: "stories", label: "作品", icon: <BookOpen size={18} /> },
-  { key: "world", label: "设定", icon: <Sparkles size={18} /> },
-  { key: "outline", label: "大纲", icon: <FileText size={18} /> },
-  { key: "write", label: "写作", icon: <PenLine size={18} /> },
-  { key: "inspiration", label: "灵感", icon: <Lightbulb size={18} /> },
-  { key: "review", label: "审阅", icon: <SearchCheck size={18} /> },
+const navItems: NavItem[] = [
+  { to: "/works", label: "作品", icon: <BookOpen size={18} /> },
+  { to: "/worldbuilding", label: "设定", icon: <Sparkles size={18} /> },
+  { to: "/outline", label: "大纲", icon: <FileText size={18} /> },
+  { to: "/writing", label: "写作", icon: <PenLine size={18} /> },
+  { to: "/inspiration", label: "灵感", icon: <Lightbulb size={18} /> },
+  { to: "/review", label: "审阅", icon: <SearchCheck size={18} /> },
 ];
 
 /** Render the persistent left navigation and footer controls. */
-export function Sidebar(props: SidebarProps): ReactElement {
+export function Sidebar(): ReactElement {
+  const { isDark, toggleTheme } = useApp();
+
   return (
     <aside className="app-sidebar">
       <div className="brand-block">
@@ -43,22 +44,21 @@ export function Sidebar(props: SidebarProps): ReactElement {
 
       <nav className="nav-list" aria-label="主导航">
         {navItems.map((item) => (
-          <button
-            key={item.key}
-            className={props.activePage === item.key ? "nav-item active" : "nav-item"}
-            type="button"
-            onClick={() => props.onNavigate(item.key)}
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}
           >
             {item.icon}
             <span>{item.label}</span>
-          </button>
+          </NavLink>
         ))}
       </nav>
 
       <div className="sidebar-footer">
-        <button className="nav-item" type="button" onClick={props.onToggleTheme}>
+        <button className="nav-item" type="button" onClick={toggleTheme}>
           <SunMoon size={18} />
-          <span>{props.isDark ? "浅色主题" : "深色主题"}</span>
+          <span>{isDark ? "浅色主题" : "深色主题"}</span>
         </button>
         <button className="nav-item" type="button">
           <Settings size={18} />
