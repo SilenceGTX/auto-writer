@@ -158,6 +158,114 @@ export async function deleteWork(workId: number): Promise<void> {
   await requestJson<void>(`/works/${workId}`, { method: "DELETE" });
 }
 
+export interface WorkStage {
+  id: number;
+  work_id: number;
+  name: string;
+  overview: string | null;
+  sort_order: number;
+  chapter_count: number;
+}
+
+export interface Chapter {
+  id: number;
+  work_id: number;
+  stage_id: number | null;
+  chapter_number: number;
+  title: string | null;
+  summary: string | null;
+  word_count: number;
+  status: string;
+}
+
+export interface Outline {
+  work_id: number;
+  title: string;
+  planned_chapter_count: number | null;
+  actual_chapter_count: number | null;
+  structure_name: string | null;
+  locked: boolean;
+  stages: WorkStage[];
+  chapters: Chapter[];
+}
+
+export interface ChapterOrderItem {
+  id: number;
+  stage_id: number | null;
+}
+
+/** Load the full outline (stages + chapters) for a work. */
+export async function getOutline(workId: number): Promise<Outline> {
+  return requestJson<Outline>(`/works/${workId}/outline`);
+}
+
+/** Generate the stage tree and synopses (replaces the existing outline). */
+export async function generateStages(workId: number): Promise<Outline> {
+  return requestJson<Outline>(`/works/${workId}/outline/stages:generate`, { method: "POST" });
+}
+
+/** Generate per-chapter titles and summaries, locking the outline. */
+export async function generateChapterOutlines(workId: number): Promise<Outline> {
+  return requestJson<Outline>(`/works/${workId}/outline/chapters:generate`, { method: "POST" });
+}
+
+/** Update a stage's name and/or synopsis. */
+export async function updateStage(
+  stageId: number,
+  input: { name?: string; overview?: string },
+): Promise<WorkStage> {
+  return requestJson<WorkStage>(`/stages/${stageId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+/** Set how many chapters belong to a stage. */
+export async function setStageChapterCount(stageId: number, count: number): Promise<Outline> {
+  return requestJson<Outline>(`/stages/${stageId}/chapter-count`, {
+    method: "PUT",
+    body: JSON.stringify({ count }),
+  });
+}
+
+/** Append a chapter to a work. */
+export async function addChapter(
+  workId: number,
+  input: { title?: string; summary?: string; stage_id?: number | null } = {},
+): Promise<Chapter> {
+  return requestJson<Chapter>(`/works/${workId}/chapters`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+/** Update a chapter's outline fields. */
+export async function updateChapter(
+  chapterId: number,
+  input: { title?: string; summary?: string; status?: string; stage_id?: number | null },
+): Promise<Chapter> {
+  return requestJson<Chapter>(`/chapters/${chapterId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+/** Delete a chapter by id. */
+export async function deleteChapter(chapterId: number): Promise<void> {
+  await requestJson<void>(`/chapters/${chapterId}`, { method: "DELETE" });
+}
+
+/** Apply a new chapter order (and stage assignment) from a drag operation. */
+export async function reorderChapters(
+  workId: number,
+  items: ChapterOrderItem[],
+): Promise<Outline> {
+  return requestJson<Outline>(`/works/${workId}/chapters/reorder`, {
+    method: "PUT",
+    body: JSON.stringify({ items }),
+  });
+}
+
 export interface ConnectionSettings {
   url: string;
   api_token: string;

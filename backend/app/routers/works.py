@@ -129,6 +129,13 @@ async def update_work(
     data = payload.model_dump(exclude_unset=True)
     await _validate_references(db, data.get("series_id"), data.get("structure_id"))
 
+    if (
+        work.actual_chapter_count is not None
+        and "planned_chapter_count" in data
+        and data["planned_chapter_count"] != work.planned_chapter_count
+    ):
+        raise HTTPException(status_code=409, detail="大纲已锁定，无法修改预计章节数")
+
     for field, value in data.items():
         setattr(work, field, value)
     await db.commit()

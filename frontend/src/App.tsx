@@ -5,6 +5,7 @@ import { AssistantPanel } from "./components/AssistantPanel";
 import { Sidebar } from "./components/Sidebar";
 import { useApp } from "./context/AppContext";
 import { useAssistant } from "./context/AssistantContext";
+import { OutlinePage } from "./pages/OutlinePage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { WorksPage } from "./pages/WorksPage";
 
@@ -13,11 +14,6 @@ const placeholderPages: Record<string, { title: string; summary: string; steps: 
     title: "设定",
     summary: "维护角色、地点、物品和概念，并在写作时引用它们。",
     steps: ["角色", "地点", "物品", "概念", "@ 引用"],
-  },
-  outline: {
-    title: "大纲",
-    summary: "从阶段树与总纲到章节大纲，再推进到可选的场景级细纲。",
-    steps: ["阶段树", "总纲", "章节", "场景", "AI 生成"],
   },
   writing: {
     title: "写作",
@@ -63,6 +59,7 @@ function App(): ReactElement {
       <Route element={<Layout />}>
         <Route index element={<Navigate to="/works" replace />} />
         <Route path="/works" element={<WorksPage />} />
+        <Route path="/outline" element={<OutlinePage />} />
         {Object.entries(placeholderPages).map(([path, content]) => (
           <Route
             key={path}

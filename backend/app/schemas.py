@@ -110,6 +110,88 @@ class WorkListResponse(BaseModel):
     total: int
 
 
+class WorkStageRead(BaseModel):
+    """A work stage with its derived chapter count for the outline view."""
+
+    id: int
+    work_id: int
+    name: str
+    overview: str | None
+    sort_order: int
+    chapter_count: int
+
+
+class WorkStageUpdate(BaseModel):
+    """Partial update for a stage (name and/or overview)."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    overview: str | None = None
+
+
+class StageChapterCountUpdate(BaseModel):
+    """Set the number of (empty) chapters allocated to a stage."""
+
+    count: int = Field(ge=0, le=500)
+
+
+class ChapterRead(BaseModel):
+    """Serialized chapter data for the outline / writing views."""
+
+    id: int
+    work_id: int
+    stage_id: int | None
+    chapter_number: int
+    title: str | None
+    summary: str | None
+    word_count: int
+    status: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ChapterCreate(BaseModel):
+    """Request body for adding a chapter (appended, optionally to a stage)."""
+
+    title: str | None = None
+    summary: str | None = None
+    stage_id: int | None = None
+
+
+class ChapterUpdate(BaseModel):
+    """Partial update for a chapter's outline fields."""
+
+    title: str | None = None
+    summary: str | None = None
+    status: str | None = Field(default=None, min_length=1, max_length=20)
+    stage_id: int | None = None
+
+
+class ChapterOrderItem(BaseModel):
+    """One entry in a chapter reorder request (new order + stage assignment)."""
+
+    id: int
+    stage_id: int | None = None
+
+
+class ChapterReorderRequest(BaseModel):
+    """Reorder request: chapters in their new top-to-bottom order."""
+
+    items: list[ChapterOrderItem]
+
+
+class OutlineRead(BaseModel):
+    """Aggregate outline payload: work summary, stages, and chapters."""
+
+    work_id: int
+    title: str
+    planned_chapter_count: int | None
+    actual_chapter_count: int | None
+    structure_name: str | None
+    locked: bool
+    stages: list[WorkStageRead]
+    chapters: list[ChapterRead]
+
+
 class ConnectionSettings(BaseModel):
     """LLM connection configuration (OpenAI-compatible endpoint)."""
 
