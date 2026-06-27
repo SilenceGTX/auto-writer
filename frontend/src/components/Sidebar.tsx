@@ -1,5 +1,5 @@
 /** Left navigation sidebar for the Auto-Writer workspace. */
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { NavLink } from "react-router-dom";
 import {
   BookOpen,
@@ -12,6 +12,7 @@ import {
   SunMoon,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
+import { SettingsModal } from "./SettingsModal";
 
 interface NavItem {
   to: string;
@@ -31,6 +32,7 @@ const navItems: NavItem[] = [
 /** Render the persistent left navigation and footer controls. */
 export function Sidebar(): ReactElement {
   const { isDark, toggleTheme } = useApp();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <aside className="app-sidebar">
@@ -60,11 +62,13 @@ export function Sidebar(): ReactElement {
           <SunMoon size={18} />
           <span>{isDark ? "浅色主题" : "深色主题"}</span>
         </button>
-        <button className="nav-item" type="button">
+        <button className="nav-item" type="button" onClick={() => setSettingsOpen(true)}>
           <Settings size={18} />
           <span>系统设置</span>
         </button>
       </div>
+
+      <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </aside>
   );
 }

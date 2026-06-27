@@ -157,3 +157,75 @@ export async function updateWork(workId: number, input: UpdateWorkInput): Promis
 export async function deleteWork(workId: number): Promise<void> {
   await requestJson<void>(`/works/${workId}`, { method: "DELETE" });
 }
+
+export interface ConnectionSettings {
+  url: string;
+  api_token: string;
+  model: string;
+}
+
+export interface StagePreference {
+  temperature: number;
+  top_p: number;
+  presence_penalty: number;
+  frequency_penalty: number;
+  max_tokens: number | null;
+}
+
+export interface Preferences {
+  outline: StagePreference;
+  writing: StagePreference;
+}
+
+export interface WritingStyle {
+  text: string;
+}
+
+export interface AppSettings {
+  connection: ConnectionSettings;
+  preferences: Preferences;
+  writing_style: WritingStyle;
+}
+
+export interface ConnectionTestResult {
+  ok: boolean;
+  message: string;
+  sample: string | null;
+}
+
+/** Load all application settings (merged with backend defaults). */
+export async function getSettings(): Promise<AppSettings> {
+  return requestJson<AppSettings>("/settings");
+}
+
+/** Persist the LLM connection configuration. */
+export async function updateConnection(input: ConnectionSettings): Promise<ConnectionSettings> {
+  return requestJson<ConnectionSettings>("/settings/connection", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
+/** Persist the global generation preferences. */
+export async function updatePreferences(input: Preferences): Promise<Preferences> {
+  return requestJson<Preferences>("/settings/preferences", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
+/** Persist the global writing-style text. */
+export async function updateWritingStyle(input: WritingStyle): Promise<WritingStyle> {
+  return requestJson<WritingStyle>("/settings/writing_style", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
+/** Test an LLM connection with a lightweight completion. */
+export async function testConnection(input: ConnectionSettings): Promise<ConnectionTestResult> {
+  return requestJson<ConnectionTestResult>("/llm/test", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}

@@ -6,4 +6,5 @@
 /frontend/dist/
 /frontend/*.tsbuildinfo
 /data/
+*.log
 .env

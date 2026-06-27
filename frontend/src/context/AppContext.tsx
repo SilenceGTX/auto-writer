@@ -44,6 +44,11 @@ export function AppProvider(props: { children: ReactNode }): ReactElement {
 
   useEffect(() => {
     localStorage.setItem(THEME_KEY, isDark ? "dark" : "light");
+    // Apply the theme class to <html> as well so HeroUI components rendered in
+    // portals (modals, popovers) outside .app-root still pick up the theme.
+    const root = document.documentElement;
+    root.classList.toggle("dark", isDark);
+    root.classList.toggle("light", !isDark);
   }, [isDark]);
 
   const toggleTheme = useCallback(() => setIsDark((current) => !current), []);

@@ -472,6 +472,72 @@ textarea {
   justify-content: center;
 }
 
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 2px 4px;
+}
+
+.stage-pref {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+}
+
+.app-root.dark .stage-pref {
+  border-color: #26334d;
+}
+
+.stage-pref h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.level-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.level-slider-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.level-slider-value {
+  color: #2563eb;
+}
+
+.app-root.dark .level-slider-value {
+  color: #60a5fa;
+}
+
+.level-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #6b7280;
+}
+
+.test-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.token-toggle {
+  display: inline-flex;
+  border: 0;
+  background: transparent;
+  color: #667085;
+  cursor: pointer;
+}
+
 .modal-form,
 .form-grid {
   display: grid;

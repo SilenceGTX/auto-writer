@@ -108,3 +108,50 @@ class WorkListResponse(BaseModel):
 
     items: list[WorkRead]
     total: int
+
+
+class ConnectionSettings(BaseModel):
+    """LLM connection configuration (OpenAI-compatible endpoint)."""
+
+    url: str = ""
+    api_token: str = ""
+    model: str = ""
+
+
+class StagePreference(BaseModel):
+    """Sampling parameters for one generation stage (outline or writing)."""
+
+    temperature: float = Field(default=0.7, ge=0, le=2)
+    top_p: float = Field(default=0.9, ge=0, le=1)
+    presence_penalty: float = Field(default=0.0, ge=-2, le=2)
+    frequency_penalty: float = Field(default=0.0, ge=-2, le=2)
+    max_tokens: int | None = Field(default=2048, ge=1)
+
+
+class Preferences(BaseModel):
+    """Global preferences for the outline and writing generation stages."""
+
+    outline: StagePreference = Field(default_factory=StagePreference)
+    writing: StagePreference = Field(default_factory=StagePreference)
+
+
+class WritingStyle(BaseModel):
+    """Free-form writing-style text injected into the system prompt."""
+
+    text: str = ""
+
+
+class SettingsResponse(BaseModel):
+    """All known settings groups returned to the client."""
+
+    connection: ConnectionSettings
+    preferences: Preferences
+    writing_style: WritingStyle
+
+
+class ConnectionTestResult(BaseModel):
+    """Result of a lightweight LLM connection test."""
+
+    ok: bool
+    message: str
+    sample: str | None = None
