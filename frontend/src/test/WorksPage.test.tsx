@@ -50,6 +50,7 @@ vi.mock("../api", () => ({
   createStructure: vi.fn(),
   updateWork: vi.fn(),
   deleteWork: vi.fn(),
+  downloadWorkExport: vi.fn(),
 }));
 
 /** Render WorksPage together with the assistant panel that hosts its portal. */

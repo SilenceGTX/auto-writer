@@ -13,7 +13,9 @@ import {
   generateChapterDraft,
   getChapter,
   getOutline,
+  getSettings,
   saveChapterContent,
+  snapshotWork,
   type Chapter,
   type Outline,
 } from "../api";
@@ -52,6 +54,30 @@ export function WritingPage(): ReactElement {
 
   const savedContentRef = useRef("");
   const memoryRef = useRef<Map<number, ScrollMemory>>(new Map());
+  const lastSnapshotRef = useRef("");
+  const [autosaveIntervalMs, setAutosaveIntervalMs] = useState(30000);
+
+  useEffect(() => {
+    void getSettings()
+      .then((s) => setAutosaveIntervalMs(s.data_save.autosave_interval_seconds * 1000))
+      .catch(() => undefined);
+  }, []);
+
+  // Second auto-save layer: on the configured interval, mirror the work to disk
+  // as a snapshot when its persisted content has changed since the last one.
+  useEffect(() => {
+    if (currentWorkId == null) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      if (savedContentRef.current === lastSnapshotRef.current) {
+        return;
+      }
+      lastSnapshotRef.current = savedContentRef.current;
+      void snapshotWork(currentWorkId).catch(() => undefined);
+    }, autosaveIntervalMs);
+    return () => window.clearInterval(timer);
+  }, [currentWorkId, autosaveIntervalMs]);
 
   useEffect(() => {
     setPageOwnsPanel(true);

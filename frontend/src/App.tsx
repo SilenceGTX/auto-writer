@@ -1,6 +1,7 @@
 /** Root application component: routed three-pane workspace shell. */
-import type { ReactElement } from "react";
+import { useEffect, type ReactElement } from "react";
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { getSettings } from "./api";
 import { AssistantPanel } from "./components/AssistantPanel";
 import { Sidebar } from "./components/Sidebar";
 import { useApp } from "./context/AppContext";
@@ -11,11 +12,18 @@ import { OutlinePage } from "./pages/OutlinePage";
 import { ReviewPage } from "./pages/ReviewPage";
 import { WorksPage } from "./pages/WorksPage";
 import { WritingPage } from "./pages/WritingPage";
+import { applyTypography } from "./utils/typography";
 
 /** Render the persistent three-pane layout with a routed central workspace. */
 function Layout(): ReactElement {
   const { isDark } = useApp();
   const { collapsed, setCollapsed, focusMode } = useAssistant();
+
+  useEffect(() => {
+    void getSettings()
+      .then((settings) => applyTypography(settings.typography))
+      .catch(() => undefined);
+  }, []);
 
   return (
     <div

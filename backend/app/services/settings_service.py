@@ -69,3 +69,15 @@ async def set_setting(session: AsyncSession, key: str, value: dict) -> dict:
         row.value = serialized
     await session.commit()
     return value
+
+
+async def set_settings(session: AsyncSession, groups: dict[str, dict]) -> None:
+    """Upsert several settings groups in a single transaction (config import)."""
+    for key, value in groups.items():
+        serialized = json.dumps(value, ensure_ascii=False)
+        row = await session.get(AppSetting, key)
+        if row is None:
+            session.add(AppSetting(key=key, value=serialized))
+        else:
+            row.value = serialized
+    await session.commit()

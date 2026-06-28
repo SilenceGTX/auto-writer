@@ -65,6 +65,11 @@ vi.mock("../api", () => ({
   saveChapterContent: vi.fn().mockResolvedValue(chapterContent),
   generateChapterDraft: vi.fn(),
   listEntities: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+  getSettings: vi.fn().mockResolvedValue({
+    data_save: { autosave_interval_seconds: 30 },
+    typography: { font_family: "", line_height: 1.8, reading_theme: "sepia" },
+  }),
+  snapshotWork: vi.fn().mockResolvedValue({ snapshot_dir: null, chapters: 0 }),
 }));
 
 /** Render WritingPage alongside the assistant panel that hosts its portal. */

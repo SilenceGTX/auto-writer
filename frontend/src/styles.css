@@ -685,6 +685,12 @@ textarea {
   padding: 8px 2px 4px;
 }
 
+.settings-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
 .stage-pref {
   display: flex;
   flex-direction: column;
@@ -1165,7 +1171,8 @@ textarea {
   border-radius: 12px;
   background: #ffffff;
   color: inherit;
-  line-height: 1.9;
+  line-height: var(--reading-line-height, 1.9);
+  font-family: var(--reading-font-family, inherit);
   font-size: 1rem;
   outline: none;
 }
@@ -1601,13 +1608,35 @@ textarea {
   border: 1px solid #d8dee8;
   border-radius: 12px;
   background: #ffffff;
-  line-height: 1.95;
+  line-height: var(--reading-line-height, 1.95);
+  font-family: var(--reading-font-family, inherit);
   font-size: 1rem;
 }
 
 .app-root.dark .review-content {
   background: #0f1626;
   border-color: #26334d;
+}
+
+/* Reading eye-care themes (set via data-reading-theme on <html>). */
+[data-reading-theme="sepia"] .review-content,
+[data-reading-theme="sepia"] .chapter-editor-area {
+  background: #f5ecd9;
+  border-color: #e3d6b8;
+  color: #433422;
+}
+
+[data-reading-theme="light"] .review-content,
+[data-reading-theme="light"] .chapter-editor-area {
+  background: #ffffff;
+  color: #1f2937;
+}
+
+[data-reading-theme="dark"] .review-content,
+[data-reading-theme="dark"] .chapter-editor-area {
+  background: #0f1626;
+  border-color: #26334d;
+  color: #cbd5e1;
 }
 
 .review-content-title {

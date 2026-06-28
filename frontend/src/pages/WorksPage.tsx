@@ -26,6 +26,7 @@ import {
 import { Download, FileText, PenLine, Plus, Search, SearchCheck, Sparkles, Trash2 } from "lucide-react";
 import {
   deleteWork,
+  downloadWorkExport,
   listSeries,
   listStructures,
   listWorks,
@@ -148,6 +149,15 @@ export function WorksPage(): ReactElement {
       );
     } catch {
       notify("更新状态失败", "error");
+    }
+  }
+
+  async function handleExport(work: Work, format: "json" | "md"): Promise<void> {
+    try {
+      await downloadWorkExport(work.id, format);
+      notify("导出已开始下载", "success");
+    } catch {
+      notify("导出失败", "error");
     }
   }
 
@@ -353,17 +363,24 @@ export function WorksPage(): ReactElement {
                         <SearchCheck size={16} />
                       </Button>
                     </Tooltip>
-                    <Tooltip content="导出">
-                      <Button
-                        isIconOnly
-                        size="sm"
-                        variant="light"
-                        aria-label="导出"
-                        onPress={() => notify("导出功能将在后续阶段提供", "info")}
+                    <Dropdown>
+                      <Tooltip content="导出">
+                        <div>
+                          <DropdownTrigger>
+                            <Button isIconOnly size="sm" variant="light" aria-label="导出">
+                              <Download size={16} />
+                            </Button>
+                          </DropdownTrigger>
+                        </div>
+                      </Tooltip>
+                      <DropdownMenu
+                        aria-label="导出格式"
+                        onAction={(key) => void handleExport(work, key as "json" | "md")}
                       >
-                        <Download size={16} />
-                      </Button>
-                    </Tooltip>
+                        <DropdownItem key="json">导出 JSON</DropdownItem>
+                        <DropdownItem key="md">导出 Markdown</DropdownItem>
+                      </DropdownMenu>
+                    </Dropdown>
                     <Tooltip content="删除" color="danger">
                       <Button
                         isIconOnly

@@ -10,6 +10,7 @@ from loguru import logger
 from app.core import settings, setup_logging
 from app.database import init_db
 from app.routers import (
+    export,
     health,
     inspirations,
     llm,
@@ -47,6 +48,7 @@ def create_app() -> FastAPI:
     application.include_router(series.router, prefix="/api")
     application.include_router(structures.router, prefix="/api")
     application.include_router(works.router, prefix="/api")
+    application.include_router(export.router, prefix="/api")
     application.include_router(outline.router, prefix="/api")
     application.include_router(writing.router, prefix="/api")
     application.include_router(review.router, prefix="/api")

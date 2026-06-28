@@ -9,6 +9,60 @@ async def test_get_settings_returns_defaults(client):
     assert data["connection"] == {"url": "", "api_token": "", "model": ""}
     assert data["preferences"]["outline"]["temperature"] == 0.7
     assert data["writing_style"]["text"] == ""
+    assert data["data_save"]["autosave_interval_seconds"] == 30
+    assert data["typography"]["reading_theme"] == "sepia"
+
+
+async def test_update_data_save_and_typography(client):
+    """Data-save and typography groups are validated and persisted."""
+    data_save = {
+        "input_debounce_seconds": 3,
+        "autosave_interval_seconds": 60,
+        "snapshot_path": "data/snapshots",
+        "history_versions": 5,
+    }
+    typography = {"font_family": "Noto Serif", "line_height": 2.0, "reading_theme": "dark"}
+    assert (await client.put("/api/settings/data_save", json=data_save)).status_code == 200
+    assert (await client.put("/api/settings/typography", json=typography)).status_code == 200
+
+    data = (await client.get("/api/settings")).json()
+    assert data["data_save"]["history_versions"] == 5
+    assert data["typography"]["font_family"] == "Noto Serif"
+
+
+async def test_data_save_validation_rejects_out_of_range(client):
+    """Out-of-range history version counts are rejected."""
+    bad = {
+        "input_debounce_seconds": 2,
+        "autosave_interval_seconds": 30,
+        "snapshot_path": "data/snapshots",
+        "history_versions": 99,
+    }
+    assert (await client.put("/api/settings/data_save", json=bad)).status_code == 422
+
+
+async def test_export_and_import_roundtrip(client):
+    """Exported configuration can be re-imported, applying only present groups."""
+    await client.put("/api/settings/writing_style", json={"text": "古典雅致"})
+    exported = (await client.get("/api/settings/export")).json()
+
+    response = await client.post(
+        "/api/settings/import",
+        json={"writing_style": {"text": "现代简洁"}, "typography": exported["typography"]},
+    )
+    assert response.status_code == 200
+
+    data = (await client.get("/api/settings")).json()
+    assert data["writing_style"]["text"] == "现代简洁"
+
+
+async def test_import_rejects_invalid_config(client):
+    """Importing a structurally invalid group is rejected with a 422."""
+    response = await client.post(
+        "/api/settings/import",
+        json={"typography": {"reading_theme": "neon"}},
+    )
+    assert response.status_code == 422
 
 
 async def test_update_connection_persists(client):

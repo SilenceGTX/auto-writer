@@ -289,10 +289,27 @@ export interface WritingStyle {
   text: string;
 }
 
+export interface DataSaveSettings {
+  input_debounce_seconds: number;
+  autosave_interval_seconds: number;
+  snapshot_path: string;
+  history_versions: number;
+}
+
+export type ReadingTheme = "sepia" | "light" | "dark";
+
+export interface TypographySettings {
+  font_family: string;
+  line_height: number;
+  reading_theme: ReadingTheme;
+}
+
 export interface AppSettings {
   connection: ConnectionSettings;
   preferences: Preferences;
   writing_style: WritingStyle;
+  data_save: DataSaveSettings;
+  typography: TypographySettings;
 }
 
 export interface ConnectionTestResult {
@@ -330,12 +347,72 @@ export async function updateWritingStyle(input: WritingStyle): Promise<WritingSt
   });
 }
 
+/** Persist the auto-save and snapshot persistence options. */
+export async function updateDataSave(input: DataSaveSettings): Promise<DataSaveSettings> {
+  return requestJson<DataSaveSettings>("/settings/data_save", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
+/** Persist the reading font, line height, and eye-care theme. */
+export async function updateTypography(input: TypographySettings): Promise<TypographySettings> {
+  return requestJson<TypographySettings>("/settings/typography", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
+/** Export all settings groups as a single configuration document. */
+export async function exportSettings(): Promise<AppSettings> {
+  return requestJson<AppSettings>("/settings/export");
+}
+
+/** Import a configuration document; only the groups present are applied. */
+export async function importSettings(config: Partial<AppSettings>): Promise<AppSettings> {
+  return requestJson<AppSettings>("/settings/import", {
+    method: "POST",
+    body: JSON.stringify(config),
+  });
+}
+
 /** Test an LLM connection with a lightweight completion. */
 export async function testConnection(input: ConnectionSettings): Promise<ConnectionTestResult> {
   return requestJson<ConnectionTestResult>("/llm/test", {
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+/** Download a work export (JSON or Markdown) and trigger a browser save. */
+export async function downloadWorkExport(workId: number, format: "json" | "md"): Promise<void> {
+  const response = await fetch(`${API_BASE}/works/${workId}/export?format=${format}`);
+  if (!response.ok) {
+    const message = await response.text();
+    throw new ApiError(response.status, message || `导出失败（${response.status}）`);
+  }
+  const blob = await response.blob();
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
+  const filename = match ? decodeURIComponent(match[1]) : `work-${workId}.${format}`;
+  triggerDownload(blob, filename);
+}
+
+/** Save a Blob to the user's machine via a temporary anchor element. */
+export function triggerDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+/** Trigger a backend snapshot of a work to the configured snapshot path. */
+export async function snapshotWork(workId: number): Promise<{ snapshot_dir: string | null; chapters: number }> {
+  return requestJson(`/works/${workId}/snapshot`, { method: "POST" });
 }
 
 export interface EntityCategory {

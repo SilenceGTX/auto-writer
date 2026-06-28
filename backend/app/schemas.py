@@ -223,12 +223,41 @@ class WritingStyle(BaseModel):
     text: str = ""
 
 
+class DataSaveSettings(BaseModel):
+    """Auto-save and snapshot persistence options (``SYSTEM_SETTINGS`` §6)."""
+
+    input_debounce_seconds: int = Field(default=2, ge=1, le=10)
+    autosave_interval_seconds: int = Field(default=30, ge=10, le=120)
+    snapshot_path: str = "data/snapshots"
+    history_versions: int = Field(default=3, ge=0, le=10)
+
+
+class TypographySettings(BaseModel):
+    """Reading font, line height, and eye-care theme (``SYSTEM_SETTINGS`` §7)."""
+
+    font_family: str = ""
+    line_height: float = Field(default=1.8, ge=1.0, le=3.0)
+    reading_theme: str = Field(default="sepia", pattern="^(sepia|light|dark)$")
+
+
 class SettingsResponse(BaseModel):
     """All known settings groups returned to the client."""
 
     connection: ConnectionSettings
     preferences: Preferences
     writing_style: WritingStyle
+    data_save: DataSaveSettings
+    typography: TypographySettings
+
+
+class SettingsImport(BaseModel):
+    """A configuration import payload; each group is optional (partial import)."""
+
+    connection: ConnectionSettings | None = None
+    preferences: Preferences | None = None
+    writing_style: WritingStyle | None = None
+    data_save: DataSaveSettings | None = None
+    typography: TypographySettings | None = None
 
 
 class ConnectionTestResult(BaseModel):
