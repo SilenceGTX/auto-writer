@@ -1080,6 +1080,36 @@ textarea {
   white-space: nowrap;
 }
 
+.add-inspiration-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: auto;
+  padding: 6px 10px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: transparent;
+  color: #b45309;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.add-inspiration-btn:hover {
+  background: #fef3c7;
+  border-color: #f59e0b;
+}
+
+.app-root.dark .add-inspiration-btn {
+  border-color: #26334d;
+  color: #fbbf24;
+}
+
+.app-root.dark .add-inspiration-btn:hover {
+  background: #3a2e10;
+  border-color: #b45309;
+}
+
 @media (max-width: 1000px) {
   .app-root {
     grid-template-columns: 220px minmax(0, 1fr);

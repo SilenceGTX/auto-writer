@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
-from app.models import Chapter, Work, WorkStage
+from app.models import Chapter, EntityCategory, Work, WorkStage, WorldEntity
 from app.schemas import (
     ChapterCreate,
     ChapterRead,
@@ -38,6 +38,11 @@ from app.services.prompts import (
     build_stage_generation_prompt,
     build_system_prompt,
     build_work_info_block,
+)
+from app.services.references import (
+    ReferencedEntry,
+    build_reference_block,
+    find_referenced_names,
 )
 from app.services.settings_service import get_all_settings
 
@@ -153,6 +158,39 @@ def _work_info(work: Work) -> str:
     )
 
 
+async def _reference_block(db: AsyncSession, work_id: int, texts: list[str]) -> str:
+    """Build the ``【引用设定】`` block for entries ``@``-referenced in the texts.
+
+    Loads the work's entries (with their category), resolves which are referenced
+    via ``@名称`` in the given texts, and assembles the prompt block (G4).
+    """
+    result = await db.execute(
+        select(WorldEntity, EntityCategory.name)
+        .join(EntityCategory, WorldEntity.category_id == EntityCategory.id)
+        .where(WorldEntity.work_id == work_id)
+    )
+    rows = result.all()
+    if not rows:
+        return ""
+    referenced = set(find_referenced_names(texts, [entity.name for entity, _ in rows]))
+    entries = [
+        ReferencedEntry(
+            name=entity.name,
+            category=category_name,
+            description=entity.description,
+            properties=json.loads(entity.properties or "[]"),
+        )
+        for entity, category_name in rows
+        if entity.name in referenced
+    ]
+    return build_reference_block(entries)
+
+
+def _with_references(user_prompt: str, reference_block: str) -> str:
+    """Prepend the reference block to a user prompt when references exist."""
+    return f"{reference_block}\n\n{user_prompt}" if reference_block else user_prompt
+
+
 @router.get("/works/{work_id}/outline", response_model=OutlineRead)
 async def get_outline(work_id: int, db: AsyncSession = Depends(get_db)) -> OutlineRead:
     """Return the full outline (stages + chapters) for a work."""
@@ -171,8 +209,12 @@ async def generate_stages(work_id: int, db: AsyncSession = Depends(get_db)) -> O
 
     try:
         connection, system_prompt, params = await _llm_context(db, work)
-        user_prompt = build_stage_generation_prompt(
-            _work_info(work), stage_names, work.planned_chapter_count
+        reference_block = await _reference_block(db, work_id, [work.summary or ""])
+        user_prompt = _with_references(
+            build_stage_generation_prompt(
+                _work_info(work), stage_names, work.planned_chapter_count
+            ),
+            reference_block,
         )
         messages = [
             {"role": "system", "content": system_prompt},
@@ -237,8 +279,13 @@ async def generate_chapter_outlines(
 
     try:
         connection, system_prompt, params = await _llm_context(db, work)
-        user_prompt = build_chapter_generation_prompt(
-            _work_info(work), stage_payload, [c.chapter_number for c in chapters]
+        texts = [work.summary or ""] + [stage.overview or "" for stage in stages]
+        reference_block = await _reference_block(db, work_id, texts)
+        user_prompt = _with_references(
+            build_chapter_generation_prompt(
+                _work_info(work), stage_payload, [c.chapter_number for c in chapters]
+            ),
+            reference_block,
         )
         messages = [
             {"role": "system", "content": system_prompt},

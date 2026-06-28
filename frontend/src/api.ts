@@ -457,3 +457,56 @@ export async function updateEntity(
 export async function deleteEntity(entityId: number): Promise<void> {
   await requestJson<void>(`/entities/${entityId}`, { method: "DELETE" });
 }
+
+export type InspirationSourcePage = "outline" | "writing" | "review";
+
+/** Source references for an inspiration, used later for "来源跳转". */
+export interface InspirationSource {
+  source_page?: InspirationSourcePage;
+  work_id?: number | null;
+  chapter_id?: number | null;
+}
+
+export interface Inspiration {
+  id: number;
+  content: string;
+  source_page: string | null;
+  work_id: number | null;
+  chapter_id: number | null;
+  created_at: string;
+}
+
+export interface CreateInspirationInput extends InspirationSource {
+  content: string;
+}
+
+export interface InspirationListParams {
+  search?: string;
+  sourcePage?: InspirationSourcePage;
+  limit?: number;
+}
+
+/** Save a snippet as an inspiration with optional source references (G3). */
+export async function createInspiration(input: CreateInspirationInput): Promise<Inspiration> {
+  return requestJson<Inspiration>("/inspirations", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+/** List inspirations (newest first) with optional search and source filter. */
+export async function listInspirations(
+  params: InspirationListParams = {},
+): Promise<Inspiration[]> {
+  const query = new URLSearchParams();
+  if (params.search) query.set("search", params.search);
+  if (params.sourcePage) query.set("source_page", params.sourcePage);
+  if (params.limit) query.set("limit", String(params.limit));
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  return requestJson<Inspiration[]>(`/inspirations${suffix}`);
+}
+
+/** Delete an inspiration by id. */
+export async function deleteInspiration(inspirationId: number): Promise<void> {
+  await requestJson<void>(`/inspirations/${inspirationId}`, { method: "DELETE" });
+}

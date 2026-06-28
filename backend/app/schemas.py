@@ -310,3 +310,25 @@ class WorldEntityListResponse(BaseModel):
 
     items: list[WorldEntityRead]
     total: int
+
+
+class InspirationCreate(BaseModel):
+    """Request body for adding an inspiration snippet (G3 加入灵感)."""
+
+    content: str = Field(min_length=1)
+    source_page: str | None = Field(default=None, max_length=20)
+    work_id: int | None = None
+    chapter_id: int | None = None
+
+
+class InspirationRead(BaseModel):
+    """Serialized inspiration snippet with its source references."""
+
+    id: int
+    content: str
+    source_page: str | None
+    work_id: int | None
+    chapter_id: int | None
+    created_at: str
+
+    model_config = ConfigDict(from_attributes=True)

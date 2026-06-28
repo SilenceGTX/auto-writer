@@ -9,7 +9,16 @@ from loguru import logger
 
 from app.core import settings, setup_logging
 from app.database import init_db
-from app.routers import health, llm, outline, series, structures, works, worldbuilding
+from app.routers import (
+    health,
+    inspirations,
+    llm,
+    outline,
+    series,
+    structures,
+    works,
+    worldbuilding,
+)
 from app.routers import settings as settings_router
 
 
@@ -38,6 +47,7 @@ def create_app() -> FastAPI:
     application.include_router(works.router, prefix="/api")
     application.include_router(outline.router, prefix="/api")
     application.include_router(worldbuilding.router, prefix="/api")
+    application.include_router(inspirations.router, prefix="/api")
     application.include_router(settings_router.router, prefix="/api")
     application.include_router(llm.router, prefix="/api")
     return application

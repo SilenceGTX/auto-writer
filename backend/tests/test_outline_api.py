@@ -242,6 +242,57 @@ async def _no_structure_id(client) -> int:
     return next(s["id"] for s in structures if s["name"] == "无")
 
 
+async def test_generate_stages_injects_referenced_entities(client, monkeypatch):
+    """`@`-referenced setting entries are injected into the generation prompt."""
+    structure_id = await _three_act_structure_id(client)
+    await client.put(
+        "/api/settings/connection",
+        json={"url": "https://stub/chat", "api_token": "t", "model": "m"},
+    )
+    work = (
+        await client.post(
+            "/api/works",
+            json={
+                "title": "魔法学院",
+                "structure_id": structure_id,
+                "summary": "故事围绕 @魔法石 展开",
+            },
+        )
+    ).json()
+
+    categories = (await client.get(f"/api/works/{work['id']}/categories")).json()
+    await client.post(
+        f"/api/works/{work['id']}/entities",
+        json={
+            "category_id": categories[0]["id"],
+            "name": "魔法石",
+            "description": "蕴含远古力量的宝石",
+            "properties": [{"name": "颜色", "value": "赤红"}],
+        },
+    )
+
+    captured: dict = {}
+
+    async def capturing_completion(connection, messages, params=None):
+        captured["messages"] = messages
+        return json.dumps(
+            [{"name": "铺垫", "chapter_count": 1, "overview": "x"}], ensure_ascii=False
+        )
+
+    import app.routers.outline as outline_router
+
+    monkeypatch.setattr(outline_router, "chat_completion", capturing_completion)
+
+    response = await client.post(f"/api/works/{work['id']}/outline/stages:generate")
+    assert response.status_code == 200
+
+    user_prompt = captured["messages"][-1]["content"]
+    assert "【引用设定】" in user_prompt
+    assert "魔法石" in user_prompt
+    assert "蕴含远古力量的宝石" in user_prompt
+    assert "颜色=赤红" in user_prompt
+
+
 def test_extract_json_raises_on_garbage():
     """A response with no JSON raises a ValueError."""
     with pytest.raises(ValueError):

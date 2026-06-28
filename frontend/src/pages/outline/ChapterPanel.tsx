@@ -2,6 +2,7 @@
 import { useState, type ReactElement } from "react";
 import { Button, Input, Select, SelectItem } from "@heroui/react";
 import { updateChapter, type Chapter, type WorkStage } from "../../api";
+import { AddInspirationButton } from "../../components/AddInspirationButton";
 import { MentionTextarea } from "../../components/MentionTextarea";
 import { useToast } from "../../components/Toast";
 
@@ -98,6 +99,10 @@ export function ChapterPanel(props: ChapterPanelProps): ReactElement {
         placeholder="本章大致写什么...（输入 @ 可引用设定条目）"
       />
       <div className="form-actions">
+        <AddInspirationButton
+          source={{ source_page: "outline", work_id: chapter.work_id, chapter_id: chapter.id }}
+          getFallbackText={() => summary}
+        />
         <Button variant="light" onPress={props.onCancel}>
           取消
         </Button>

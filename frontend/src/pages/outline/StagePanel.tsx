@@ -2,6 +2,7 @@
 import { useState, type ReactElement } from "react";
 import { Button } from "@heroui/react";
 import { updateStage, type WorkStage } from "../../api";
+import { AddInspirationButton } from "../../components/AddInspirationButton";
 import { MentionTextarea } from "../../components/MentionTextarea";
 import { useToast } from "../../components/Toast";
 
@@ -58,6 +59,10 @@ export function StagePanel(props: StagePanelProps): ReactElement {
         placeholder="该阶段的关键剧情走向...（输入 @ 可引用设定条目）"
       />
       <div className="form-actions">
+        <AddInspirationButton
+          source={{ source_page: "outline", work_id: stage.work_id }}
+          getFallbackText={() => overview}
+        />
         <Button variant="light" onPress={props.onCancel}>
           取消
         </Button>

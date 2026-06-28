@@ -2,8 +2,9 @@
  *
  * Implements the user-facing half of ``GENERAL_UI_DESIGN.md`` G4 / outline §4:
  * typing `@` opens a live search of the work's setting entries; selecting one
- * inserts an `@名称` reference marker at the caret. Prompt-side injection of the
- * referenced content is handled separately (Phase 5).
+ * inserts an `@名称` reference marker at the caret. The backend resolves these
+ * markers and injects the referenced entries' content into the AI prompt (see
+ * ``backend/app/services/references.py``).
  */
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import { Textarea } from "@heroui/react";
