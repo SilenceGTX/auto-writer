@@ -458,6 +458,94 @@ export async function deleteEntity(entityId: number): Promise<void> {
   await requestJson<void>(`/entities/${entityId}`, { method: "DELETE" });
 }
 
+export interface ChapterContent {
+  id: number;
+  work_id: number;
+  chapter_number: number;
+  title: string | null;
+  summary: string | null;
+  content: string | null;
+  word_count: number;
+  status: string;
+}
+
+export interface Recap {
+  has_previous: boolean;
+  previous_chapter_number: number | null;
+  recap: string | null;
+  cached: boolean;
+  stale: boolean;
+}
+
+export interface RewriteResult {
+  original: string;
+  rewritten: string;
+}
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/** Load a chapter's full payload (including body text) for the editor. */
+export async function getChapter(chapterId: number): Promise<ChapterContent> {
+  return requestJson<ChapterContent>(`/chapters/${chapterId}`);
+}
+
+/** Save a chapter's body text (recomputes word counts server-side). */
+export async function saveChapterContent(
+  chapterId: number,
+  content: string,
+): Promise<ChapterContent> {
+  return requestJson<ChapterContent>(`/chapters/${chapterId}/content`, {
+    method: "PUT",
+    body: JSON.stringify({ content }),
+  });
+}
+
+/** Generate the chapter body from its outline (optionally including the recap). */
+export async function generateChapterDraft(
+  chapterId: number,
+  includeRecap = false,
+): Promise<ChapterContent> {
+  return requestJson<ChapterContent>(`/chapters/${chapterId}/draft:generate`, {
+    method: "POST",
+    body: JSON.stringify({ include_recap: includeRecap }),
+  });
+}
+
+/** Look up the previous chapter's cached recap and whether it is stale. */
+export async function getRecap(chapterId: number): Promise<Recap> {
+  return requestJson<Recap>(`/chapters/${chapterId}/recap`);
+}
+
+/** Generate (and cache) the previous chapter's recap. */
+export async function generateRecap(chapterId: number): Promise<Recap> {
+  return requestJson<Recap>(`/chapters/${chapterId}/recap:generate`, { method: "POST" });
+}
+
+/** Rewrite a selected passage; returns original + new for a diff preview. */
+export async function rewritePassage(
+  chapterId: number,
+  input: { selection: string; instruction?: string; context?: string },
+): Promise<RewriteResult> {
+  return requestJson<RewriteResult>(`/chapters/${chapterId}/rewrite`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+/** Send the writing-assistant chat conversation and get the assistant reply. */
+export async function sendWritingChat(
+  workId: number,
+  input: { messages: ChatMessage[]; chapter_id?: number | null; quoted?: string | null },
+): Promise<{ reply: string }> {
+  return requestJson<{ reply: string }>(`/works/${workId}/chat`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 export type InspirationSourcePage = "outline" | "writing" | "review";
 
 /** Source references for an inspiration, used later for "来源跳转". */
@@ -467,6 +555,12 @@ export interface InspirationSource {
   chapter_id?: number | null;
 }
 
+export interface Tag {
+  id: number;
+  name: string;
+  color: string | null;
+}
+
 export interface Inspiration {
   id: number;
   content: string;
@@ -474,6 +568,7 @@ export interface Inspiration {
   work_id: number | null;
   chapter_id: number | null;
   created_at: string;
+  tags: Tag[];
 }
 
 export interface CreateInspirationInput extends InspirationSource {
@@ -483,6 +578,7 @@ export interface CreateInspirationInput extends InspirationSource {
 export interface InspirationListParams {
   search?: string;
   sourcePage?: InspirationSourcePage;
+  tagId?: number;
   limit?: number;
 }
 
@@ -494,13 +590,14 @@ export async function createInspiration(input: CreateInspirationInput): Promise<
   });
 }
 
-/** List inspirations (newest first) with optional search and source filter. */
+/** List inspirations (newest first) with optional search, source, and tag filters. */
 export async function listInspirations(
   params: InspirationListParams = {},
 ): Promise<Inspiration[]> {
   const query = new URLSearchParams();
   if (params.search) query.set("search", params.search);
   if (params.sourcePage) query.set("source_page", params.sourcePage);
+  if (params.tagId != null) query.set("tag_id", String(params.tagId));
   if (params.limit) query.set("limit", String(params.limit));
   const suffix = query.toString() ? `?${query.toString()}` : "";
   return requestJson<Inspiration[]>(`/inspirations${suffix}`);
@@ -509,4 +606,44 @@ export async function listInspirations(
 /** Delete an inspiration by id. */
 export async function deleteInspiration(inspirationId: number): Promise<void> {
   await requestJson<void>(`/inspirations/${inspirationId}`, { method: "DELETE" });
+}
+
+/** Replace the full set of tags attached to an inspiration. */
+export async function setInspirationTags(
+  inspirationId: number,
+  tagIds: number[],
+): Promise<Inspiration> {
+  return requestJson<Inspiration>(`/inspirations/${inspirationId}/tags`, {
+    method: "PUT",
+    body: JSON.stringify({ tag_ids: tagIds }),
+  });
+}
+
+/** List all reusable tags (alphabetical by name). */
+export async function listTags(): Promise<Tag[]> {
+  return requestJson<Tag[]>("/tags");
+}
+
+/** Create a tag (or return the existing one with the same name). */
+export async function createTag(name: string, color?: string | null): Promise<Tag> {
+  return requestJson<Tag>("/tags", {
+    method: "POST",
+    body: JSON.stringify({ name, color }),
+  });
+}
+
+/** Delete a tag (removing it from all inspirations). */
+export async function deleteTag(tagId: number): Promise<void> {
+  await requestJson<void>(`/tags/${tagId}`, { method: "DELETE" });
+}
+
+/** Send the review-assistant chat conversation and get the assistant reply. */
+export async function sendReviewChat(
+  workId: number,
+  input: { messages: ChatMessage[]; chapter_id?: number | null; quoted?: string | null },
+): Promise<{ reply: string }> {
+  return requestJson<{ reply: string }>(`/works/${workId}/review/chat`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }

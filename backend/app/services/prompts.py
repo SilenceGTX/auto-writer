@@ -67,6 +67,92 @@ def build_stage_generation_prompt(
     )
 
 
+def build_draft_prompt(
+    work_info: str,
+    *,
+    chapter_number: int,
+    title: str | None,
+    summary: str | None,
+    recap: str | None = None,
+) -> str:
+    """Build the user prompt asking the LLM to draft a chapter's body text."""
+    lines = [work_info, ""]
+    if recap and recap.strip():
+        lines.append(f"【前情提要】\n{recap.strip()}")
+        lines.append("")
+    heading = f"第{chapter_number}章" + (f"《{title}》" if title else "")
+    lines.append(f"请为「{heading}」撰写正文。")
+    summary_text = summary.strip() if summary and summary.strip() else "（暂无，请合理发挥）"
+    lines.append(f"本章内容概述：{summary_text}")
+    lines.append(
+        "要求：直接输出本章正文文本，不要输出标题、解释或 Markdown 代码块；"
+        "保持与作品设定、前情提要一致，行文流畅。"
+    )
+    return "\n".join(lines)
+
+
+def build_recap_prompt(*, chapter_number: int, title: str | None, content: str) -> str:
+    """Build the user prompt asking the LLM to summarize a chapter's content."""
+    heading = f"第{chapter_number}章" + (f"《{title}》" if title else "")
+    return (
+        f"请用简洁的语言总结「{heading}」的剧情，作为后续章节写作的前情提要。"
+        "突出关键事件、人物动向与悬念，控制在 200 字以内，直接输出总结文本。\n\n"
+        f"【本章正文】\n{content.strip()}"
+    )
+
+
+def build_rewrite_prompt(*, selection: str, instruction: str | None, context: str | None) -> str:
+    """Build the user prompt asking the LLM to rewrite a selected passage."""
+    lines = []
+    if context and context.strip():
+        lines.append(f"【上下文（仅供参考，不要改写）】\n{context.strip()}")
+        lines.append("")
+    requirement = (
+        instruction.strip()
+        if instruction and instruction.strip()
+        else "在保持原意的前提下润色，使表达更生动流畅"
+    )
+    lines.append(f"请按照以下要求重写下面这段文字：{requirement}")
+    lines.append("仅输出重写后的文字，不要包含解释、标题或引号。")
+    lines.append("")
+    lines.append(f"【待重写文字】\n{selection.strip()}")
+    return "\n".join(lines)
+
+
+def build_chat_context_block(
+    *,
+    work_info: str,
+    chapter_number: int | None = None,
+    chapter_title: str | None = None,
+    chapter_summary: str | None = None,
+    quoted: str | None = None,
+) -> str:
+    """Build a context preface for the writing assistant chat (current chapter)."""
+    lines = [work_info]
+    if chapter_number is not None:
+        heading = f"第{chapter_number}章" + (f"《{chapter_title}》" if chapter_title else "")
+        lines.append(f"\n当前章节：{heading}")
+        if chapter_summary and chapter_summary.strip():
+            lines.append(f"本章概述：{chapter_summary.strip()}")
+    if quoted and quoted.strip():
+        lines.append(f"\n用户引用的正文片段：\n{quoted.strip()}")
+    return "\n".join(lines)
+
+
+def build_review_instruction() -> str:
+    """Build the system instruction framing the assistant as a manuscript editor.
+
+    Used by the review assistant (``REVIEW_PAGE_DESIGN.md`` §3) so the model
+    checks the manuscript for continuity, character/setting consistency, plot
+    holes and wording issues, then gives concrete, actionable suggestions.
+    """
+    return (
+        "请以资深小说编辑的视角审阅用户提供的正文与引用片段："
+        "检查前后情节是否连贯、人物与设定是否自洽、是否存在逻辑硬伤、节奏问题或表达瑕疵，"
+        "并给出具体、可操作的修改建议。回答需条理清晰、有针对性，必要时引用原文定位问题。"
+    )
+
+
 def build_chapter_generation_prompt(
     work_info: str, stages: list[dict[str, object]], chapter_numbers: list[int]
 ) -> str:

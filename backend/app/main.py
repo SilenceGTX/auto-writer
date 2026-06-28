@@ -14,10 +14,12 @@ from app.routers import (
     inspirations,
     llm,
     outline,
+    review,
     series,
     structures,
     works,
     worldbuilding,
+    writing,
 )
 from app.routers import settings as settings_router
 
@@ -46,6 +48,8 @@ def create_app() -> FastAPI:
     application.include_router(structures.router, prefix="/api")
     application.include_router(works.router, prefix="/api")
     application.include_router(outline.router, prefix="/api")
+    application.include_router(writing.router, prefix="/api")
+    application.include_router(review.router, prefix="/api")
     application.include_router(worldbuilding.router, prefix="/api")
     application.include_router(inspirations.router, prefix="/api")
     application.include_router(settings_router.router, prefix="/api")

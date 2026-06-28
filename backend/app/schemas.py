@@ -312,6 +312,102 @@ class WorldEntityListResponse(BaseModel):
     total: int
 
 
+class ChapterContentRead(BaseModel):
+    """Full chapter payload for the writing editor (includes body text)."""
+
+    id: int
+    work_id: int
+    chapter_number: int
+    title: str | None
+    summary: str | None
+    content: str | None
+    word_count: int
+    status: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ChapterContentUpdate(BaseModel):
+    """Request body for saving a chapter's body text."""
+
+    content: str = ""
+
+
+class DraftGenerateRequest(BaseModel):
+    """Options for generating a chapter draft (optionally include the recap)."""
+
+    include_recap: bool = False
+
+
+class RecapRead(BaseModel):
+    """Result of a 前情提要 lookup/generation for the previous chapter."""
+
+    has_previous: bool
+    previous_chapter_number: int | None = None
+    recap: str | None = None
+    cached: bool = False
+    stale: bool = False
+
+
+class RewriteRequest(BaseModel):
+    """Request body for a local rewrite of a selected passage."""
+
+    selection: str = Field(min_length=1)
+    instruction: str | None = None
+    context: str | None = None
+
+
+class RewriteResult(BaseModel):
+    """Original vs. rewritten passage for the diff preview (no DB change)."""
+
+    original: str
+    rewritten: str
+
+
+class ChatMessage(BaseModel):
+    """One message in the writing-assistant conversation."""
+
+    role: str = Field(pattern="^(user|assistant)$")
+    content: str = Field(min_length=1)
+
+
+class ChatRequest(BaseModel):
+    """Request body for the writing-assistant chat."""
+
+    messages: list[ChatMessage] = Field(min_length=1)
+    chapter_id: int | None = None
+    quoted: str | None = None
+
+
+class ChatReply(BaseModel):
+    """Assistant reply for the writing-assistant chat."""
+
+    reply: str
+
+
+class TagRead(BaseModel):
+    """Serialized tag (id, name, optional color)."""
+
+    id: int
+    name: str
+    color: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TagCreate(BaseModel):
+    """Request body for creating a tag (idempotent on name)."""
+
+    name: str = Field(min_length=1, max_length=80)
+    color: str | None = Field(default=None, max_length=20)
+
+
+class InspirationTagsUpdate(BaseModel):
+    """Replace the full set of tags attached to an inspiration."""
+
+    tag_ids: list[int] = Field(default_factory=list)
+
+
 class InspirationCreate(BaseModel):
     """Request body for adding an inspiration snippet (G3 加入灵感)."""
 
@@ -322,7 +418,7 @@ class InspirationCreate(BaseModel):
 
 
 class InspirationRead(BaseModel):
-    """Serialized inspiration snippet with its source references."""
+    """Serialized inspiration snippet with its source references and tags."""
 
     id: int
     content: str
@@ -330,5 +426,6 @@ class InspirationRead(BaseModel):
     work_id: int | None
     chapter_id: int | None
     created_at: str
+    tags: list[TagRead] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)

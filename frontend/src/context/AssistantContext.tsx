@@ -21,6 +21,8 @@ interface AssistantContextValue {
   setPageOwnsPanel: (owns: boolean) => void;
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
+  focusMode: boolean;
+  setFocusMode: (focus: boolean) => void;
 }
 
 const AssistantContext = createContext<AssistantContextValue | null>(null);
@@ -30,10 +32,20 @@ export function AssistantProvider(props: { children: ReactNode }): ReactElement 
   const [slot, setSlot] = useState<HTMLDivElement | null>(null);
   const [pageOwnsPanel, setPageOwnsPanel] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
 
   const value = useMemo<AssistantContextValue>(
-    () => ({ slot, setSlot, pageOwnsPanel, setPageOwnsPanel, collapsed, setCollapsed }),
-    [slot, pageOwnsPanel, collapsed],
+    () => ({
+      slot,
+      setSlot,
+      pageOwnsPanel,
+      setPageOwnsPanel,
+      collapsed,
+      setCollapsed,
+      focusMode,
+      setFocusMode,
+    }),
+    [slot, pageOwnsPanel, collapsed, focusMode],
   );
 
   return <AssistantContext.Provider value={value}>{props.children}</AssistantContext.Provider>;

@@ -18,6 +18,12 @@ interface AppContextValue {
   toggleTheme: () => void;
   currentWorkId: number | null;
   setCurrentWorkId: (workId: number | null) => void;
+  /** Text queued for "一键回插" insertion into the writing editor (G3 闭环). */
+  pendingInsert: string | null;
+  setPendingInsert: (text: string | null) => void;
+  /** Text to highlight on the target page after a "来源跳转" jump, if still present. */
+  pendingHighlight: string | null;
+  setPendingHighlight: (text: string | null) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -41,6 +47,8 @@ function readInitialWorkId(): number | null {
 export function AppProvider(props: { children: ReactNode }): ReactElement {
   const [isDark, setIsDark] = useState<boolean>(readInitialTheme);
   const [currentWorkId, setCurrentWorkIdState] = useState<number | null>(readInitialWorkId);
+  const [pendingInsert, setPendingInsert] = useState<string | null>(null);
+  const [pendingHighlight, setPendingHighlight] = useState<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem(THEME_KEY, isDark ? "dark" : "light");
@@ -63,8 +71,17 @@ export function AppProvider(props: { children: ReactNode }): ReactElement {
   }, []);
 
   const value = useMemo<AppContextValue>(
-    () => ({ isDark, toggleTheme, currentWorkId, setCurrentWorkId }),
-    [isDark, toggleTheme, currentWorkId, setCurrentWorkId],
+    () => ({
+      isDark,
+      toggleTheme,
+      currentWorkId,
+      setCurrentWorkId,
+      pendingInsert,
+      setPendingInsert,
+      pendingHighlight,
+      setPendingHighlight,
+    }),
+    [isDark, toggleTheme, currentWorkId, setCurrentWorkId, pendingInsert, pendingHighlight],
   );
 
   return <AppContext.Provider value={value}>{props.children}</AppContext.Provider>;

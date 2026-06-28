@@ -7,7 +7,11 @@ assembles a ``【引用设定】`` prompt block so the referenced entries' conte
 sent to the LLM.
 """
 
+import json
 from dataclasses import dataclass
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @dataclass
@@ -71,3 +75,42 @@ def build_reference_block(entries: list[ReferencedEntry]) -> str:
         if prop_text:
             lines.append(f"  属性：{prop_text}")
     return "\n".join(lines)
+
+
+async def reference_block_for_texts(
+    db: AsyncSession, work_id: int, texts: list[str]
+) -> str:
+    """Resolve ``@``-referenced entries in the texts into a prompt block.
+
+    Loads the work's entries (with their category name), determines which are
+    referenced via ``@名称`` in the given texts, and assembles the
+    ``【引用设定】`` block. Shared by the outline and writing generation flows.
+    """
+    # Imported here to avoid a models -> services import cycle at module load.
+    from app.models import EntityCategory, WorldEntity
+
+    result = await db.execute(
+        select(WorldEntity, EntityCategory.name)
+        .join(EntityCategory, WorldEntity.category_id == EntityCategory.id)
+        .where(WorldEntity.work_id == work_id)
+    )
+    rows = result.all()
+    if not rows:
+        return ""
+    referenced = set(find_referenced_names(texts, [entity.name for entity, _ in rows]))
+    entries = [
+        ReferencedEntry(
+            name=entity.name,
+            category=category_name,
+            description=entity.description,
+            properties=json.loads(entity.properties or "[]"),
+        )
+        for entity, category_name in rows
+        if entity.name in referenced
+    ]
+    return build_reference_block(entries)
+
+
+def with_references(user_prompt: str, reference_block: str) -> str:
+    """Prepend the reference block to a user prompt when references exist."""
+    return f"{reference_block}\n\n{user_prompt}" if reference_block else user_prompt

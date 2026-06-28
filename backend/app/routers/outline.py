@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
-from app.models import Chapter, EntityCategory, Work, WorkStage, WorldEntity
+from app.models import Chapter, Work, WorkStage
 from app.schemas import (
     ChapterCreate,
     ChapterRead,
@@ -26,25 +26,14 @@ from app.schemas import (
     WorkStageRead,
     WorkStageUpdate,
 )
-from app.services.llm_service import (
-    LLMConfigError,
-    LLMConnection,
-    LLMRequestError,
-    chat_completion,
-)
+from app.services.generation_context import resolve_llm_context, work_info_block
+from app.services.llm_service import LLMConfigError, LLMRequestError, chat_completion
 from app.services.outline_service import allocate_chapter_counts, extract_json
 from app.services.prompts import (
     build_chapter_generation_prompt,
     build_stage_generation_prompt,
-    build_system_prompt,
-    build_work_info_block,
 )
-from app.services.references import (
-    ReferencedEntry,
-    build_reference_block,
-    find_referenced_names,
-)
-from app.services.settings_service import get_all_settings
+from app.services.references import reference_block_for_texts, with_references
 
 router = APIRouter(tags=["outline"])
 
@@ -134,63 +123,6 @@ async def _renumber_contiguous(db: AsyncSession, work_id: int) -> None:
         chapter.chapter_number = index
 
 
-async def _llm_context(db: AsyncSession, work: Work) -> tuple[LLMConnection, str, dict]:
-    """Resolve the connection, system prompt, and outline sampling params."""
-    settings = await get_all_settings(db)
-    connection = LLMConnection.from_settings(settings["connection"])
-    system_prompt = build_system_prompt(settings["writing_style"].get("text", ""))
-    params = settings["preferences"]["outline"]
-    return connection, system_prompt, params
-
-
-def _work_info(work: Work) -> str:
-    """Build the work-information prompt block for a work."""
-    structure = work.structure
-    stages = json.loads(structure.stages) if structure else []
-    return build_work_info_block(
-        title=work.title,
-        structure_name=structure.name if structure else None,
-        stages=stages,
-        structure_description=structure.description if structure else None,
-        planned_chapter_count=work.planned_chapter_count,
-        actual_chapter_count=work.actual_chapter_count,
-        summary=work.summary,
-    )
-
-
-async def _reference_block(db: AsyncSession, work_id: int, texts: list[str]) -> str:
-    """Build the ``【引用设定】`` block for entries ``@``-referenced in the texts.
-
-    Loads the work's entries (with their category), resolves which are referenced
-    via ``@名称`` in the given texts, and assembles the prompt block (G4).
-    """
-    result = await db.execute(
-        select(WorldEntity, EntityCategory.name)
-        .join(EntityCategory, WorldEntity.category_id == EntityCategory.id)
-        .where(WorldEntity.work_id == work_id)
-    )
-    rows = result.all()
-    if not rows:
-        return ""
-    referenced = set(find_referenced_names(texts, [entity.name for entity, _ in rows]))
-    entries = [
-        ReferencedEntry(
-            name=entity.name,
-            category=category_name,
-            description=entity.description,
-            properties=json.loads(entity.properties or "[]"),
-        )
-        for entity, category_name in rows
-        if entity.name in referenced
-    ]
-    return build_reference_block(entries)
-
-
-def _with_references(user_prompt: str, reference_block: str) -> str:
-    """Prepend the reference block to a user prompt when references exist."""
-    return f"{reference_block}\n\n{user_prompt}" if reference_block else user_prompt
-
-
 @router.get("/works/{work_id}/outline", response_model=OutlineRead)
 async def get_outline(work_id: int, db: AsyncSession = Depends(get_db)) -> OutlineRead:
     """Return the full outline (stages + chapters) for a work."""
@@ -208,11 +140,11 @@ async def generate_stages(work_id: int, db: AsyncSession = Depends(get_db)) -> O
         raise HTTPException(status_code=400, detail="请先为作品选择包含阶段的故事结构")
 
     try:
-        connection, system_prompt, params = await _llm_context(db, work)
-        reference_block = await _reference_block(db, work_id, [work.summary or ""])
-        user_prompt = _with_references(
+        connection, system_prompt, params = await resolve_llm_context(db, "outline")
+        reference_block = await reference_block_for_texts(db, work_id, [work.summary or ""])
+        user_prompt = with_references(
             build_stage_generation_prompt(
-                _work_info(work), stage_names, work.planned_chapter_count
+                work_info_block(work), stage_names, work.planned_chapter_count
             ),
             reference_block,
         )
@@ -278,12 +210,12 @@ async def generate_chapter_outlines(
         )
 
     try:
-        connection, system_prompt, params = await _llm_context(db, work)
+        connection, system_prompt, params = await resolve_llm_context(db, "outline")
         texts = [work.summary or ""] + [stage.overview or "" for stage in stages]
-        reference_block = await _reference_block(db, work_id, texts)
-        user_prompt = _with_references(
+        reference_block = await reference_block_for_texts(db, work_id, texts)
+        user_prompt = with_references(
             build_chapter_generation_prompt(
-                _work_info(work), stage_payload, [c.chapter_number for c in chapters]
+                work_info_block(work), stage_payload, [c.chapter_number for c in chapters]
             ),
             reference_block,
         )
