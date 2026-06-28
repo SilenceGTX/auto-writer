@@ -337,3 +337,123 @@ export async function testConnection(input: ConnectionSettings): Promise<Connect
     body: JSON.stringify(input),
   });
 }
+
+export interface EntityCategory {
+  id: number;
+  work_id: number;
+  name: string;
+  is_preset: number;
+  sort_order: number;
+  entity_count: number;
+}
+
+export interface EntityProperty {
+  name: string;
+  value: string;
+}
+
+export interface WorldEntity {
+  id: number;
+  work_id: number;
+  category_id: number;
+  name: string;
+  description: string | null;
+  properties: EntityProperty[];
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EntityListParams {
+  categoryId?: number | null;
+  search?: string;
+  sortBy?: string;
+  order?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
+}
+
+export interface WorldEntityListResponse {
+  items: WorldEntity[];
+  total: number;
+}
+
+export interface CreateEntityInput {
+  category_id: number;
+  name: string;
+  description?: string | null;
+  properties?: EntityProperty[];
+}
+
+export interface UpdateEntityInput {
+  category_id?: number;
+  name?: string;
+  description?: string | null;
+  properties?: EntityProperty[];
+}
+
+/** List a work's worldbuilding categories with entry counts. */
+export async function listCategories(workId: number): Promise<EntityCategory[]> {
+  return requestJson<EntityCategory[]>(`/works/${workId}/categories`);
+}
+
+/** Create a custom worldbuilding category for a work. */
+export async function createCategory(workId: number, name: string): Promise<EntityCategory> {
+  return requestJson<EntityCategory>(`/works/${workId}/categories`, {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+}
+
+/** Delete a custom category (and cascade its entries). */
+export async function deleteCategory(categoryId: number): Promise<void> {
+  await requestJson<void>(`/categories/${categoryId}`, { method: "DELETE" });
+}
+
+/** List distinct property names for a category, most frequent first. */
+export async function listPropertyNames(categoryId: number): Promise<string[]> {
+  return requestJson<string[]>(`/categories/${categoryId}/property-names`);
+}
+
+/** List a work's entries with optional category filter, search, and paging. */
+export async function listEntities(
+  workId: number,
+  params: EntityListParams = {},
+): Promise<WorldEntityListResponse> {
+  const query = new URLSearchParams();
+  if (params.categoryId != null) query.set("category_id", String(params.categoryId));
+  if (params.search) query.set("search", params.search);
+  if (params.sortBy) query.set("sort_by", params.sortBy);
+  if (params.order) query.set("order", params.order);
+  if (params.page) query.set("page", String(params.page));
+  if (params.pageSize) query.set("page_size", String(params.pageSize));
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  return requestJson<WorldEntityListResponse>(`/works/${workId}/entities${suffix}`);
+}
+
+/** Create a worldbuilding entry. */
+export async function createEntity(
+  workId: number,
+  input: CreateEntityInput,
+): Promise<WorldEntity> {
+  return requestJson<WorldEntity>(`/works/${workId}/entities`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+/** Partially update a worldbuilding entry. */
+export async function updateEntity(
+  entityId: number,
+  input: UpdateEntityInput,
+): Promise<WorldEntity> {
+  return requestJson<WorldEntity>(`/entities/${entityId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+/** Delete a worldbuilding entry by id. */
+export async function deleteEntity(entityId: number): Promise<void> {
+  await requestJson<void>(`/entities/${entityId}`, { method: "DELETE" });
+}

@@ -1,7 +1,8 @@
 /** Assistant-panel editor for a selected chapter (``OUTLINE_PAGE_DESIGN.md`` §3.2). */
 import { useState, type ReactElement } from "react";
-import { Button, Input, Select, SelectItem, Textarea } from "@heroui/react";
+import { Button, Input, Select, SelectItem } from "@heroui/react";
 import { updateChapter, type Chapter, type WorkStage } from "../../api";
+import { MentionTextarea } from "../../components/MentionTextarea";
 import { useToast } from "../../components/Toast";
 
 const CHAPTER_STATUSES = ["草稿", "已完成"];
@@ -88,12 +89,13 @@ export function ChapterPanel(props: ChapterPanelProps): ReactElement {
           <SelectItem key={value}>{value}</SelectItem>
         ))}
       </Select>
-      <Textarea
+      <MentionTextarea
+        workId={chapter.work_id}
         label="章节概述"
         minRows={6}
         value={summary}
         onValueChange={setSummary}
-        placeholder="本章大致写什么..."
+        placeholder="本章大致写什么...（输入 @ 可引用设定条目）"
       />
       <div className="form-actions">
         <Button variant="light" onPress={props.onCancel}>

@@ -5,16 +5,12 @@ import { AssistantPanel } from "./components/AssistantPanel";
 import { Sidebar } from "./components/Sidebar";
 import { useApp } from "./context/AppContext";
 import { useAssistant } from "./context/AssistantContext";
+import { ConceptPage } from "./pages/ConceptPage";
 import { OutlinePage } from "./pages/OutlinePage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { WorksPage } from "./pages/WorksPage";
 
 const placeholderPages: Record<string, { title: string; summary: string; steps: string[] }> = {
-  worldbuilding: {
-    title: "设定",
-    summary: "维护角色、地点、物品和概念，并在写作时引用它们。",
-    steps: ["角色", "地点", "物品", "概念", "@ 引用"],
-  },
   writing: {
     title: "写作",
     summary: "围绕章节草稿、局部重写和上下文摘要组织正文创作。",
@@ -59,6 +55,7 @@ function App(): ReactElement {
       <Route element={<Layout />}>
         <Route index element={<Navigate to="/works" replace />} />
         <Route path="/works" element={<WorksPage />} />
+        <Route path="/worldbuilding" element={<ConceptPage />} />
         <Route path="/outline" element={<OutlinePage />} />
         {Object.entries(placeholderPages).map(([path, content]) => (
           <Route

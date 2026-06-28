@@ -1,7 +1,8 @@
 /** Assistant-panel editor for a selected stage (``OUTLINE_PAGE_DESIGN.md`` §3.1). */
 import { useState, type ReactElement } from "react";
-import { Button, Textarea } from "@heroui/react";
+import { Button } from "@heroui/react";
 import { updateStage, type WorkStage } from "../../api";
+import { MentionTextarea } from "../../components/MentionTextarea";
 import { useToast } from "../../components/Toast";
 
 interface StagePanelProps {
@@ -48,12 +49,13 @@ export function StagePanel(props: StagePanelProps): ReactElement {
           <strong>{ratio}%</strong>
         </div>
       </div>
-      <Textarea
+      <MentionTextarea
+        workId={stage.work_id}
         label="阶段总纲"
         minRows={8}
         value={overview}
         onValueChange={setOverview}
-        placeholder="该阶段的关键剧情走向..."
+        placeholder="该阶段的关键剧情走向...（输入 @ 可引用设定条目）"
       />
       <div className="form-actions">
         <Button variant="light" onPress={props.onCancel}>

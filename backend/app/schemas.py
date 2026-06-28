@@ -237,3 +237,76 @@ class ConnectionTestResult(BaseModel):
     ok: bool
     message: str
     sample: str | None = None
+
+
+class EntityCategoryCreate(BaseModel):
+    """Request body for creating a custom worldbuilding category."""
+
+    name: str = Field(min_length=1, max_length=120)
+
+
+class EntityCategoryRead(BaseModel):
+    """Serialized worldbuilding category with its entry count."""
+
+    id: int
+    work_id: int
+    name: str
+    is_preset: int
+    sort_order: int
+    entity_count: int = 0
+
+
+class EntityProperty(BaseModel):
+    """A single custom key-value property on a worldbuilding entry."""
+
+    name: str = Field(min_length=1, max_length=120)
+    value: str = ""
+
+
+class WorldEntityCreate(BaseModel):
+    """Request body for creating a worldbuilding entry."""
+
+    category_id: int
+    name: str = Field(min_length=1, max_length=200)
+    description: str | None = None
+    properties: list[EntityProperty] = Field(default_factory=list)
+
+
+class WorldEntityUpdate(BaseModel):
+    """Partial update for a worldbuilding entry (only set fields are applied)."""
+
+    category_id: int | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = None
+    properties: list[EntityProperty] | None = None
+
+
+class WorldEntityRead(BaseModel):
+    """Serialized worldbuilding entry with its properties parsed from JSON."""
+
+    id: int
+    work_id: int
+    category_id: int
+    name: str
+    description: str | None
+    properties: list[EntityProperty]
+    sort_order: int
+    created_at: str
+    updated_at: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("properties", mode="before")
+    @classmethod
+    def parse_properties(cls, value: str | list) -> list:
+        """Parse the properties column, which is stored as a JSON text array."""
+        if isinstance(value, str):
+            return list(json.loads(value or "[]"))
+        return value
+
+
+class WorldEntityListResponse(BaseModel):
+    """Paginated list of worldbuilding entries for the current filter."""
+
+    items: list[WorldEntityRead]
+    total: int
