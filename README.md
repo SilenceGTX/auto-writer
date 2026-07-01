@@ -1,5 +1,7 @@
 # Auto-Writer
 
+[![CI](https://github.com/SilenceGTX/auto-writer/actions/workflows/ci.yml/badge.svg)](https://github.com/SilenceGTX/auto-writer/actions/workflows/ci.yml)
+
 LLM 辅助小说写作 Web 应用：帮助作者管理作品、构建世界观、编排大纲、撰写正文并完成审阅，全程可由 AI 协作。面向**单用户、本地优先**场景，SQLite 始终是唯一数据真源。
 
 ## 功能概览
