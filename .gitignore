@@ -8,3 +8,5 @@
 /data/
 *.log
 .env
+designs/
+AGENTS.md
