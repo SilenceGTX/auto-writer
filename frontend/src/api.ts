@@ -604,7 +604,13 @@ export async function generateRecap(chapterId: number): Promise<Recap> {
 /** Rewrite a selected passage; returns original + new for a diff preview. */
 export async function rewritePassage(
   chapterId: number,
-  input: { selection: string; instruction?: string; context?: string },
+  input: {
+    selection: string;
+    instruction?: string;
+    context?: string;
+    preceding?: string;
+    following?: string;
+  },
 ): Promise<RewriteResult> {
   return requestJson<RewriteResult>(`/chapters/${chapterId}/rewrite`, {
     method: "POST",

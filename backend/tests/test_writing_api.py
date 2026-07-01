@@ -194,6 +194,35 @@ async def test_rewrite_returns_original_and_rewritten(client, monkeypatch):
     assert result == {"original": "原始文字", "rewritten": "重写后的文字"}
 
 
+async def test_rewrite_with_neighbors_injects_cohesion_context(client, monkeypatch):
+    """强化衔接 adds 上文/下文 blocks and a cohesion instruction to the prompt."""
+    _work, outline = await _setup_work_with_chapters(client, monkeypatch)
+    chapter_id = outline["chapters"][0]["id"]
+
+    captured: dict = {}
+
+    async def capturing(connection, messages, params=None):
+        captured["messages"] = messages
+        return "重写后的文字"
+
+    monkeypatch.setattr(writing_router, "chat_completion", capturing)
+
+    await client.post(
+        f"/api/chapters/{chapter_id}/rewrite",
+        json={
+            "selection": "原始文字",
+            "preceding": "前一段落。",
+            "following": "后一段落。",
+        },
+    )
+    prompt = captured["messages"][-1]["content"]
+    assert "【上文" in prompt
+    assert "前一段落。" in prompt
+    assert "【下文" in prompt
+    assert "后一段落。" in prompt
+    assert "衔接" in prompt
+
+
 async def test_chat_returns_reply(client, monkeypatch):
     """The writing-assistant chat returns the model's reply."""
     work, outline = await _setup_work_with_chapters(client, monkeypatch)

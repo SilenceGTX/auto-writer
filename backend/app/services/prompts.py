@@ -101,11 +101,30 @@ def build_recap_prompt(*, chapter_number: int, title: str | None, content: str) 
     )
 
 
-def build_rewrite_prompt(*, selection: str, instruction: str | None, context: str | None) -> str:
-    """Build the user prompt asking the LLM to rewrite a selected passage."""
+def build_rewrite_prompt(
+    *,
+    selection: str,
+    instruction: str | None,
+    context: str | None,
+    preceding: str | None = None,
+    following: str | None = None,
+) -> str:
+    """Build the user prompt asking the LLM to rewrite a selected passage.
+
+    When ``preceding`` / ``following`` (the surrounding paragraphs) are provided,
+    the model is asked to keep the rewrite cohesive with them while still only
+    returning the rewritten passage itself.
+    """
     lines = []
     if context and context.strip():
         lines.append(f"【上下文（仅供参考，不要改写）】\n{context.strip()}")
+        lines.append("")
+    has_neighbors = bool((preceding and preceding.strip()) or (following and following.strip()))
+    if preceding and preceding.strip():
+        lines.append(f"【上文（重写内容的前文，保持衔接，不要改写）】\n{preceding.strip()}")
+        lines.append("")
+    if following and following.strip():
+        lines.append(f"【下文（重写内容的后文，保持衔接，不要改写）】\n{following.strip()}")
         lines.append("")
     requirement = (
         instruction.strip()
@@ -113,7 +132,9 @@ def build_rewrite_prompt(*, selection: str, instruction: str | None, context: st
         else "在保持原意的前提下润色，使表达更生动流畅"
     )
     lines.append(f"请按照以下要求重写下面这段文字：{requirement}")
-    lines.append("仅输出重写后的文字，不要包含解释、标题或引号。")
+    if has_neighbors:
+        lines.append("并在重写段落的基础上，确保与上文、下文自然衔接、语气连贯。")
+    lines.append("仅输出重写后的文字，不要包含解释、标题、引号，也不要重复上文或下文的内容。")
     lines.append("")
     lines.append(f"【待重写文字】\n{selection.strip()}")
     return "\n".join(lines)

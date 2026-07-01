@@ -7,21 +7,28 @@
 import { useState, type ReactElement } from "react";
 import {
   Button,
+  Checkbox,
   Modal,
   ModalBody,
   ModalContent,
   ModalFooter,
   ModalHeader,
   Textarea,
+  Tooltip,
 } from "@heroui/react";
 import { rewritePassage } from "../../api";
 import { useToast } from "../../components/Toast";
+import { surroundingParagraphs } from "../../utils/paragraphs";
 
 interface RewriteDialogProps {
   isOpen: boolean;
   chapterId: number;
   selection: string;
   context?: string;
+  /** Full chapter body and the selection's offsets, for 强化衔接 context. */
+  content: string;
+  selectionStart: number;
+  selectionEnd: number;
   onApply: (rewritten: string) => void;
   onClose: () => void;
 }
@@ -30,16 +37,22 @@ interface RewriteDialogProps {
 export function RewriteDialog(props: RewriteDialogProps): ReactElement {
   const { notify } = useToast();
   const [instruction, setInstruction] = useState("");
+  const [strengthen, setStrengthen] = useState(false);
   const [rewritten, setRewritten] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function runRewrite(): Promise<void> {
     setLoading(true);
     try {
+      const neighbors = strengthen
+        ? surroundingParagraphs(props.content, props.selectionStart, props.selectionEnd)
+        : { preceding: "", following: "" };
       const result = await rewritePassage(props.chapterId, {
         selection: props.selection,
         instruction: instruction.trim() || undefined,
         context: props.context,
+        preceding: neighbors.preceding || undefined,
+        following: neighbors.following || undefined,
       });
       setRewritten(result.rewritten);
     } catch {
@@ -51,6 +64,7 @@ export function RewriteDialog(props: RewriteDialogProps): ReactElement {
 
   function handleClose(): void {
     setInstruction("");
+    setStrengthen(false);
     setRewritten(null);
     props.onClose();
   }
@@ -67,6 +81,11 @@ export function RewriteDialog(props: RewriteDialogProps): ReactElement {
             onValueChange={setInstruction}
             placeholder="例如：更紧张、精简对话、改为第一人称…"
           />
+          <Tooltip content="将选区前后各 2 个自然段作为上下文，让重写与前后文更连贯（仍只替换选区）">
+            <Checkbox size="sm" isSelected={strengthen} onValueChange={setStrengthen}>
+              强化衔接
+            </Checkbox>
+          </Tooltip>
           {rewritten !== null && (
             <div className="rewrite-diff">
               <div className="rewrite-pane">

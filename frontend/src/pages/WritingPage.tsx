@@ -307,6 +307,9 @@ export function WritingPage(): ReactElement {
           chapterId={selectedId}
           selection={rewrite.selection}
           context={selectedChapter?.summary ?? undefined}
+          content={content}
+          selectionStart={rewrite.start}
+          selectionEnd={rewrite.end}
           onApply={applyRewrite}
           onClose={() => setRewrite(null)}
         />

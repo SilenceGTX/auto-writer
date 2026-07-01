@@ -266,13 +266,23 @@ async def rewrite_passage(
     try:
         connection, system_prompt, params = await resolve_llm_context(db, "writing")
         reference_block = await reference_block_for_texts(
-            db, chapter.work_id, [payload.selection, payload.context or "", chapter.summary or ""]
+            db,
+            chapter.work_id,
+            [
+                payload.selection,
+                payload.context or "",
+                payload.preceding or "",
+                payload.following or "",
+                chapter.summary or "",
+            ],
         )
         user_prompt = with_references(
             build_rewrite_prompt(
                 selection=payload.selection,
                 instruction=payload.instruction,
                 context=payload.context,
+                preceding=payload.preceding,
+                following=payload.following,
             ),
             reference_block,
         )
