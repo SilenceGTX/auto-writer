@@ -1,43 +1,62 @@
 """FastAPI application entry point for the Auto-Writer backend."""
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from loguru import logger
 
-from app.core import settings
-from app.database import Base, engine
-from app.routers import chapters, llm, plot_items, scenes, series, stories, world
+from app.core import settings, setup_logging
+from app.database import init_db
+from app.routers import (
+    export,
+    health,
+    inspirations,
+    llm,
+    outline,
+    review,
+    series,
+    structures,
+    works,
+    worldbuilding,
+    writing,
+)
+from app.routers import settings as settings_router
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Create database tables on startup."""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Initialize application resources before serving requests."""
+    await init_db()
     yield
 
 
-app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
+def create_app() -> FastAPI:
+    """Create and configure the FastAPI application instance."""
+    setup_logging(settings.log_dir, settings.log_level)
+    logger.info("启动 {} 后端", settings.app_name)
+    application = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    application.include_router(health.router, prefix="/api")
+    application.include_router(series.router, prefix="/api")
+    application.include_router(structures.router, prefix="/api")
+    application.include_router(works.router, prefix="/api")
+    application.include_router(export.router, prefix="/api")
+    application.include_router(outline.router, prefix="/api")
+    application.include_router(writing.router, prefix="/api")
+    application.include_router(review.router, prefix="/api")
+    application.include_router(worldbuilding.router, prefix="/api")
+    application.include_router(inspirations.router, prefix="/api")
+    application.include_router(settings_router.router, prefix="/api")
+    application.include_router(llm.router, prefix="/api")
+    return application
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
-app.include_router(stories.router)
-app.include_router(series.router)
-app.include_router(chapters.router)
-app.include_router(scenes.router)
-app.include_router(plot_items.router)
-app.include_router(world.router)
-app.include_router(llm.router)
-
-
-@app.get("/health")
-async def health():
-    """Health check endpoint."""
-    return {"status": "ok"}
+app = create_app()

@@ -1,143 +1,317 @@
-"""SQLAlchemy ORM models for series, stories, characters, chapters, scenes, and plot items."""
+"""SQLAlchemy ORM models for Auto-Writer.
 
-from datetime import datetime
+Defines the full persistence schema described in
+``designs/DATA_STORAGE_DESIGN.md``: works domain (series, story structures,
+works, stages, chapters, scenes), worldbuilding domain (entity categories and
+entities), inspiration domain (inspirations, tags), and the key-value settings
+store. Timestamps are stored as ISO text to match the design conventions.
+"""
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import relationship
+from datetime import UTC, datetime
+
+from sqlalchemy import (
+    Column as SAColumn,
+)
+from sqlalchemy import (
+    ForeignKey,
+    Integer,
+    String,
+    Table,
+    Text,
+    UniqueConstraint,
+    text,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
-# Plot item type constants
-PLOT_ITEM_TYPES = ["目标", "铺垫", "推进", "冲突", "反转", "高潮", "结尾"]
+
+def utcnow_iso() -> str:
+    """Return the current UTC time as an ISO-like text timestamp."""
+    return datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
+
+
+_SERVER_NOW = text("(datetime('now'))")
 
 
 class Series(Base):
-    """A series that groups multiple stories (e.g. a trilogy)."""
+    """A named collection that groups multiple works."""
 
     __tablename__ = "series"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False)
-    description = Column(Text, default="")
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    created_at: Mapped[str] = mapped_column(
+        Text, default=utcnow_iso, server_default=_SERVER_NOW, nullable=False
+    )
+    updated_at: Mapped[str] = mapped_column(
+        Text,
+        default=utcnow_iso,
+        onupdate=utcnow_iso,
+        server_default=_SERVER_NOW,
+        nullable=False,
+    )
 
-    stories = relationship("Story", back_populates="series", cascade="all, delete-orphan")
+    works: Mapped[list["Work"]] = relationship(back_populates="series")
 
 
-class Story(Base):
-    """A novel or story project."""
+class StoryStructure(Base):
+    """A reusable narrative framework composed of ordered stages."""
 
-    __tablename__ = "stories"
+    __tablename__ = "story_structures"
 
-    id = Column(Integer, primary_key=True, index=True)
-    series_id = Column(Integer, ForeignKey("series.id"), nullable=True)
-    title = Column(String(255), nullable=False)
-    description = Column(Text, default="")
-    genre = Column(String(100), default="")
-    status = Column(String(20), default="连载")  # 连载 / 完结
-    structure = Column(String(100), default="")
-    chapter_goal = Column(Integer, default=0)
-    word_count = Column(Integer, default=0)
-    current_chapter = Column(Integer, default=0)
-    save_path = Column(String(512), default="")
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    stages: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'[]'"))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_preset: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
 
-    series = relationship("Series", back_populates="stories")
-    chapters = relationship("Chapter", back_populates="story", cascade="all, delete-orphan")
-    characters = relationship("Character", back_populates="story", cascade="all, delete-orphan")
+    works: Mapped[list["Work"]] = relationship(back_populates="structure")
+
+
+class Work(Base):
+    """A novel project managed by Auto-Writer."""
+
+    __tablename__ = "works"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(String(240), nullable=False, index=True)
+    series_id: Mapped[int | None] = mapped_column(
+        ForeignKey("series.id", ondelete="SET NULL"), nullable=True
+    )
+    structure_id: Mapped[int | None] = mapped_column(
+        ForeignKey("story_structures.id", ondelete="SET NULL"), nullable=True
+    )
+    planned_chapter_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    actual_chapter_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    current_chapter: Mapped[int] = mapped_column(Integer, server_default=text("0"))
+    total_word_count: Mapped[int] = mapped_column(Integer, server_default=text("0"))
+    status: Mapped[str] = mapped_column(String(40), nullable=False, server_default=text("'创作中'"))
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[str] = mapped_column(
+        Text, default=utcnow_iso, server_default=_SERVER_NOW, nullable=False
+    )
+    updated_at: Mapped[str] = mapped_column(
+        Text,
+        default=utcnow_iso,
+        onupdate=utcnow_iso,
+        server_default=_SERVER_NOW,
+        nullable=False,
+    )
+
+    series: Mapped[Series | None] = relationship(back_populates="works")
+    structure: Mapped[StoryStructure | None] = relationship(back_populates="works")
+    stages: Mapped[list["WorkStage"]] = relationship(
+        back_populates="work", cascade="all, delete-orphan", passive_deletes=True
+    )
+    chapters: Mapped[list["Chapter"]] = relationship(
+        back_populates="work", cascade="all, delete-orphan", passive_deletes=True
+    )
+    categories: Mapped[list["EntityCategory"]] = relationship(
+        back_populates="work", cascade="all, delete-orphan", passive_deletes=True
+    )
+    entities: Mapped[list["WorldEntity"]] = relationship(
+        back_populates="work", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+
+class WorkStage(Base):
+    """A per-work instantiation of a story structure stage (holds the synopsis)."""
+
+    __tablename__ = "work_stages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    work_id: Mapped[int] = mapped_column(ForeignKey("works.id", ondelete="CASCADE"), nullable=False)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    overview: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    created_at: Mapped[str] = mapped_column(
+        Text, default=utcnow_iso, server_default=_SERVER_NOW, nullable=False
+    )
+    updated_at: Mapped[str] = mapped_column(
+        Text,
+        default=utcnow_iso,
+        onupdate=utcnow_iso,
+        server_default=_SERVER_NOW,
+        nullable=False,
+    )
+
+    work: Mapped[Work] = relationship(back_populates="stages")
+    chapters: Mapped[list["Chapter"]] = relationship(back_populates="stage")
 
 
 class Chapter(Base):
-    """A chapter within a story."""
+    """A chapter within a work, holding its outline summary and body text."""
 
     __tablename__ = "chapters"
 
-    id = Column(Integer, primary_key=True, index=True)
-    story_id = Column(Integer, ForeignKey("stories.id"), nullable=False)
-    title = Column(String(255), nullable=False)
-    content = Column(Text, default="")
-    order = Column(Integer, default=0)
-    summary = Column(Text, default="")
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    work_id: Mapped[int] = mapped_column(ForeignKey("works.id", ondelete="CASCADE"), nullable=False)
+    stage_id: Mapped[int | None] = mapped_column(
+        ForeignKey("work_stages.id", ondelete="SET NULL"), nullable=True
+    )
+    chapter_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str | None] = mapped_column(Text, nullable=True)
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    word_count: Mapped[int] = mapped_column(Integer, server_default=text("0"))
+    status: Mapped[str] = mapped_column(String(20), server_default=text("'草稿'"))
+    recap: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recap_generated_at: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[str] = mapped_column(
+        Text, default=utcnow_iso, server_default=_SERVER_NOW, nullable=False
+    )
+    updated_at: Mapped[str] = mapped_column(
+        Text,
+        default=utcnow_iso,
+        onupdate=utcnow_iso,
+        server_default=_SERVER_NOW,
+        nullable=False,
+    )
 
-    story = relationship("Story", back_populates="chapters")
-    scenes = relationship("Scene", back_populates="chapter", cascade="all, delete-orphan", order_by="Scene.order")
-
-
-class Character(Base):
-    """A character in a story."""
-
-    __tablename__ = "characters"
-
-    id = Column(Integer, primary_key=True, index=True)
-    story_id = Column(Integer, ForeignKey("stories.id"), nullable=False)
-    name = Column(String(255), nullable=False)
-    description = Column(Text, default="")
-    role = Column(String(100), default="")
-    traits = Column(Text, default="")
-    background = Column(Text, default="")
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    story = relationship("Story", back_populates="characters")
+    work: Mapped[Work] = relationship(back_populates="chapters")
+    stage: Mapped[WorkStage | None] = relationship(back_populates="chapters")
+    scenes: Mapped[list["Scene"]] = relationship(
+        back_populates="chapter", cascade="all, delete-orphan", passive_deletes=True
+    )
 
 
 class Scene(Base):
-    """A scene plan or outline entry within a chapter, containing plot items."""
+    """A scene within a chapter (scene-level outline / 细纲)."""
 
     __tablename__ = "scenes"
 
-    id = Column(Integer, primary_key=True, index=True)
-    chapter_id = Column(Integer, ForeignKey("chapters.id"), nullable=False)
-    title = Column(String(255), nullable=False)
-    description = Column(Text, default="")
-    order = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    chapter_id: Mapped[int] = mapped_column(
+        ForeignKey("chapters.id", ondelete="CASCADE"), nullable=False
+    )
+    title: Mapped[str | None] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    created_at: Mapped[str] = mapped_column(
+        Text, default=utcnow_iso, server_default=_SERVER_NOW, nullable=False
+    )
+    updated_at: Mapped[str] = mapped_column(
+        Text,
+        default=utcnow_iso,
+        onupdate=utcnow_iso,
+        server_default=_SERVER_NOW,
+        nullable=False,
+    )
 
-    chapter = relationship("Chapter", back_populates="scenes")
-    plot_items = relationship("PlotItem", back_populates="scene", cascade="all, delete-orphan", order_by="PlotItem.order")
+    chapter: Mapped[Chapter] = relationship(back_populates="scenes")
 
 
-class PlotItem(Base):
-    """A plot element within a scene (goal, foreshadowing, climax, etc.)."""
+class EntityCategory(Base):
+    """A worldbuilding category (e.g. 人物) scoped to a single work."""
 
-    __tablename__ = "plot_items"
+    __tablename__ = "entity_categories"
+    __table_args__ = (UniqueConstraint("work_id", "name", name="uq_entity_categories_work_name"),)
 
-    id = Column(Integer, primary_key=True, index=True)
-    scene_id = Column(Integer, ForeignKey("scenes.id"), nullable=False)
-    item_type = Column(String(20), nullable=False, default="推进")  # 目标/铺垫/推进/冲突/反转/高潮/结尾
-    description = Column(Text, default="")
-    order = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    work_id: Mapped[int] = mapped_column(ForeignKey("works.id", ondelete="CASCADE"), nullable=False)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    is_preset: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    created_at: Mapped[str] = mapped_column(
+        Text, default=utcnow_iso, server_default=_SERVER_NOW, nullable=False
+    )
 
-    scene = relationship("Scene", back_populates="plot_items")
+    work: Mapped[Work] = relationship(back_populates="categories")
+    entities: Mapped[list["WorldEntity"]] = relationship(
+        back_populates="category", cascade="all, delete-orphan", passive_deletes=True
+    )
 
 
 class WorldEntity(Base):
-    """A world-building entity (character, location, item, organization, etc.)."""
+    """A worldbuilding entry with free-form key-value properties (JSON)."""
 
     __tablename__ = "world_entities"
 
-    id = Column(Integer, primary_key=True, index=True)
-    story_id = Column(Integer, ForeignKey("stories.id"), nullable=False)
-    entity_type = Column(String(50), nullable=False, index=True)
-    name = Column(String(255), nullable=False)
-    properties = Column(Text, default="{}")
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    work_id: Mapped[int] = mapped_column(ForeignKey("works.id", ondelete="CASCADE"), nullable=False)
+    category_id: Mapped[int] = mapped_column(
+        ForeignKey("entity_categories.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    properties: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'[]'"))
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    created_at: Mapped[str] = mapped_column(
+        Text, default=utcnow_iso, server_default=_SERVER_NOW, nullable=False
+    )
+    updated_at: Mapped[str] = mapped_column(
+        Text,
+        default=utcnow_iso,
+        onupdate=utcnow_iso,
+        server_default=_SERVER_NOW,
+        nullable=False,
+    )
 
-    story = relationship("Story")
+    work: Mapped[Work] = relationship(back_populates="entities")
+    category: Mapped[EntityCategory] = relationship(back_populates="entities")
 
-# Default world entity types
-DEFAULT_ENTITY_TYPES = ["chara", "location", "item", "org"]
-ENTITY_TYPE_LABELS: dict[str, str] = {
-    "chara": "人物",
-    "location": "地点",
-    "item": "物品",
-    "org": "组织",
-}
+
+inspiration_tags = Table(
+    "inspiration_tags",
+    Base.metadata,
+    SAColumn(
+        "inspiration_id",
+        ForeignKey("inspirations.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    SAColumn("tag_id", ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+class Inspiration(Base):
+    """A saved inspiration snippet (global clipboard with source references)."""
+
+    __tablename__ = "inspirations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    source_page: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    work_id: Mapped[int | None] = mapped_column(
+        ForeignKey("works.id", ondelete="SET NULL"), nullable=True
+    )
+    chapter_id: Mapped[int | None] = mapped_column(
+        ForeignKey("chapters.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[str] = mapped_column(
+        Text, default=utcnow_iso, server_default=_SERVER_NOW, nullable=False
+    )
+
+    tags: Mapped[list["Tag"]] = relationship(
+        secondary=inspiration_tags, back_populates="inspirations"
+    )
+
+
+class Tag(Base):
+    """A reusable, colored tag for classifying inspirations."""
+
+    __tablename__ = "tags"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(80), nullable=False, unique=True)
+    color: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+    inspirations: Mapped[list[Inspiration]] = relationship(
+        secondary=inspiration_tags, back_populates="tags"
+    )
+
+
+class AppSetting(Base):
+    """A key-value store row for global single-user application settings."""
+
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(60), primary_key=True)
+    value: Mapped[str] = mapped_column(Text, nullable=False)
+    updated_at: Mapped[str] = mapped_column(
+        Text,
+        default=utcnow_iso,
+        onupdate=utcnow_iso,
+        server_default=_SERVER_NOW,
+        nullable=False,
+    )

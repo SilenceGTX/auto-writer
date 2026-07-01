@@ -1,46 +1,44 @@
-/** Reusable confirmation dialog with backdrop overlay. */
-import type { ReactNode } from "react";
+/** Reusable confirmation dialog for destructive/irreversible actions (rule G1). */
+import type { ReactElement, ReactNode } from "react";
+import {
+  Button,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+} from "@heroui/react";
 
 interface ConfirmDialogProps {
-  open: boolean;
+  isOpen: boolean;
   title: string;
-  message: ReactNode;
+  body?: ReactNode;
   confirmLabel?: string;
+  cancelLabel?: string;
   danger?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-function ConfirmDialog({
-  open,
-  title,
-  message,
-  confirmLabel = "确认",
-  danger = false,
-  onConfirm,
-  onCancel,
-}: ConfirmDialogProps) {
-  if (!open) return null;
+/** Render a modal asking the user to confirm or cancel an action.
 
+The backdrop is non-dismissable so the choice must be made via the buttons,
+preventing accidental dismissal (per the project UX rules). */
+export function ConfirmDialog(props: ConfirmDialogProps): ReactElement {
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal confirm-dialog" onClick={(e) => e.stopPropagation()}>
-        <h2>{title}</h2>
-        <div className="confirm-message">{message}</div>
-        <div className="modal-actions">
-          <button
-            className={danger ? "danger" : ""}
-            onClick={onConfirm}
-          >
-            {confirmLabel}
-          </button>
-          <button className="secondary" onClick={onCancel}>
-            取消
-          </button>
-        </div>
-      </div>
-    </div>
+    <Modal isOpen={props.isOpen} onClose={props.onCancel} isDismissable={false}>
+      <ModalContent>
+        <ModalHeader>{props.title}</ModalHeader>
+        {props.body ? <ModalBody>{props.body}</ModalBody> : null}
+        <ModalFooter>
+          <Button variant="light" onPress={props.onCancel}>
+            {props.cancelLabel ?? "取消"}
+          </Button>
+          <Button color={props.danger ? "danger" : "primary"} onPress={props.onConfirm}>
+            {props.confirmLabel ?? "确认"}
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
   );
 }
-
-export default ConfirmDialog;

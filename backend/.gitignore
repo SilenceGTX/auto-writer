@@ -1,6 +1,6 @@
-__pycache__/
-*.py[cod]
 .env
-*.db
 .venv/
-dist/
+__pycache__/
+*.db
+.pytest_cache/
+.ruff_cache/

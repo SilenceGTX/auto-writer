@@ -1,15 +1,32 @@
-/** Placeholder page for sections not yet implemented. */
-interface Props {
+/** Placeholder page for workflow areas that will be implemented next. */
+import type { ReactElement } from "react";
+import { Card, CardBody, Chip } from "@heroui/react";
+
+interface PlaceholderPageProps {
   title: string;
+  summary: string;
+  steps: string[];
 }
 
-function PlaceholderPage({ title }: Props) {
+/** Render a focused placeholder for a planned workflow page. */
+export function PlaceholderPage(props: PlaceholderPageProps): ReactElement {
   return (
-    <div className="placeholder-page">
-      <h1>{title}</h1>
-      <p className="placeholder-hint">此功能正在开发中…</p>
-    </div>
+    <section className="workspace-page">
+      <div className="page-header">
+        <div>
+          <h1>{props.title}</h1>
+          <p>{props.summary}</p>
+        </div>
+      </div>
+      <Card shadow="sm">
+        <CardBody className="placeholder-card">
+          {props.steps.map((step) => (
+            <Chip key={step} color="primary" variant="flat">
+              {step}
+            </Chip>
+          ))}
+        </CardBody>
+      </Card>
+    </section>
   );
 }
-
-export default PlaceholderPage;

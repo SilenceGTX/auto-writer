@@ -1,17 +1,19 @@
-FROM python:3.11-slim AS base
+# syntax=docker/dockerfile:1
+
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS base
+
 WORKDIR /app
-COPY pyproject.toml uv.lock ./
+ENV PYTHONUNBUFFERED=1 \
+    UV_LINK_MODE=copy
 
-# --- production stage ---
-FROM base AS prod
-RUN pip install uv && uv sync --frozen --no-dev
-COPY app/ ./app/
-EXPOSE 8000
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+COPY pyproject.toml ./
 
-# --- development stage ---
 FROM base AS dev
-RUN pip install uv && uv sync --frozen
-COPY app/ ./app/
-EXPOSE 8000
+RUN uv sync --dev --no-install-project
+COPY app ./app
 CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+FROM base AS prod
+RUN uv sync --no-dev --no-install-project
+COPY app ./app
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

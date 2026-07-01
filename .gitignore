@@ -4,5 +4,9 @@
 /backend/.env
 /frontend/node_modules/
 /frontend/dist/
+/frontend/*.tsbuildinfo
 /data/
+*.log
 .env
+designs/
+AGENTS.md
