@@ -22,14 +22,14 @@ export default {
       themes: {
         light: {
           colors: {
-            primary: "#2563eb",
-            secondary: "#7c3aed",
+            primary: { DEFAULT: "#2563eb", foreground: "#ffffff" },
+            secondary: { DEFAULT: "#7c3aed", foreground: "#ffffff" },
           },
         },
         dark: {
           colors: {
-            primary: "#60a5fa",
-            secondary: "#a78bfa",
+            primary: { DEFAULT: "#60a5fa", foreground: "#0b1220" },
+            secondary: { DEFAULT: "#a78bfa", foreground: "#0b1220" },
           },
         },
       },

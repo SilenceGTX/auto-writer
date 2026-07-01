@@ -1,18 +1,19 @@
-/** Local-rewrite dialog with a diff preview (``WRITING_PAGE_DESSIGN.md`` §2.2).
+/** Local-rewrite drawer with a diff preview (``WRITING_PAGE_DESSIGN.md`` §2.2).
  *
  * Lets the user describe how to rewrite the selected passage, requests the
- * rewrite, and previews the original vs. new text side by side. The original is
- * only replaced once the user confirms.
+ * rewrite, and previews the original vs. new text. It slides in from the right
+ * with a transparent backdrop so the manuscript stays visible while comparing.
+ * The original is only replaced once the user confirms.
  */
 import { useState, type ReactElement } from "react";
 import {
   Button,
   Checkbox,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
+  Drawer,
+  DrawerBody,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
   Textarea,
   Tooltip,
 } from "@heroui/react";
@@ -70,10 +71,17 @@ export function RewriteDialog(props: RewriteDialogProps): ReactElement {
   }
 
   return (
-    <Modal isOpen={props.isOpen} onClose={handleClose} size="3xl" isDismissable={false}>
-      <ModalContent>
-        <ModalHeader>局部重写</ModalHeader>
-        <ModalBody>
+    <Drawer
+      isOpen={props.isOpen}
+      onClose={handleClose}
+      placement="right"
+      backdrop="transparent"
+      isDismissable={false}
+      classNames={{ base: "rewrite-drawer" }}
+    >
+      <DrawerContent>
+        <DrawerHeader>局部重写</DrawerHeader>
+        <DrawerBody>
           <Textarea
             label="重写要求（可选）"
             minRows={2}
@@ -98,8 +106,8 @@ export function RewriteDialog(props: RewriteDialogProps): ReactElement {
               </div>
             </div>
           )}
-        </ModalBody>
-        <ModalFooter>
+        </DrawerBody>
+        <DrawerFooter>
           <Button variant="light" onPress={handleClose}>
             取消
           </Button>
@@ -118,8 +126,8 @@ export function RewriteDialog(props: RewriteDialogProps): ReactElement {
           >
             应用替换
           </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }
