@@ -1,6 +1,6 @@
 /** Integration test for the writing page (chapter load, editor, assistant). */
 import { useState, type ReactElement } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChapterContent, Outline } from "../api";
@@ -106,8 +106,9 @@ describe("WritingPage", () => {
 
   it("loads the first chapter's content and shows the live word count", async () => {
     renderPage();
-    const editor = await screen.findByPlaceholderText(/撰写本章正文/);
-    expect(editor).toHaveValue("你好世界");
+    // Wait for the async chapter content to populate the editor rather than
+    // asserting at the moment the (initially empty) textarea first renders.
+    expect(await screen.findByDisplayValue("你好世界")).toBeInTheDocument();
     expect(screen.getByText(/本章 4 字/)).toBeInTheDocument();
   });
 
@@ -120,8 +121,7 @@ describe("WritingPage", () => {
 
   it("can switch chapters via the selector", async () => {
     renderPage();
-    await screen.findByPlaceholderText(/撰写本章正文/);
     const { getChapter } = await import("../api");
-    expect(getChapter).toHaveBeenCalledWith(11);
+    await waitFor(() => expect(getChapter).toHaveBeenCalledWith(11));
   });
 });

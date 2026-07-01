@@ -33,11 +33,15 @@ docker compose up --build app
 
 ### Docker 开发环境（一键启动 + 热重载）
 
+`docker-compose.dev.yml` 自成一体，可直接单独启动：
+
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build app
+docker compose -f docker-compose.dev.yml up --build app
 ```
 
 访问 http://localhost:5173，修改前后端代码即时生效。
+
+> 生产镜像（`auto-writer-*:prod`，nginx）与开发镜像（`auto-writer-*:dev`，Vite 热重载）使用不同的镜像名，互不覆盖。首次或依赖变更后加 `--build` 以确保重新构建对应镜像。
 
 ### 本地开发（不使用 Docker）
 

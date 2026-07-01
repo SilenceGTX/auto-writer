@@ -2,6 +2,7 @@
 
 services:
   backend:
+    image: auto-writer-backend:dev
     build:
       context: ./backend
       target: dev
@@ -16,6 +17,7 @@ services:
       - "8000:8000"
 
   app:
+    image: auto-writer-app:dev
     build:
       context: ./frontend
       target: dev

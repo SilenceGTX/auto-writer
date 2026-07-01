@@ -1,5 +1,6 @@
 services:
   backend:
+    image: auto-writer-backend:prod
     build:
       context: ./backend
       target: prod
@@ -23,6 +24,7 @@ services:
       start_period: 5s
 
   app:
+    image: auto-writer-app:prod
     build:
       context: ./frontend
       target: prod
