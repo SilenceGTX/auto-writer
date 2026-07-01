@@ -47,6 +47,7 @@ export function WritingPage(): ReactElement {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [wordCounts, setWordCounts] = useState<Map<number, number>>(new Map());
   const [generating, setGenerating] = useState(false);
+  const [includeRecap, setIncludeRecap] = useState(false);
   const [quoted, setQuoted] = useState<string | null>(null);
   const [rewrite, setRewrite] = useState<{ selection: string; start: number; end: number } | null>(
     null,
@@ -184,7 +185,7 @@ export function WritingPage(): ReactElement {
     if (selectedId == null) return;
     setGenerating(true);
     try {
-      const chapter = await generateChapterDraft(selectedId);
+      const chapter = await generateChapterDraft(selectedId, includeRecap);
       savedContentRef.current = chapter.content ?? "";
       setContent(chapter.content ?? "");
       setWordCounts((current) => new Map(current).set(chapter.id, chapter.word_count));
@@ -288,6 +289,8 @@ export function WritingPage(): ReactElement {
           onToggleFocus={() => setFocusMode(!focusMode)}
           generating={generating}
           onGenerateDraft={() => void handleGenerateDraft()}
+          includeRecap={includeRecap}
+          onIncludeRecapChange={setIncludeRecap}
           onQuote={handleQuote}
           onRewrite={(selection, start, end) => setRewrite({ selection, start, end })}
           memory={memoryRef.current}

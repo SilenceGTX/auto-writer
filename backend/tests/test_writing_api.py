@@ -76,6 +76,64 @@ async def test_generate_draft_fills_content(client, monkeypatch):
     assert drafted["word_count"] == 7
 
 
+async def test_generate_draft_with_recap_auto_summarizes_and_caches(client, monkeypatch):
+    """include_recap without a cached recap summarizes the previous chapter once,
+    injects it into the draft prompt, and caches it for later reuse."""
+    _work, outline = await _setup_work_with_chapters(client, monkeypatch)
+    first, second = outline["chapters"][0], outline["chapters"][1]
+    await client.put(f"/api/chapters/{first['id']}/content", json={"content": "第一章内容"})
+
+    calls: list = []
+
+    async def capturing(connection, messages, params=None):
+        """Record every LLM call's messages and return a canned recap/draft text."""
+        calls.append(messages)
+        return "第一章前情提要"
+
+    monkeypatch.setattr(writing_router, "chat_completion", capturing)
+
+    drafted = (
+        await client.post(
+            f"/api/chapters/{second['id']}/draft:generate", json={"include_recap": True}
+        )
+    ).json()
+    assert drafted["content"] == "第一章前情提要"
+
+    # Two calls: first summarizes the previous chapter, second drafts the body.
+    assert len(calls) == 2
+    draft_prompt = calls[1][-1]["content"]
+    assert "【前情提要】" in draft_prompt
+    assert "第一章前情提要" in draft_prompt
+
+    # The freshly generated recap is now cached on the previous chapter.
+    cached = (await client.get(f"/api/chapters/{second['id']}/recap")).json()
+    assert cached["cached"] is True
+    assert cached["recap"] == "第一章前情提要"
+
+
+async def test_generate_draft_with_recap_skips_when_previous_has_no_content(client, monkeypatch):
+    """include_recap does not summarize (or inject) when the previous chapter is empty."""
+    _work, outline = await _setup_work_with_chapters(client, monkeypatch)
+    second = outline["chapters"][1]
+
+    calls: list = []
+
+    async def capturing(connection, messages, params=None):
+        """Record every LLM call's messages and return canned draft text."""
+        calls.append(messages)
+        return "这是生成的正文。"
+
+    monkeypatch.setattr(writing_router, "chat_completion", capturing)
+
+    await client.post(
+        f"/api/chapters/{second['id']}/draft:generate", json={"include_recap": True}
+    )
+
+    # Only the draft call happens; no recap summary and no 前情提要 in the prompt.
+    assert len(calls) == 1
+    assert "【前情提要】" not in calls[0][-1]["content"]
+
+
 async def test_recap_cache_and_staleness(client, monkeypatch, session):
     """Recap is cached for the previous chapter and marked stale after edits."""
     _work, outline = await _setup_work_with_chapters(client, monkeypatch)
