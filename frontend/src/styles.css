@@ -112,14 +112,12 @@ textarea {
 }
 
 .brand-mark {
-  display: grid;
+  display: block;
   width: 42px;
   height: 42px;
-  place-items: center;
   border-radius: 8px;
-  background: #2563eb;
-  color: #ffffff;
-  font-weight: 800;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 .nav-list,
