@@ -38,7 +38,7 @@ function StageBlock(props: {
       <span className="stage-block-body">
         <strong>{stage.name}</strong>
         <span className="stage-count">占比 {props.ratio}%</span>
-        <span onClick={(event) => event.stopPropagation()}>
+        <span className="stage-count-field" onClick={(event) => event.stopPropagation()}>
           <Input
             aria-label={`${stage.name} 章节数`}
             size="sm"
@@ -46,6 +46,11 @@ function StageBlock(props: {
             min={0}
             value={draft}
             isDisabled={props.locked}
+            classNames={{
+              base: "stage-count-input",
+              inputWrapper: "stage-count-input-wrapper",
+              input: "stage-count-input-inner",
+            }}
             onValueChange={setDraft}
             onBlur={() => {
               const next = Number(draft);
@@ -56,6 +61,7 @@ function StageBlock(props: {
               }
             }}
           />
+          <span className="stage-count-unit">章</span>
         </span>
       </span>
     </button>

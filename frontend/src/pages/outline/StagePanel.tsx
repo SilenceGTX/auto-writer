@@ -43,7 +43,7 @@ export function StagePanel(props: StagePanelProps): ReactElement {
       <div className="detail-stats">
         <div className="detail-stat">
           <span>章节总数</span>
-          <strong>{stage.chapter_count}</strong>
+          <strong>{stage.chapter_count} 章</strong>
         </div>
         <div className="detail-stat">
           <span>章节占比</span>

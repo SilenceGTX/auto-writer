@@ -566,6 +566,37 @@ textarea {
   color: #64748b;
 }
 
+.stage-count-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.stage-count-input {
+  width: auto;
+  max-width: 3.5rem;
+}
+
+.stage-count-input-wrapper {
+  min-height: 1.75rem;
+  padding-left: 0.5rem;
+  padding-right: 0.35rem;
+}
+
+.stage-count-input-inner {
+  text-align: right;
+}
+
+.stage-count-unit {
+  font-size: 0.82rem;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.app-root.dark .stage-count-unit {
+  color: #aab4c5;
+}
+
 .chapter-outline {
   display: flex;
   flex-direction: column;
