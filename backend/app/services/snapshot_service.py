@@ -46,9 +46,8 @@ def _snapshot_root(snapshot_path: str) -> Path:
     path = Path(snapshot_path).expanduser()
     if path.is_absolute():
         return path
-    # Relative paths like "data/snapshots" are resolved against the repo root
-    # (the parent of the data directory) so they land under the ignored data/.
-    return data_dir().parent / path
+    # Relative paths resolve under the application data directory.
+    return data_dir() / path
 
 
 def _versioned(path: Path, version: int) -> Path:
@@ -132,7 +131,7 @@ async def write_work_snapshot(db: AsyncSession, work: Work) -> dict | None:
     """
     data_save = await get_setting(db, DATA_SAVE_KEY)
     history_versions = int(data_save.get("history_versions", 3))
-    root = _snapshot_root(str(data_save.get("snapshot_path", "data/snapshots")))
+    root = _snapshot_root(str(data_save.get("snapshot_path", "snapshots")))
     work_dir = root / str(work.id)
 
     stages = sorted(work.stages, key=lambda s: s.sort_order)

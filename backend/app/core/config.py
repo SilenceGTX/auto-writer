@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///../data/auto_writer.db"
     log_dir: str = "../data/logs"
     log_level: str = "INFO"
+    desktop_mode: bool = False
+    data_dir: str | None = None
+    static_dir: str | None = None
     # NoDecode stops pydantic-settings from JSON-decoding the env value so the
     # validator below can accept a plain comma-separated string.
     cors_origins: Annotated[list[str], NoDecode] = [

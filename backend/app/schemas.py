@@ -228,7 +228,7 @@ class DataSaveSettings(BaseModel):
 
     input_debounce_seconds: int = Field(default=2, ge=1, le=10)
     autosave_interval_seconds: int = Field(default=30, ge=10, le=120)
-    snapshot_path: str = "data/snapshots"
+    snapshot_path: str = "snapshots"
     history_versions: int = Field(default=3, ge=0, le=10)
 
 

@@ -37,7 +37,7 @@ DEFAULT_SETTINGS: dict[str, dict] = {
     DATA_SAVE_KEY: {
         "input_debounce_seconds": 2,
         "autosave_interval_seconds": 30,
-        "snapshot_path": "data/snapshots",
+        "snapshot_path": "snapshots",
         "history_versions": 3,
     },
     TYPOGRAPHY_KEY: {"font_family": "", "line_height": 1.8, "reading_theme": "sepia"},

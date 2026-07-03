@@ -57,7 +57,7 @@ const DEFAULT_PREFERENCES: Preferences = {
 const DEFAULT_DATA_SAVE: DataSaveSettings = {
   input_debounce_seconds: 2,
   autosave_interval_seconds: 30,
-  snapshot_path: "data/snapshots",
+  snapshot_path: "snapshots",
   history_versions: 3,
 };
 const DEFAULT_TYPOGRAPHY: TypographySettings = {
