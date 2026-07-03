@@ -3,7 +3,7 @@
  * Implements ``designs/OUTLINE_PAGE_DESIGN.md``: generate the stage tree and
  * synopses, generate chapter outlines, adjust per-stage chapter counts, edit
  * stages/chapters in the assistant panel, reorder chapters, and hand off to the
- * writing page via "保存并生成正文".
+ * writing page via "撰写正文".
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";

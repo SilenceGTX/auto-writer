@@ -138,12 +138,14 @@ export function ChapterEditor(props: ChapterEditorProps): ReactElement {
       <div className="chapter-editor-toolbar">
         <Button
           size="sm"
-          variant="flat"
+          color="primary"
+          variant="shadow"
+          className="chapter-draft-generate-btn"
           startContent={<Sparkles size={15} />}
           isLoading={props.generating}
           onPress={props.onGenerateDraft}
         >
-          AI 生成本章
+          AI 生成初稿
         </Button>
         <Tooltip content="生成时附带上一章的前情提要；若无缓存会自动总结一次">
           <Checkbox

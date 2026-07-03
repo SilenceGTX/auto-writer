@@ -33,7 +33,8 @@ from app.services.generation_context import (
 )
 from app.services.llm_service import LLMConfigError, LLMRequestError, chat_completion
 from app.services.prompts import (
-    build_draft_prompt,
+    assemble_draft_prompt,
+    build_draft_requirements,
     build_recap_prompt,
     build_rewrite_prompt,
 )
@@ -172,15 +173,15 @@ async def generate_draft(
         reference_block = await reference_block_for_texts(
             db, chapter.work_id, [chapter.summary or ""]
         )
-        user_prompt = with_references(
-            build_draft_prompt(
-                work_info_block(work),
+        user_prompt = assemble_draft_prompt(
+            work_info_block(work),
+            reference_block,
+            build_draft_requirements(
                 chapter_number=chapter.chapter_number,
                 title=chapter.title,
                 summary=chapter.summary,
                 recap=recap_text,
             ),
-            reference_block,
         )
         content = await chat_completion(
             connection,

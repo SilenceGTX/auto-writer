@@ -112,16 +112,15 @@ def build_stage_generation_prompt(
 
 
 @_log_prompt_builder
-def build_draft_prompt(
-    work_info: str,
+def build_draft_requirements(
     *,
     chapter_number: int,
     title: str | None,
     summary: str | None,
     recap: str | None = None,
 ) -> str:
-    """Build the user prompt asking the LLM to draft a chapter's body text."""
-    lines = [work_info, ""]
+    """Build the draft writing-task section (recap, chapter brief, and constraints)."""
+    lines: list[str] = []
     if recap and recap.strip():
         lines.append(f"【前情提要】\n{recap.strip()}")
         lines.append("")
@@ -134,6 +133,15 @@ def build_draft_prompt(
         "保持与作品设定、前情提要一致，行文流畅。"
     )
     return "\n".join(lines)
+
+
+def assemble_draft_prompt(work_info: str, reference_block: str, requirements: str) -> str:
+    """Assemble the draft user prompt: work info, then references, then the task."""
+    parts = [work_info.strip()]
+    if reference_block.strip():
+        parts.append(reference_block.strip())
+    parts.append(requirements.strip())
+    return log_assembled_prompt("assemble_draft_prompt", "\n\n".join(parts))
 
 
 @_log_prompt_builder

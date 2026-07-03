@@ -2,7 +2,14 @@
 
 from unittest.mock import patch
 
-from app.services.prompts import build_system_prompt, build_work_info_block, log_assembled_prompt
+from app.services.prompts import (
+    assemble_draft_prompt,
+    build_draft_requirements,
+    build_system_prompt,
+    build_work_info_block,
+    log_assembled_prompt,
+)
+from app.services.references import ReferencedEntry, build_reference_block
 
 
 @patch("app.services.prompts.logger.debug")
@@ -51,3 +58,21 @@ def test_work_info_block_contains_fields():
     assert "三幕式" in block
     assert "铺垫、对抗、解决" in block
     assert "少年屠龙的故事" in block
+
+
+def test_assemble_draft_prompt_orders_work_info_before_references():
+    """Draft prompts place work info first, then references, then the task."""
+    work_info = build_work_info_block(title="昆图库塔传", stages=["开端"])
+    references = build_reference_block(
+        [ReferencedEntry(name="昆图库塔", category="人物", description="巨龙")]
+    )
+    requirements = build_draft_requirements(
+        chapter_number=1, title="龙醒", summary="苏醒的巨龙巡视山川"
+    )
+    with patch("app.services.prompts.logger.debug"):
+        prompt = assemble_draft_prompt(work_info, references, requirements)
+
+    work_idx = prompt.index("【作品信息】")
+    ref_idx = prompt.index("【引用设定】")
+    task_idx = prompt.index("请为「第1章《龙醒》」撰写正文。")
+    assert work_idx < ref_idx < task_idx

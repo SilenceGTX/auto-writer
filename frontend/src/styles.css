@@ -425,6 +425,24 @@ textarea {
   margin-top: 4px;
 }
 
+.form-actions-stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.form-actions-stacked .add-inspiration-btn {
+  margin-right: 0;
+  align-self: flex-start;
+}
+
+.form-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .detail-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1192,6 +1210,10 @@ textarea {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+.chapter-draft-generate-btn {
+  font-weight: 600;
 }
 
 .chapter-editor-body {
