@@ -1,0 +1,113 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version label
+        required: false
+        default: dev
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Desktop (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x64
+            archive: tar
+          - os: macos-latest
+            platform: macos-arm64
+            archive: tar
+          - os: windows-latest
+            platform: win-x64
+            archive: zip
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "value=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.event.inputs.version || 'dev' }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: Assemble desktop bundle
+        run: python scripts/assemble_release.py --output release --version ${{ steps.version.outputs.value }}
+
+      - name: Archive (Unix)
+        if: matrix.archive == 'tar'
+        run: |
+          chmod +x release/start.sh release/start.command
+          tar -czf "auto-writer-${{ steps.version.outputs.value }}-${{ matrix.platform }}.tar.gz" -C release .
+
+      - name: Archive (Windows)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path release\* -DestinationPath "auto-writer-${{ steps.version.outputs.value }}-${{ matrix.platform }}.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-writer-${{ matrix.platform }}
+          path: auto-writer-*
+          if-no-files-found: error
+
+  publish:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**
+          generate_release_notes: true

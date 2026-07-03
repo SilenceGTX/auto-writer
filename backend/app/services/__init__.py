@@ -1,1 +1,1 @@
-"""Business logic services for LLM integration, story generation, etc."""
+"""Service-layer helpers (seeding, prompt assembly, persistence, etc.)."""

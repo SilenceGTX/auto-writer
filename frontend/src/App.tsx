@@ -1,31 +1,71 @@
-/** Root application component — left sidebar + right workspace layout. */
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import Sidebar from "./components/Sidebar";
-import DashboardPage from "./pages/DashboardPage";
-import StoriesPage from "./pages/StoriesPage";
-import WritePage from "./pages/WritePage";
-import PlaceholderPage from "./pages/PlaceholderPage";
+/** Root application component: routed three-pane workspace shell. */
+import { useEffect, type ReactElement } from "react";
+import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { getSettings } from "./api";
+import { AssistantPanel } from "./components/AssistantPanel";
+import { Sidebar } from "./components/Sidebar";
+import { useApp } from "./context/AppContext";
+import { useAssistant } from "./context/AssistantContext";
+import { ConceptPage } from "./pages/ConceptPage";
+import { InspirationPage } from "./pages/InspirationPage";
+import { OutlinePage } from "./pages/OutlinePage";
+import { ReviewPage } from "./pages/ReviewPage";
+import { WorksPage } from "./pages/WorksPage";
+import { WritingPage } from "./pages/WritingPage";
+import { applyTypography } from "./utils/typography";
 
-function App() {
+/** Render the persistent three-pane layout with a routed central workspace. */
+function Layout(): ReactElement {
+  const { isDark } = useApp();
+  const { collapsed, setCollapsed, focusMode } = useAssistant();
+
+  useEffect(() => {
+    void getSettings()
+      .then((settings) => applyTypography(settings.typography))
+      .catch(() => undefined);
+  }, []);
+
+  // Mirror the theme onto <html> so HeroUI's portaled overlays (dropdowns,
+  // menus, modals) also pick up the dark palette instead of rendering light.
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+  }, [isDark]);
+
   return (
-    <BrowserRouter>
-      <div className="app">
-        <Sidebar />
-        <main className="workspace">
-          <Routes>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/stories" element={<StoriesPage />} />
-            <Route path="/write" element={<WritePage />} />
-            <Route path="/outline" element={<PlaceholderPage title="大纲" />} />
-            <Route path="/characters" element={<PlaceholderPage title="角色" />} />
-            <Route path="/worldbuilding" element={<PlaceholderPage title="设定" />} />
-            <Route path="/inspiration" element={<PlaceholderPage title="灵感" />} />
-            <Route path="/review" element={<PlaceholderPage title="审阅" />} />
-            <Route path="/settings" element={<PlaceholderPage title="系统设置" />} />
-          </Routes>
-        </main>
-      </div>
-    </BrowserRouter>
+    <div
+      className={[
+        "app-root",
+        isDark ? "dark" : "light",
+        collapsed ? "assistant-collapsed" : "",
+        focusMode ? "focus-mode" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <Sidebar />
+      <main className="workspace-main">
+        <Outlet />
+      </main>
+      <AssistantPanel collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
+    </div>
+  );
+}
+
+/** Define the application routes within the shared layout. */
+function App(): ReactElement {
+  return (
+    <Routes>
+      <Route element={<Layout />}>
+        <Route index element={<Navigate to="/works" replace />} />
+        <Route path="/works" element={<WorksPage />} />
+        <Route path="/worldbuilding" element={<ConceptPage />} />
+        <Route path="/outline" element={<OutlinePage />} />
+        <Route path="/writing" element={<WritingPage />} />
+        <Route path="/inspiration" element={<InspirationPage />} />
+        <Route path="/review" element={<ReviewPage />} />
+        <Route path="*" element={<Navigate to="/works" replace />} />
+      </Route>
+    </Routes>
   );
 }
 
