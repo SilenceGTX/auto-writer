@@ -4,16 +4,22 @@ Implements ``STORY_PAGE_DESIGN.md`` §2.5 / ``DATA_STORAGE_DESIGN.md`` §8.2. Th
 JSON export is a structured snapshot of a work (info, structure, stages/overview,
 chapters with outline + body, scenes, and worldbuilding entries) for backup and
 migration; the Markdown export concatenates the chapter bodies in order for
-reading or external archival.
+reading or archival. Per-chapter Markdown zips omit chapters with no body text.
 """
 
+import io
 import json
+import re
+import zipfile
+from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import Chapter, EntityCategory, Work, WorkStage, WorldEntity
+
+_FILENAME_UNSAFE = re.compile(r'[\\/:*?"<>|]+')
 
 
 async def _load_work(db: AsyncSession, work_id: int) -> Work | None:
@@ -158,3 +164,62 @@ async def build_work_export_markdown(db: AsyncSession, work_id: int) -> str | No
         lines.append(body if body else "（本章暂无正文）")
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
+
+
+def safe_path_segment(text: str, fallback: str = "work") -> str:
+    """Reduce a label to a filesystem-safe path segment."""
+    cleaned = _FILENAME_UNSAFE.sub("_", text).strip().strip(".")
+    return cleaned or fallback
+
+
+def chapter_export_filename(chapter: Chapter) -> str:
+    """Return a filesystem-safe Markdown filename for a chapter."""
+    label = f"第{chapter.chapter_number}章"
+    if chapter.title and chapter.title.strip():
+        label += f" {chapter.title.strip()}"
+    return f"{safe_path_segment(label, f'chapter-{chapter.chapter_number}')}.md"
+
+
+def chapter_export_markdown(chapter: Chapter) -> str:
+    """Format a chapter body as a standalone Markdown file."""
+    heading = f"第{chapter.chapter_number}章"
+    if chapter.title and chapter.title.strip():
+        heading += f" {chapter.title.strip()}"
+    return f"# {heading}\n\n{chapter.content.strip()}\n"
+
+
+def chapters_with_content(chapters: list[Chapter]) -> list[Chapter]:
+    """Return chapters that have non-empty body text, preserving order."""
+    return [chapter for chapter in chapters if (chapter.content or "").strip()]
+
+
+async def write_work_chapters_zip(
+    db: AsyncSession,
+    work_id: int,
+    target_dir: Path,
+    *,
+    slug: str,
+    timestamp: str,
+) -> tuple[Path, int]:
+    """Write a zip with one Markdown file per non-empty chapter under ``{title}/``.
+
+    Returns the zip path and the number of files included. Raises ``ValueError``
+    when the work is missing or no chapter has body text.
+    """
+    work = await _load_work(db, work_id)
+    if work is None:
+        raise ValueError("Work not found")
+
+    chapters = chapters_with_content(await load_chapters_with_scenes(db, work_id))
+    if not chapters:
+        raise ValueError("No chapters with content")
+
+    folder = safe_path_segment(work.title)
+    zip_path = target_dir / f"{slug}-{timestamp}-chapters.zip"
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for chapter in chapters:
+            arcname = f"{folder}/{chapter_export_filename(chapter)}"
+            archive.writestr(arcname, chapter_export_markdown(chapter))
+    zip_path.write_bytes(buffer.getvalue())
+    return zip_path, len(chapters)

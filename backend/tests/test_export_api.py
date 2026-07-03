@@ -5,7 +5,9 @@ filesystem snapshot writer with history rotation (``DATA_STORAGE_DESIGN.md`` §8
 LLM calls are patched so outline generation works without a live model.
 """
 
+import io
 import json
+import zipfile
 
 import app.routers.export as export_router
 import app.routers.outline as outline_router
@@ -76,6 +78,43 @@ async def test_export_markdown_has_headings(client, monkeypatch, tmp_path):
     assert text.startswith("# 测试作品")
     assert "## 第1章" in text
     assert "这是第一章的正文内容。" in text
+
+
+async def test_export_chapters_zip_skips_empty(client, monkeypatch, tmp_path):
+    """Chapter zip includes only non-empty chapters under a folder named after the work."""
+    monkeypatch.setattr(export_router, "exports_dir", lambda: tmp_path)
+    work = await _setup_work(client, monkeypatch)
+
+    response = await client.get(
+        f"/api/works/{work['id']}/export", params={"format": "chapters"}
+    )
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/zip")
+
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        names = archive.namelist()
+        assert len(names) == 1
+        assert names[0].startswith("测试作品/")
+        assert names[0].endswith(".md")
+        body = archive.read(names[0]).decode("utf-8")
+        assert "# 第1章" in body
+        assert "这是第一章的正文内容。" in body
+
+
+async def test_export_chapters_returns_400_when_no_body(client, monkeypatch, tmp_path):
+    """Chapter export fails when every chapter has an empty body."""
+    monkeypatch.setattr(export_router, "exports_dir", lambda: tmp_path)
+    work = await _setup_work(client, monkeypatch)
+    chapter_id = (
+        await client.get(f"/api/works/{work['id']}/outline")
+    ).json()["chapters"][0]["id"]
+    await client.put(f"/api/chapters/{chapter_id}/content", json={"content": ""})
+
+    response = await client.get(
+        f"/api/works/{work['id']}/export", params={"format": "chapters"}
+    )
+    assert response.status_code == 400
+    assert "没有可导出的章节正文" in response.text
 
 
 async def test_export_unknown_work_returns_404(client, monkeypatch, tmp_path):

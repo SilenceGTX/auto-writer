@@ -18,7 +18,11 @@ from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.models import Work
-from app.services.export_service import build_work_export_json, build_work_export_markdown
+from app.services.export_service import (
+    build_work_export_json,
+    build_work_export_markdown,
+    write_work_chapters_zip,
+)
 from app.services.snapshot_service import exports_dir, write_work_snapshot
 
 router = APIRouter(prefix="/works", tags=["export"])
@@ -33,10 +37,10 @@ def _safe_filename(title: str) -> str:
 @router.get("/{work_id}/export")
 async def export_work(
     work_id: int,
-    format: str = Query(default="json", pattern="^(json|md)$"),
+    format: str = Query(default="json", pattern="^(json|md|chapters)$"),
     db: AsyncSession = Depends(get_db),
 ) -> FileResponse:
-    """Export a work as JSON or Markdown, returning the file as a download."""
+    """Export a work as JSON, a single Markdown manuscript, or a chapter zip."""
     work = await db.get(Work, work_id)
     if work is None:
         raise HTTPException(status_code=404, detail="Work not found")
@@ -50,12 +54,23 @@ async def export_work(
         body = json.dumps(document, ensure_ascii=False, indent=2)
         path = target_dir / f"{slug}-{timestamp}.json"
         media_type = "application/json"
+        path.write_text(body, encoding="utf-8")
+    elif format == "chapters":
+        try:
+            path, _count = await write_work_chapters_zip(
+                db, work_id, target_dir, slug=slug, timestamp=timestamp
+            )
+        except ValueError as exc:
+            if str(exc) == "Work not found":
+                raise HTTPException(status_code=404, detail="Work not found") from exc
+            raise HTTPException(status_code=400, detail="没有可导出的章节正文") from exc
+        return FileResponse(path, media_type="application/zip", filename=f"{slug}.zip")
     else:
         body = await build_work_export_markdown(db, work_id) or ""
         path = target_dir / f"{slug}-{timestamp}.md"
         media_type = "text/markdown"
+        path.write_text(body, encoding="utf-8")
 
-    path.write_text(body, encoding="utf-8")
     return FileResponse(path, media_type=media_type, filename=path.name)
 
 
