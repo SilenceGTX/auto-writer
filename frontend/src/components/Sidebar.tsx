@@ -37,10 +37,10 @@ export function Sidebar(): ReactElement {
   return (
     <aside className="app-sidebar">
       <div className="brand-block">
-        <div className="brand-mark">AW</div>
+        <img className="brand-mark" src="/icon.png" alt="Auto-Writer" />
         <div>
           <strong>Auto-Writer</strong>
-          <span>小说创作工作台</span>
+          <span>小说辅助创作工具</span>
         </div>
       </div>
 

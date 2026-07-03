@@ -13,6 +13,9 @@ dependencies = [
     "uvicorn[standard]>=0.32.0",
 ]
 
+[project.scripts]
+auto-writer = "app.launcher:main"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3.3",

@@ -1,11 +1,13 @@
 services:
   backend:
+    image: auto-writer-backend:prod
     build:
       context: ./backend
       target: prod
     environment:
       AW_DATABASE_URL: sqlite+aiosqlite:///./data/auto_writer.db
       AW_CORS_ORIGINS: http://localhost:5173,http://localhost:8080
+      # AW_LOG_LEVEL: DEBUG
     volumes:
       - ./data:/app/data
     ports:
@@ -23,6 +25,7 @@ services:
       start_period: 5s
 
   app:
+    image: auto-writer-app:prod
     build:
       context: ./frontend
       target: prod

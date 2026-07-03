@@ -5,7 +5,7 @@
  * actions to quote the selection into the AI chat or trigger a local rewrite.
  */
 import { useEffect, useRef, type ReactElement } from "react";
-import { Button, Tooltip } from "@heroui/react";
+import { Button, Checkbox, Tooltip } from "@heroui/react";
 import { Maximize2, Minimize2, MessageSquareQuote, Sparkles, WandSparkles } from "lucide-react";
 import { useEntityMentions } from "../../hooks/useEntityMentions";
 import { MentionPopover } from "../../components/MentionPopover";
@@ -30,6 +30,8 @@ interface ChapterEditorProps {
   onToggleFocus: () => void;
   generating: boolean;
   onGenerateDraft: () => void;
+  includeRecap: boolean;
+  onIncludeRecapChange: (value: boolean) => void;
   onQuote: (text: string) => void;
   onRewrite: (selection: string, start: number, end: number) => void;
   memory: Map<number, ScrollMemory>;
@@ -136,13 +138,24 @@ export function ChapterEditor(props: ChapterEditorProps): ReactElement {
       <div className="chapter-editor-toolbar">
         <Button
           size="sm"
-          variant="flat"
+          color="primary"
+          variant="shadow"
+          className="chapter-draft-generate-btn"
           startContent={<Sparkles size={15} />}
           isLoading={props.generating}
           onPress={props.onGenerateDraft}
         >
-          AI 生成本章
+          AI 生成初稿
         </Button>
+        <Tooltip content="生成时附带上一章的前情提要；若无缓存会自动总结一次">
+          <Checkbox
+            size="sm"
+            isSelected={props.includeRecap}
+            onValueChange={props.onIncludeRecapChange}
+          >
+            含前情提要
+          </Checkbox>
+        </Tooltip>
         <Tooltip content="将选中文字引用到 AI 对话">
           <Button
             size="sm"

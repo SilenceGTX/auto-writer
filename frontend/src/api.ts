@@ -398,6 +398,20 @@ export async function downloadWorkExport(workId: number, format: "json" | "md"):
   triggerDownload(blob, filename);
 }
 
+/** Download a zip of one Markdown file per chapter (skips chapters with no body). */
+export async function downloadWorkChapterExport(workId: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/works/${workId}/export?format=chapters`);
+  if (!response.ok) {
+    const message = await response.text();
+    throw new ApiError(response.status, message || `导出失败（${response.status}）`);
+  }
+  const blob = await response.blob();
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
+  const filename = match ? decodeURIComponent(match[1]) : `work-${workId}.zip`;
+  triggerDownload(blob, filename);
+}
+
 /** Save a Blob to the user's machine via a temporary anchor element. */
 export function triggerDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
@@ -604,7 +618,13 @@ export async function generateRecap(chapterId: number): Promise<Recap> {
 /** Rewrite a selected passage; returns original + new for a diff preview. */
 export async function rewritePassage(
   chapterId: number,
-  input: { selection: string; instruction?: string; context?: string },
+  input: {
+    selection: string;
+    instruction?: string;
+    context?: string;
+    preceding?: string;
+    following?: string;
+  },
 ): Promise<RewriteResult> {
   return requestJson<RewriteResult>(`/chapters/${chapterId}/rewrite`, {
     method: "POST",

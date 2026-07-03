@@ -33,7 +33,8 @@ from app.services.generation_context import (
 )
 from app.services.llm_service import LLMConfigError, LLMRequestError, chat_completion
 from app.services.prompts import (
-    build_draft_prompt,
+    assemble_draft_prompt,
+    build_draft_requirements,
     build_recap_prompt,
     build_rewrite_prompt,
 )
@@ -71,6 +72,36 @@ async def _previous_chapter(db: AsyncSession, chapter: Chapter) -> Chapter | Non
         .limit(1)
     )
     return result.scalar_one_or_none()
+
+
+async def _summarize_and_cache_recap(
+    db: AsyncSession, previous: Chapter, connection, system_prompt: str, params
+) -> str:
+    """Summarize a chapter's content, cache the recap on it, and return the text.
+
+    Mutates ``previous`` in place (recap + timestamps); the caller is responsible
+    for committing. Shared by the recap endpoint and the draft generator.
+    """
+    user_prompt = build_recap_prompt(
+        chapter_number=previous.chapter_number,
+        title=previous.title,
+        content=previous.content or "",
+    )
+    recap = await chat_completion(
+        connection,
+        [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        params,
+    )
+    # Pin recap_generated_at to updated_at so a freshly generated recap is not
+    # considered stale; a later content edit bumps updated_at and marks it stale.
+    now = utcnow_iso()
+    previous.recap = recap.strip()
+    previous.recap_generated_at = now
+    previous.updated_at = now
+    return previous.recap
 
 
 async def _recompute_work_total(db: AsyncSession, work_id: int) -> None:
@@ -122,25 +153,35 @@ async def generate_draft(
     chapter = await _get_chapter(db, chapter_id)
     work = await _get_work(db, chapter.work_id)
 
-    recap_text = None
-    if payload.include_recap:
-        previous = await _previous_chapter(db, chapter)
-        recap_text = previous.recap if previous else None
-
     try:
         connection, system_prompt, params = await resolve_llm_context(db, "writing")
+
+        # When requested, include the previous chapter's recap. Reuse the cached
+        # recap if present; otherwise generate one now (and cache it) as long as
+        # the previous chapter has body text to summarize.
+        recap_text = None
+        if payload.include_recap:
+            previous = await _previous_chapter(db, chapter)
+            if previous is not None:
+                if previous.recap and previous.recap.strip():
+                    recap_text = previous.recap
+                elif (previous.content or "").strip():
+                    recap_text = await _summarize_and_cache_recap(
+                        db, previous, connection, system_prompt, params
+                    )
+
         reference_block = await reference_block_for_texts(
             db, chapter.work_id, [chapter.summary or ""]
         )
-        user_prompt = with_references(
-            build_draft_prompt(
-                work_info_block(work),
+        user_prompt = assemble_draft_prompt(
+            work_info_block(work),
+            reference_block,
+            build_draft_requirements(
                 chapter_number=chapter.chapter_number,
                 title=chapter.title,
                 summary=chapter.summary,
                 recap=recap_text,
             ),
-            reference_block,
         )
         content = await chat_completion(
             connection,
@@ -198,36 +239,20 @@ async def generate_recap(chapter_id: int, db: AsyncSession = Depends(get_db)) ->
 
     try:
         connection, system_prompt, params = await resolve_llm_context(db, "writing")
-        user_prompt = build_recap_prompt(
-            chapter_number=previous.chapter_number,
-            title=previous.title,
-            content=previous.content,
-        )
-        recap = await chat_completion(
-            connection,
-            [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            params,
+        recap_text = await _summarize_and_cache_recap(
+            db, previous, connection, system_prompt, params
         )
     except LLMConfigError as exc:
         raise _config_error(exc) from exc
     except LLMRequestError as exc:
         raise _request_error(exc) from exc
 
-    # Pin recap_generated_at to updated_at so a freshly generated recap is not
-    # considered stale; a later content edit bumps updated_at and marks it stale.
-    now = utcnow_iso()
-    previous.recap = recap.strip()
-    previous.recap_generated_at = now
-    previous.updated_at = now
     await db.commit()
     logger.info("生成前情提要 previous_chapter_id={}", previous.id)
     return RecapRead(
         has_previous=True,
         previous_chapter_number=previous.chapter_number,
-        recap=previous.recap,
+        recap=recap_text,
         cached=True,
         stale=False,
     )
@@ -242,13 +267,23 @@ async def rewrite_passage(
     try:
         connection, system_prompt, params = await resolve_llm_context(db, "writing")
         reference_block = await reference_block_for_texts(
-            db, chapter.work_id, [payload.selection, payload.context or "", chapter.summary or ""]
+            db,
+            chapter.work_id,
+            [
+                payload.selection,
+                payload.context or "",
+                payload.preceding or "",
+                payload.following or "",
+                chapter.summary or "",
+            ],
         )
         user_prompt = with_references(
             build_rewrite_prompt(
                 selection=payload.selection,
                 instruction=payload.instruction,
                 context=payload.context,
+                preceding=payload.preceding,
+                following=payload.following,
             ),
             reference_block,
         )

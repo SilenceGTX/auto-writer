@@ -21,6 +21,7 @@ import {
 } from "../api";
 import { useApp } from "../context/AppContext";
 import { useToast } from "../components/Toast";
+import { INSPIRATION_CREATED_EVENT } from "../utils/events";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { InspirationCard } from "./inspiration/InspirationCard";
 import { InspirationDetailModal } from "./inspiration/InspirationDetailModal";
@@ -85,6 +86,12 @@ export function InspirationPage(): ReactElement {
 
   useEffect(() => {
     void loadInspirations();
+  }, [loadInspirations]);
+
+  useEffect(() => {
+    const handler = (): void => void loadInspirations();
+    window.addEventListener(INSPIRATION_CREATED_EVENT, handler);
+    return () => window.removeEventListener(INSPIRATION_CREATED_EVENT, handler);
   }, [loadInspirations]);
 
   async function handleCopy(content: string): Promise<void> {

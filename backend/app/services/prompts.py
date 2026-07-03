@@ -2,19 +2,62 @@
 
 Builds the reusable prompt fragments described in ``STORY_PAGE_DESIGN.md`` §5,
 such as the work-information block and the system prompt that injects the
-user's global writing style.
+user's global writing style. Each builder logs the assembled text at DEBUG
+via loguru.
 """
 
+import functools
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
+from loguru import logger
+
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+def log_assembled_prompt(label: str, prompt: str) -> str:
+    """Record a fully assembled prompt at DEBUG level and return it unchanged."""
+    logger.debug("组装 prompt [{}]:\n{}", label, prompt)
+    return prompt
+
+
+def log_chat_messages(label: str, messages: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Record an assembled chat message list at DEBUG level."""
+    parts: list[str] = []
+    for message in messages:
+        parts.append(f"--- [{message['role']}] ---")
+        parts.append(message["content"])
+    logger.debug("组装 prompt [{}]:\n{}", label, "\n".join(parts))
+    return messages
+
+
+def _log_prompt_builder(func: Callable[P, str]) -> Callable[P, str]:
+    """Decorator that DEBUG-logs the string returned by a prompt builder."""
+
+    @functools.wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> str:
+        result = func(*args, **kwargs)
+        log_assembled_prompt(func.__name__, result)
+        return result
+
+    return wrapper
+
+
+@_log_prompt_builder
 def build_system_prompt(writing_style: str = "") -> str:
-    """Build the base system prompt, optionally injecting the writing style."""
-    base = "你是一位专业的小说创作助手，擅长构思情节、塑造人物并保持文风统一。"
+    """Build the system prompt, using the user's writing style when provided.
+
+    When ``writing_style`` is non-empty it fully replaces the default persona;
+    otherwise a default top-tier novelist instruction is used.
+    """
     style = writing_style.strip()
     if style:
-        return f"{base}\n\n【写作风格要求】\n{style}"
-    return base
+        return style
+    return "你是一位顶级小说作家，擅长构思情节、塑造人物并保持文风统一。"
 
 
+@_log_prompt_builder
 def build_work_info_block(
     *,
     title: str,
@@ -42,6 +85,7 @@ def build_work_info_block(
     return "\n".join(lines)
 
 
+@_log_prompt_builder
 def build_stage_generation_prompt(
     work_info: str, stages: list[str], planned_chapter_count: int | None
 ) -> str:
@@ -67,16 +111,16 @@ def build_stage_generation_prompt(
     )
 
 
-def build_draft_prompt(
-    work_info: str,
+@_log_prompt_builder
+def build_draft_requirements(
     *,
     chapter_number: int,
     title: str | None,
     summary: str | None,
     recap: str | None = None,
 ) -> str:
-    """Build the user prompt asking the LLM to draft a chapter's body text."""
-    lines = [work_info, ""]
+    """Build the draft writing-task section (recap, chapter brief, and constraints)."""
+    lines: list[str] = []
     if recap and recap.strip():
         lines.append(f"【前情提要】\n{recap.strip()}")
         lines.append("")
@@ -91,6 +135,16 @@ def build_draft_prompt(
     return "\n".join(lines)
 
 
+def assemble_draft_prompt(work_info: str, reference_block: str, requirements: str) -> str:
+    """Assemble the draft user prompt: work info, then references, then the task."""
+    parts = [work_info.strip()]
+    if reference_block.strip():
+        parts.append(reference_block.strip())
+    parts.append(requirements.strip())
+    return log_assembled_prompt("assemble_draft_prompt", "\n\n".join(parts))
+
+
+@_log_prompt_builder
 def build_recap_prompt(*, chapter_number: int, title: str | None, content: str) -> str:
     """Build the user prompt asking the LLM to summarize a chapter's content."""
     heading = f"第{chapter_number}章" + (f"《{title}》" if title else "")
@@ -101,11 +155,31 @@ def build_recap_prompt(*, chapter_number: int, title: str | None, content: str) 
     )
 
 
-def build_rewrite_prompt(*, selection: str, instruction: str | None, context: str | None) -> str:
-    """Build the user prompt asking the LLM to rewrite a selected passage."""
+@_log_prompt_builder
+def build_rewrite_prompt(
+    *,
+    selection: str,
+    instruction: str | None,
+    context: str | None,
+    preceding: str | None = None,
+    following: str | None = None,
+) -> str:
+    """Build the user prompt asking the LLM to rewrite a selected passage.
+
+    When ``preceding`` / ``following`` (the surrounding paragraphs) are provided,
+    the model is asked to keep the rewrite cohesive with them while still only
+    returning the rewritten passage itself.
+    """
     lines = []
     if context and context.strip():
         lines.append(f"【上下文（仅供参考，不要改写）】\n{context.strip()}")
+        lines.append("")
+    has_neighbors = bool((preceding and preceding.strip()) or (following and following.strip()))
+    if preceding and preceding.strip():
+        lines.append(f"【上文（重写内容的前文，保持衔接，不要改写）】\n{preceding.strip()}")
+        lines.append("")
+    if following and following.strip():
+        lines.append(f"【下文（重写内容的后文，保持衔接，不要改写）】\n{following.strip()}")
         lines.append("")
     requirement = (
         instruction.strip()
@@ -113,12 +187,15 @@ def build_rewrite_prompt(*, selection: str, instruction: str | None, context: st
         else "在保持原意的前提下润色，使表达更生动流畅"
     )
     lines.append(f"请按照以下要求重写下面这段文字：{requirement}")
-    lines.append("仅输出重写后的文字，不要包含解释、标题或引号。")
+    if has_neighbors:
+        lines.append("并在重写段落的基础上，确保与上文、下文自然衔接、语气连贯。")
+    lines.append("仅输出重写后的文字，不要包含解释、标题、引号，也不要重复上文或下文的内容。")
     lines.append("")
     lines.append(f"【待重写文字】\n{selection.strip()}")
     return "\n".join(lines)
 
 
+@_log_prompt_builder
 def build_chat_context_block(
     *,
     work_info: str,
@@ -139,6 +216,7 @@ def build_chat_context_block(
     return "\n".join(lines)
 
 
+@_log_prompt_builder
 def build_review_instruction() -> str:
     """Build the system instruction framing the assistant as a manuscript editor.
 
@@ -153,6 +231,7 @@ def build_review_instruction() -> str:
     )
 
 
+@_log_prompt_builder
 def build_chapter_generation_prompt(
     work_info: str, stages: list[dict[str, object]], chapter_numbers: list[int]
 ) -> str:

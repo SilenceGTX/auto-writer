@@ -25,6 +25,12 @@ function Layout(): ReactElement {
       .catch(() => undefined);
   }, []);
 
+  // Mirror the theme onto <html> so HeroUI's portaled overlays (dropdowns,
+  // menus, modals) also pick up the dark palette instead of rendering light.
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+  }, [isDark]);
+
   return (
     <div
       className={[

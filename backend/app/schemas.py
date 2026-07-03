@@ -228,7 +228,7 @@ class DataSaveSettings(BaseModel):
 
     input_debounce_seconds: int = Field(default=2, ge=1, le=10)
     autosave_interval_seconds: int = Field(default=30, ge=10, le=120)
-    snapshot_path: str = "data/snapshots"
+    snapshot_path: str = "snapshots"
     history_versions: int = Field(default=3, ge=0, le=10)
 
 
@@ -379,11 +379,17 @@ class RecapRead(BaseModel):
 
 
 class RewriteRequest(BaseModel):
-    """Request body for a local rewrite of a selected passage."""
+    """Request body for a local rewrite of a selected passage.
+
+    ``preceding`` / ``following`` carry the surrounding paragraphs when the user
+    enables "强化衔接" so the model can keep the rewrite cohesive with its context.
+    """
 
     selection: str = Field(min_length=1)
     instruction: str | None = None
     context: str | None = None
+    preceding: str | None = None
+    following: str | None = None
 
 
 class RewriteResult(BaseModel):

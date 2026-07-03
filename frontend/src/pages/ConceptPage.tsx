@@ -22,6 +22,7 @@ import { useApp } from "../context/AppContext";
 import { useAssistant } from "../context/AssistantContext";
 import { useToast } from "../components/Toast";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { WorkTitleSelect } from "../components/WorkTitleSelect";
 import { CategoryTabs } from "./worldbuilding/CategoryTabs";
 import { EntityCard } from "./worldbuilding/EntityCard";
 import { EntityForm } from "./worldbuilding/EntityForm";
@@ -95,6 +96,13 @@ export function ConceptPage(): ReactElement {
   useEffect(() => {
     void loadCategories();
   }, [loadCategories]);
+
+  useEffect(() => {
+    setPanel({ mode: "none" });
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+  }, [currentWorkId]);
 
   const loadEntities = useCallback(async () => {
     if (currentWorkId == null || activeId == null) {
@@ -227,7 +235,7 @@ export function ConceptPage(): ReactElement {
     <section className="workspace-page">
       <div className="page-header">
         <div>
-          <h1>设定</h1>
+          <WorkTitleSelect fallback="设定" />
           <p>维护角色、地点、物品与概念，写作时可通过 @ 引用它们。</p>
         </div>
         <Button

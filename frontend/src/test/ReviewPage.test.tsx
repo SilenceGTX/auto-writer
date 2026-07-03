@@ -65,6 +65,7 @@ vi.mock("../api", () => ({
   getChapter: vi.fn().mockResolvedValue(chapterContent),
   sendReviewChat: vi.fn(),
   listEntities: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+  downloadWorkChapterExport: vi.fn().mockResolvedValue(undefined),
 }));
 
 function Harness(): ReactElement {
@@ -117,5 +118,13 @@ describe("ReviewPage", () => {
     const second = screen.getAllByText(/第 2 章/)[0];
     await userEvent.click(second);
     await waitFor(() => expect(getChapter).toHaveBeenCalledWith(12));
+  });
+
+  it("exports chapters when the export button is clicked", async () => {
+    renderPage();
+    await screen.findByText("这是第一章的正文段落。");
+    const { downloadWorkChapterExport } = await import("../api");
+    await userEvent.click(screen.getByRole("button", { name: "导出作品" }));
+    await waitFor(() => expect(downloadWorkChapterExport).toHaveBeenCalledWith(1));
   });
 });

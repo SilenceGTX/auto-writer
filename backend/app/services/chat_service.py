@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import Chapter, Work
 from app.schemas import ChatRequest
 from app.services.generation_context import work_info_block
-from app.services.prompts import build_chat_context_block
+from app.services.prompts import build_chat_context_block, log_chat_messages
 from app.services.references import reference_block_for_texts, with_references
 
 
@@ -57,4 +57,4 @@ async def build_chat_messages(
     messages.extend(
         {"role": message.role, "content": message.content} for message in payload.messages
     )
-    return messages
+    return log_chat_messages("build_chat_messages", messages)

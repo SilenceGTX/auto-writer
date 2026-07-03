@@ -98,20 +98,22 @@ export function ChapterPanel(props: ChapterPanelProps): ReactElement {
         onValueChange={setSummary}
         placeholder="本章大致写什么...（输入 @ 可引用设定条目）"
       />
-      <div className="form-actions">
+      <div className="form-actions form-actions-stacked">
         <AddInspirationButton
           source={{ source_page: "outline", work_id: chapter.work_id, chapter_id: chapter.id }}
           getFallbackText={() => summary}
         />
-        <Button variant="light" onPress={props.onCancel}>
-          取消
-        </Button>
-        <Button variant="flat" isLoading={saving} onPress={() => void handleSave()}>
-          保存
-        </Button>
-        <Button color="primary" isLoading={saving} onPress={() => void handleGenerate()}>
-          保存并生成正文
-        </Button>
+        <div className="form-actions-row">
+          <Button variant="light" onPress={props.onCancel}>
+            取消
+          </Button>
+          <Button variant="flat" isLoading={saving} onPress={() => void handleSave()}>
+            保存
+          </Button>
+          <Button color="primary" isLoading={saving} onPress={() => void handleGenerate()}>
+            撰写正文
+          </Button>
+        </div>
       </div>
     </section>
   );

@@ -43,7 +43,7 @@ export function StagePanel(props: StagePanelProps): ReactElement {
       <div className="detail-stats">
         <div className="detail-stat">
           <span>章节总数</span>
-          <strong>{stage.chapter_count}</strong>
+          <strong>{stage.chapter_count} 章</strong>
         </div>
         <div className="detail-stat">
           <span>章节占比</span>
@@ -58,17 +58,19 @@ export function StagePanel(props: StagePanelProps): ReactElement {
         onValueChange={setOverview}
         placeholder="该阶段的关键剧情走向...（输入 @ 可引用设定条目）"
       />
-      <div className="form-actions">
+      <div className="form-actions form-actions-stacked">
         <AddInspirationButton
           source={{ source_page: "outline", work_id: stage.work_id }}
           getFallbackText={() => overview}
         />
-        <Button variant="light" onPress={props.onCancel}>
-          取消
-        </Button>
-        <Button color="primary" isLoading={saving} onPress={() => void handleSave()}>
-          保存
-        </Button>
+        <div className="form-actions-row">
+          <Button variant="light" onPress={props.onCancel}>
+            取消
+          </Button>
+          <Button color="primary" isLoading={saving} onPress={() => void handleSave()}>
+            保存
+          </Button>
+        </div>
       </div>
     </section>
   );

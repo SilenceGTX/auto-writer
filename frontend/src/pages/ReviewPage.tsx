@@ -4,14 +4,16 @@
  * navigation / reading progress) in the workspace, and an editor-style AI review
  * chat in the assistant panel where the user can quote passages for checking.
  */
-import { useCallback, useEffect, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@heroui/react";
-import { getChapter, getOutline, type Chapter, type Outline } from "../api";
+import { Download } from "lucide-react";
+import { ApiError, downloadWorkChapterExport, getChapter, getOutline, type Chapter, type Outline } from "../api";
 import { useApp } from "../context/AppContext";
 import { useAssistant } from "../context/AssistantContext";
 import { useToast } from "../components/Toast";
+import { WorkTitleSelect } from "../components/WorkTitleSelect";
 import { ReviewReader } from "./review/ReviewReader";
 import { ReviewAssistant } from "./review/ReviewAssistant";
 
@@ -22,11 +24,13 @@ export function ReviewPage(): ReactElement {
   const { currentWorkId, pendingHighlight, setPendingHighlight } = useApp();
   const { slot, setPageOwnsPanel, setCollapsed } = useAssistant();
   const [searchParams] = useSearchParams();
+  const previousWorkIdRef = useRef<number | null>(currentWorkId);
 
   const [outline, setOutline] = useState<Outline | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [quoted, setQuoted] = useState<string | null>(null);
   const [highlight, setHighlight] = useState<string | null>(null);
 
@@ -65,6 +69,17 @@ export function ReviewPage(): ReactElement {
   }, [loadOutline]);
 
   useEffect(() => {
+    const previous = previousWorkIdRef.current;
+    if (previous != null && previous !== currentWorkId) {
+      navigate("/review", { replace: true });
+      setSelectedId(null);
+      setQuoted(null);
+      setHighlight(null);
+    }
+    previousWorkIdRef.current = currentWorkId;
+  }, [currentWorkId, navigate]);
+
+  useEffect(() => {
     if (selectedId == null) {
       return;
     }
@@ -93,6 +108,21 @@ export function ReviewPage(): ReactElement {
   function handleSelectChapter(chapterId: number): void {
     setHighlight(null);
     setSelectedId(chapterId);
+  }
+
+  async function handleExportChapters(): Promise<void> {
+    if (currentWorkId == null) {
+      return;
+    }
+    setExporting(true);
+    try {
+      await downloadWorkChapterExport(currentWorkId);
+      notify("作品导出已开始下载", "success");
+    } catch (error) {
+      notify(error instanceof ApiError ? error.message : "导出失败", "error");
+    } finally {
+      setExporting(false);
+    }
   }
 
   if (currentWorkId == null) {
@@ -124,9 +154,19 @@ export function ReviewPage(): ReactElement {
     <section className="workspace-page review-page">
       <div className="page-header">
         <div>
-          <h1>{outline?.title ?? "审阅"}</h1>
-          <p>通读全文，定位前后矛盾与可优化段落，并借助 AI 提出修改建议。</p>
+          <WorkTitleSelect fallback={outline?.title ?? "审阅"} />
+          <p>通读全文，并借助 AI 提出修改建议。</p>
         </div>
+        {chapters.length > 0 ? (
+          <Button
+            variant="flat"
+            startContent={<Download size={16} />}
+            isLoading={exporting}
+            onPress={() => void handleExportChapters()}
+          >
+            导出作品
+          </Button>
+        ) : null}
       </div>
 
       {chapters.length === 0 ? (

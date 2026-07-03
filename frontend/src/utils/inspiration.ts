@@ -9,7 +9,7 @@ export const SOURCE_LABELS: Record<string, string> = {
 
 /** Map a stored source-page value to its Chinese label (or a fallback). */
 export function sourceLabel(source: string | null): string {
-  return source ? (SOURCE_LABELS[source] ?? source) : "未知来源";
+  return source ? (SOURCE_LABELS[source] ?? source) : "灵光一闪";
 }
 
 /** Format an ISO-like UTC timestamp ("YYYY-MM-DD HH:MM:SS") for display. */
