@@ -188,6 +188,46 @@ textarea {
   line-height: 1.2;
 }
 
+.work-title-select {
+  max-width: min(100%, 520px);
+  margin: 0 0 6px;
+}
+
+.work-title-select-base {
+  min-width: 0;
+}
+
+.work-title-select-trigger {
+  min-height: calc(1.8rem * 1.45);
+  height: auto;
+  padding: 2px 32px 4px 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  font-size: 1.8rem;
+  font-weight: 700;
+  line-height: 1.45;
+  overflow: visible;
+}
+
+.work-title-select-trigger[data-hover="true"],
+.work-title-select-trigger[data-focus="true"] {
+  background: transparent;
+}
+
+.work-title-select-inner {
+  padding: 0;
+  overflow: visible;
+  align-items: center;
+}
+
+.work-title-select-value {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: 1.45;
+  overflow: visible;
+}
+
 .stats-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 180px));

@@ -23,6 +23,7 @@ import { useApp } from "../context/AppContext";
 import { useAssistant } from "../context/AssistantContext";
 import { useToast } from "../components/Toast";
 import { type SaveState } from "../components/SaveStatus";
+import { WorkTitleSelect } from "../components/WorkTitleSelect";
 import { useHotkeys } from "../hooks/useHotkeys";
 import { countWords } from "../utils/wordCount";
 import { ChapterEditor, type ScrollMemory } from "./writing/ChapterEditor";
@@ -39,6 +40,7 @@ export function WritingPage(): ReactElement {
     useApp();
   const { slot, setPageOwnsPanel, setCollapsed, focusMode, setFocusMode } = useAssistant();
   const [searchParams] = useSearchParams();
+  const previousWorkIdRef = useRef<number | null>(currentWorkId);
 
   const [outline, setOutline] = useState<Outline | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -109,6 +111,15 @@ export function WritingPage(): ReactElement {
   useEffect(() => {
     void loadOutline();
   }, [loadOutline]);
+
+  useEffect(() => {
+    const previous = previousWorkIdRef.current;
+    if (previous != null && previous !== currentWorkId) {
+      navigate("/writing", { replace: true });
+      setSelectedId(null);
+    }
+    previousWorkIdRef.current = currentWorkId;
+  }, [currentWorkId, navigate]);
 
   useEffect(() => {
     if (selectedId == null) {
@@ -247,7 +258,7 @@ export function WritingPage(): ReactElement {
     <section className="workspace-page writing-page">
       <div className="page-header">
         <div>
-          <h1>{outline?.title ?? "写作"}</h1>
+          <WorkTitleSelect fallback={outline?.title ?? "写作"} />
           <p>选择章节进行正文创作，支持自动保存与 AI 协作。</p>
         </div>
         <Select

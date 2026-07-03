@@ -26,6 +26,7 @@ import { useApp } from "../context/AppContext";
 import { useAssistant } from "../context/AssistantContext";
 import { useToast } from "../components/Toast";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { WorkTitleSelect } from "../components/WorkTitleSelect";
 import { stageColorMap } from "../utils/outline";
 import { ChapterOutline } from "./outline/ChapterOutline";
 import { ChapterPanel } from "./outline/ChapterPanel";
@@ -66,6 +67,10 @@ export function OutlinePage(): ReactElement {
   useEffect(() => {
     void loadOutline();
   }, [loadOutline]);
+
+  useEffect(() => {
+    setSelection(null);
+  }, [currentWorkId]);
 
   const colorMap = useMemo(() => stageColorMap(outline?.stages ?? []), [outline?.stages]);
 
@@ -181,10 +186,7 @@ export function OutlinePage(): ReactElement {
       chapter={selectedChapter}
       stages={outline?.stages ?? []}
       onSaved={() => void loadOutline()}
-      onGenerate={() => {
-        notify("正文生成将在写作页进行", "info");
-        navigate("/writing");
-      }}
+      onGenerate={(chapter) => navigate(`/writing?chapter=${chapter.id}`)}
       onCancel={() => setSelection(null)}
     />
   ) : (
@@ -200,7 +202,7 @@ export function OutlinePage(): ReactElement {
     <section className="workspace-page outline-page">
       <div className="page-header">
         <div>
-          <h1>{outline?.title ?? "大纲"}</h1>
+          <WorkTitleSelect fallback={outline?.title ?? "大纲"} />
           <p>
             {outline?.structure_name ? `结构：${outline.structure_name} · ` : ""}
             已规划 {outline?.chapters.length ?? 0} 章
