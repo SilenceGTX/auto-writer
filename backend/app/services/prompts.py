@@ -2,19 +2,62 @@
 
 Builds the reusable prompt fragments described in ``STORY_PAGE_DESIGN.md`` §5,
 such as the work-information block and the system prompt that injects the
-user's global writing style.
+user's global writing style. Each builder logs the assembled text at DEBUG
+via loguru.
 """
 
+import functools
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
+from loguru import logger
+
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+def log_assembled_prompt(label: str, prompt: str) -> str:
+    """Record a fully assembled prompt at DEBUG level and return it unchanged."""
+    logger.debug("组装 prompt [{}]:\n{}", label, prompt)
+    return prompt
+
+
+def log_chat_messages(label: str, messages: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Record an assembled chat message list at DEBUG level."""
+    parts: list[str] = []
+    for message in messages:
+        parts.append(f"--- [{message['role']}] ---")
+        parts.append(message["content"])
+    logger.debug("组装 prompt [{}]:\n{}", label, "\n".join(parts))
+    return messages
+
+
+def _log_prompt_builder(func: Callable[P, str]) -> Callable[P, str]:
+    """Decorator that DEBUG-logs the string returned by a prompt builder."""
+
+    @functools.wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> str:
+        result = func(*args, **kwargs)
+        log_assembled_prompt(func.__name__, result)
+        return result
+
+    return wrapper
+
+
+@_log_prompt_builder
 def build_system_prompt(writing_style: str = "") -> str:
-    """Build the base system prompt, optionally injecting the writing style."""
-    base = "你是一位专业的小说创作助手，擅长构思情节、塑造人物并保持文风统一。"
+    """Build the system prompt, using the user's writing style when provided.
+
+    When ``writing_style`` is non-empty it fully replaces the default persona;
+    otherwise a default top-tier novelist instruction is used.
+    """
     style = writing_style.strip()
     if style:
-        return f"{base}\n\n【写作风格要求】\n{style}"
-    return base
+        return style
+    return "你是一位顶级小说作家，擅长构思情节、塑造人物并保持文风统一。"
 
 
+@_log_prompt_builder
 def build_work_info_block(
     *,
     title: str,
@@ -42,6 +85,7 @@ def build_work_info_block(
     return "\n".join(lines)
 
 
+@_log_prompt_builder
 def build_stage_generation_prompt(
     work_info: str, stages: list[str], planned_chapter_count: int | None
 ) -> str:
@@ -67,6 +111,7 @@ def build_stage_generation_prompt(
     )
 
 
+@_log_prompt_builder
 def build_draft_prompt(
     work_info: str,
     *,
@@ -91,6 +136,7 @@ def build_draft_prompt(
     return "\n".join(lines)
 
 
+@_log_prompt_builder
 def build_recap_prompt(*, chapter_number: int, title: str | None, content: str) -> str:
     """Build the user prompt asking the LLM to summarize a chapter's content."""
     heading = f"第{chapter_number}章" + (f"《{title}》" if title else "")
@@ -101,6 +147,7 @@ def build_recap_prompt(*, chapter_number: int, title: str | None, content: str) 
     )
 
 
+@_log_prompt_builder
 def build_rewrite_prompt(
     *,
     selection: str,
@@ -140,6 +187,7 @@ def build_rewrite_prompt(
     return "\n".join(lines)
 
 
+@_log_prompt_builder
 def build_chat_context_block(
     *,
     work_info: str,
@@ -160,6 +208,7 @@ def build_chat_context_block(
     return "\n".join(lines)
 
 
+@_log_prompt_builder
 def build_review_instruction() -> str:
     """Build the system instruction framing the assistant as a manuscript editor.
 
@@ -174,6 +223,7 @@ def build_review_instruction() -> str:
     )
 
 
+@_log_prompt_builder
 def build_chapter_generation_prompt(
     work_info: str, stages: list[dict[str, object]], chapter_numbers: list[int]
 ) -> str:

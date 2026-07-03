@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.prompts import log_assembled_prompt
+
 
 @dataclass
 class ReferencedEntry:
@@ -113,4 +115,9 @@ async def reference_block_for_texts(
 
 def with_references(user_prompt: str, reference_block: str) -> str:
     """Prepend the reference block to a user prompt when references exist."""
-    return f"{reference_block}\n\n{user_prompt}" if reference_block else user_prompt
+    if reference_block:
+        return log_assembled_prompt(
+            "with_references",
+            f"{reference_block}\n\n{user_prompt}",
+        )
+    return user_prompt
