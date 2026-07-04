@@ -46,16 +46,31 @@ def _install_portable_python(backend_out: Path) -> Path:
         cwd=backend_out,
     )
 
-    installed = [
+    # Newer uv versions may create both a versioned install and a shorter alias
+    # (often a symlink), e.g. cpython-3.11.15-... and cpython-3.11-....
+    entries = [
         path
         for path in runtime_root.iterdir()
         if path.is_dir() and not path.name.startswith(".")
     ]
-    if len(installed) != 1:
-        raise SystemExit(f"Expected one Python install under {runtime_root}, found {installed}")
+    if not entries:
+        raise SystemExit(f"No Python install found under {runtime_root}")
+
+    # Prefer a real directory over aliases, and the most specific name.
+    real_installs = [path for path in entries if not path.is_symlink()]
+    candidates = real_installs or entries
+    source = max(candidates, key=lambda path: (len(path.name), path.name))
 
     target = runtime_root / "python"
-    installed[0].rename(target)
+    for path in entries:
+        if path == source:
+            continue
+        if path.is_symlink() or path.is_file():
+            path.unlink()
+        elif path.is_dir():
+            shutil.rmtree(path)
+
+    source.rename(target)
     return target
 
 
