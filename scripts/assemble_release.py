@@ -1,10 +1,15 @@
-"""Assemble a platform-native desktop release directory for distribution.
+"""Assemble a self-contained desktop release for Windows, Linux, and macOS.
 
-Bundles a self-contained CPython under ``backend/runtime/python`` and installs
-dependencies into ``backend/.venv``. Start scripts invoke the runtime
-interpreter with ``python -m app.bootstrap`` so the package does not depend on
-build-machine absolute paths (the usual failure mode of a plain ``uv sync``
-venv on Windows CI).
+Layout of the release directory::
+
+    start.bat / start.sh / start.command
+    static/                 # Vite production build
+    backend/
+      app/                  # application source
+      runtime/python/       # portable CPython + site-packages (no system Python)
+
+Dependencies are installed directly into the bundled interpreter. No ``.venv``
+and no build-machine absolute paths are required at runtime.
 """
 
 from __future__ import annotations
@@ -14,6 +19,7 @@ import os
 import shutil
 import stat
 import subprocess
+import tempfile
 from pathlib import Path
 
 PYTHON_VERSION = "3.11"
@@ -28,50 +34,24 @@ def _copy_backend(backend_src: Path, backend_out: Path) -> None:
         shutil.copy2(backend_src / name, backend_out / name)
 
 
-def _run(cmd: list[str], *, cwd: Path) -> None:
+def _run(cmd: list[str], *, cwd: Path, env: dict[str, str] | None = None) -> None:
     """Run a subprocess and fail the build on non-zero exit."""
     print("+", " ".join(cmd), flush=True)
-    subprocess.run(cmd, cwd=cwd, check=True)
+    subprocess.run(cmd, cwd=cwd, check=True, env=env)
 
 
-def _install_portable_python(backend_out: Path) -> Path:
-    """Install a managed CPython into ``backend/runtime/python`` and return it."""
-    runtime_root = backend_out / "runtime"
-    if runtime_root.exists():
-        shutil.rmtree(runtime_root)
-    runtime_root.mkdir(parents=True)
-
-    _run(
-        ["uv", "python", "install", PYTHON_VERSION, "--install-dir", str(runtime_root)],
-        cwd=backend_out,
-    )
-
-    # Newer uv versions may create both a versioned install and a shorter alias
-    # (often a symlink), e.g. cpython-3.11.15-... and cpython-3.11-....
-    entries = [
-        path
-        for path in runtime_root.iterdir()
-        if path.is_dir() and not path.name.startswith(".")
-    ]
-    if not entries:
-        raise SystemExit(f"No Python install found under {runtime_root}")
-
-    # Prefer a real directory over aliases, and the most specific name.
-    real_installs = [path for path in entries if not path.is_symlink()]
-    candidates = real_installs or entries
-    source = max(candidates, key=lambda path: (len(path.name), path.name))
-
-    target = runtime_root / "python"
-    for path in entries:
-        if path == source:
-            continue
-        if path.is_symlink() or path.is_file():
-            path.unlink()
-        elif path.is_dir():
-            shutil.rmtree(path)
-
-    source.rename(target)
-    return target
+def _remove_path(path: Path) -> None:
+    """Remove a file, symlink, junction, or directory tree."""
+    if not path.exists() and not path.is_symlink():
+        return
+    # Windows junctions/symlinks: rmtree raises; unlink works.
+    if path.is_symlink() or path.is_file():
+        path.unlink()
+        return
+    try:
+        shutil.rmtree(path)
+    except OSError:
+        path.unlink()
 
 
 def _find_runtime_python(python_home: Path) -> Path:
@@ -89,37 +69,85 @@ def _find_runtime_python(python_home: Path) -> Path:
     raise SystemExit(f"Could not find a Python executable under {python_home}")
 
 
-def _install_dependencies(backend_out: Path, runtime_python: Path) -> None:
-    """Create a venv for site-packages and install locked dependencies into it."""
-    venv_dir = backend_out / ".venv"
-    if venv_dir.exists():
-        shutil.rmtree(venv_dir)
+def _discover_install_roots(staging: Path) -> list[Path]:
+    """Return unique resolved install directories under a uv python install-dir."""
+    roots: dict[Path, Path] = {}
+    for entry in staging.iterdir():
+        if entry.name.startswith("."):
+            continue
+        if not (entry.is_dir() or entry.is_symlink()):
+            continue
+        resolved = entry.resolve()
+        if not resolved.is_dir():
+            continue
+        # Keep the entry with the longest name for each real path.
+        current = roots.get(resolved)
+        if current is None or len(entry.name) > len(current.name):
+            roots[resolved] = entry
+    return list(roots.keys())
 
+
+def _install_portable_python(backend_out: Path) -> Path:
+    """Copy a managed CPython into ``backend/runtime/python`` (no symlinks)."""
+    runtime_root = backend_out / "runtime"
+    if runtime_root.exists():
+        _remove_path(runtime_root)
+    runtime_root.mkdir(parents=True)
+
+    with tempfile.TemporaryDirectory(prefix="aw-python-") as tmp:
+        staging = Path(tmp)
+        _run(
+            ["uv", "python", "install", PYTHON_VERSION, "--install-dir", str(staging)],
+            cwd=backend_out,
+        )
+        installs = _discover_install_roots(staging)
+        if not installs:
+            raise SystemExit(f"No Python install found under {staging}")
+        # Prefer the most specific install directory name.
+        source = max(installs, key=lambda path: (len(path.name), path.name))
+        target = runtime_root / "python"
+        # Dereference symlinks so the bundle is fully self-contained.
+        shutil.copytree(source, target, symlinks=False, dirs_exist_ok=False)
+
+    # Allow installing packages into this private copy (uv marks managed installs).
+    for marker in target.rglob("EXTERNALLY-MANAGED"):
+        marker.unlink(missing_ok=True)
+
+    return target
+
+
+def _install_dependencies(backend_out: Path, runtime_python: Path) -> None:
+    """Install locked runtime dependencies into the bundled interpreter."""
+    requirements = backend_out / "requirements.desktop.txt"
     _run(
         [
             "uv",
-            "venv",
-            str(venv_dir),
-            "--python",
-            str(runtime_python),
-            "--link-mode",
-            "copy",
-        ],
-        cwd=backend_out,
-    )
-    _run(
-        [
-            "uv",
-            "sync",
+            "export",
             "--frozen",
             "--no-dev",
-            "--python",
-            str(runtime_python),
-            "--link-mode",
-            "copy",
+            "--no-emit-project",
+            "--no-hashes",
+            "-o",
+            str(requirements),
         ],
         cwd=backend_out,
     )
+    _run(
+        [
+            "uv",
+            "pip",
+            "install",
+            "--python",
+            str(runtime_python),
+            "--break-system-packages",
+            "--link-mode",
+            "copy",
+            "-r",
+            str(requirements),
+        ],
+        cwd=backend_out,
+    )
+    requirements.unlink(missing_ok=True)
 
 
 def _runtime_python_relpath(runtime_python: Path, backend_out: Path) -> str:
@@ -139,22 +167,17 @@ if [[ ! -f "$ROOT/static/index.html" ]]; then
 fi
 
 PYTHON="$ROOT/backend/{runtime_python_rel}"
-if [[ ! -x "$PYTHON" ]]; then
+if [[ ! -x "$PYTHON" && ! -f "$PYTHON" ]]; then
   echo "Error: bundled Python not found at backend/{runtime_python_rel}" >&2
   echo "You do not need to install Python yourself." >&2
   echo "Re-download the release built for this OS." >&2
   exit 1
 fi
 
-if [[ ! -d "$ROOT/backend/.venv" ]]; then
-  echo "Error: bundled dependencies not found at backend/.venv" >&2
-  exit 1
-fi
-
 export AW_DESKTOP_MODE=1
 export AW_STATIC_DIR="$ROOT/static"
 cd "$ROOT/backend"
-exec "$PYTHON" -m app.bootstrap
+exec "$PYTHON" -m app.launcher
 """
     path = output / "start.sh"
     path.write_text(content, encoding="utf-8", newline="\n")
@@ -185,17 +208,10 @@ if not exist "backend\\{win_python}" (
   exit /b 1
 )
 
-if not exist "backend\\.venv" (
-  echo Error: bundled dependencies not found at backend\\.venv
-  echo.
-  pause
-  exit /b 1
-)
-
 set "AW_DESKTOP_MODE=1"
 set "AW_STATIC_DIR=%~dp0static"
 cd /d "%~dp0backend"
-"{win_python}" -m app.bootstrap
+"{win_python}" -m app.launcher
 set "EXIT_CODE=%ERRORLEVEL%"
 if not "%EXIT_CODE%"=="0" (
   echo.
@@ -230,12 +246,9 @@ Linux   : ./start.sh
 
 Your browser opens automatically. Press Ctrl+C in the terminal to stop.
 
-Python is NOT required. Each release embeds a portable CPython under
-backend/runtime/python/ plus dependencies under backend/.venv/.
+This package is self-contained. Python is NOT required on the host machine.
+Everything lives under backend/runtime/python/ (interpreter + dependencies).
 Use the archive built for your OS (win-x64 / linux-x64 / macos-arm64).
-
-If start.bat shows an error about hostedtoolcache or a missing Python path,
-you have an old build — download a newer release.
 
 User data (database, snapshots, exports, logs)
 ----------------------------------------------
@@ -266,25 +279,18 @@ def assemble_release(repo_root: Path, output: Path, version: str) -> None:
     runtime_python = _find_runtime_python(python_home)
     _install_dependencies(backend_out, runtime_python)
 
+    # Drop packaging metadata that is not needed at runtime.
+    for name in ("pyproject.toml", "uv.lock"):
+        (backend_out / name).unlink(missing_ok=True)
+
     runtime_rel = _runtime_python_relpath(runtime_python, backend_out)
     _write_start_sh(output, runtime_rel)
     _write_start_bat(output, runtime_rel)
     _write_start_command(output)
     _write_readme(output, version)
 
-    # Smoke-check: runtime interpreter + venv site-packages resolve after packaging.
     smoke = subprocess.run(
-        [
-            str(runtime_python),
-            "-c",
-            "from pathlib import Path; import sys; "
-            "backend = Path('.').resolve(); "
-            "site = backend / '.venv' / 'Lib' / 'site-packages'; "
-            "matches = sorted((backend / '.venv' / 'lib').glob('python*/site-packages')) "
-            "if not site.is_dir() else [site]; "
-            "sys.path[:0] = [str(matches[0]), str(backend)]; "
-            "import fastapi, app.launcher; print('smoke-ok')",
-        ],
+        [str(runtime_python), "-c", "import fastapi, app.launcher; print('smoke-ok')"],
         cwd=backend_out,
         capture_output=True,
         text=True,
