@@ -25,10 +25,24 @@ def _write_start_sh(output: Path) -> None:
     content = """#!/usr/bin/env bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [[ ! -f "$ROOT/static/index.html" ]]; then
+  echo "Error: static/index.html not found. This release package is incomplete." >&2
+  exit 1
+fi
+
+PYTHON="$ROOT/backend/.venv/bin/python"
+if [[ ! -x "$PYTHON" ]]; then
+  echo "Error: bundled Python not found at backend/.venv/bin/python" >&2
+  echo "You do not need to install Python yourself." >&2
+  echo "Re-download the release built for this OS (do not copy a Linux/macOS bundle to another platform)." >&2
+  exit 1
+fi
+
 export AW_DESKTOP_MODE=1
 export AW_STATIC_DIR="$ROOT/static"
 cd "$ROOT/backend"
-exec .venv/bin/python -m app.launcher
+exec "$PYTHON" -m app.launcher
 """
     path = output / "start.sh"
     path.write_text(content, encoding="utf-8", newline="\n")
@@ -38,12 +52,38 @@ exec .venv/bin/python -m app.launcher
 def _write_start_bat(output: Path) -> None:
     """Write the Windows launcher script."""
     content = """@echo off
-setlocal
+setlocal EnableExtensions
 cd /d "%~dp0"
-set AW_DESKTOP_MODE=1
-set AW_STATIC_DIR=%~dp0static
-cd backend
+
+if not exist "static\\index.html" (
+  echo Error: static\\index.html not found. This release package is incomplete.
+  echo.
+  pause
+  exit /b 1
+)
+
+if not exist "backend\\.venv\\Scripts\\python.exe" (
+  echo Error: bundled Python not found at backend\\.venv\\Scripts\\python.exe
+  echo.
+  echo You do NOT need to install Python yourself.
+  echo Use the Windows release zip from GitHub Releases ^(win-x64^).
+  echo Do not copy a Linux/macOS bundle onto Windows — the embedded runtime is OS-specific.
+  echo.
+  pause
+  exit /b 1
+)
+
+set "AW_DESKTOP_MODE=1"
+set "AW_STATIC_DIR=%~dp0static"
+cd /d "%~dp0backend"
 ".venv\\Scripts\\python.exe" -m app.launcher
+set "EXIT_CODE=%ERRORLEVEL%"
+if not "%EXIT_CODE%"=="0" (
+  echo.
+  echo Auto-Writer exited with error code %EXIT_CODE%.
+  pause
+)
+exit /b %EXIT_CODE%
 """
     (output / "start.bat").write_text(content, encoding="utf-8", newline="\r\n")
 
@@ -70,6 +110,13 @@ macOS   : double-click start.command (or run ./start.sh in Terminal)
 Linux   : ./start.sh
 
 Your browser opens automatically. Press Ctrl+C in the terminal to stop.
+
+Python is NOT required. Each release embeds a platform-specific runtime under
+backend/.venv/. Use the archive built for your OS (win-x64 / linux-x64 /
+macos-arm64). Copying a bundle between OSes will not work.
+
+If start.bat flashes and closes, run it from Command Prompt to see the error,
+or check that backend\\.venv\\Scripts\\python.exe exists after unzipping.
 
 User data (database, snapshots, exports, logs)
 ----------------------------------------------
