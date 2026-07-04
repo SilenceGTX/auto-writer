@@ -30,7 +30,7 @@ def _copy_backend(backend_src: Path, backend_out: Path) -> None:
     backend_out.mkdir(parents=True, exist_ok=True)
     ignore = shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache", ".ruff_cache")
     shutil.copytree(backend_src / "app", backend_out / "app", ignore=ignore)
-    for name in ("pyproject.toml", "uv.lock"):
+    for name in ("pyproject.toml", "uv.lock", "run_desktop.py"):
         shutil.copy2(backend_src / name, backend_out / name)
 
 
@@ -176,8 +176,10 @@ fi
 
 export AW_DESKTOP_MODE=1
 export AW_STATIC_DIR="$ROOT/static"
+export PYTHONNOUSERSITE=1
+unset PYTHONPATH || true
 cd "$ROOT/backend"
-exec "$PYTHON" -m app.launcher
+exec "$PYTHON" -s run_desktop.py
 """
     path = output / "start.sh"
     path.write_text(content, encoding="utf-8", newline="\n")
@@ -210,8 +212,10 @@ if not exist "backend\\{win_python}" (
 
 set "AW_DESKTOP_MODE=1"
 set "AW_STATIC_DIR=%~dp0static"
+set "PYTHONNOUSERSITE=1"
+set "PYTHONPATH="
 cd /d "%~dp0backend"
-"{win_python}" -m app.launcher
+"{win_python}" -s run_desktop.py
 set "EXIT_CODE=%ERRORLEVEL%"
 if not "%EXIT_CODE%"=="0" (
   echo.
@@ -289,15 +293,39 @@ def assemble_release(repo_root: Path, output: Path, version: str) -> None:
     _write_start_command(output)
     _write_readme(output, version)
 
-    smoke = subprocess.run(
-        [str(runtime_python), "-c", "import fastapi, app.launcher; print('smoke-ok')"],
+    smoke_env = {
+        **os.environ,
+        "PYTHONNOUSERSITE": "1",
+        "PYTHONPATH": "",
+        "AW_DESKTOP_MODE": "1",
+        "AW_STATIC_DIR": str(output / "static"),
+        "AW_DATA_DIR": str(output / ".smoke-data"),
+    }
+    import_check = subprocess.run(
+        [
+            str(runtime_python),
+            "-s",
+            "-c",
+            "import run_desktop; run_desktop._isolate_from_host_packages(); "
+            "import fastapi, pydantic, app.launcher; "
+            "print('smoke-ok', pydantic.__file__)",
+        ],
         cwd=backend_out,
+        env=smoke_env,
         capture_output=True,
         text=True,
         check=False,
     )
-    if smoke.returncode != 0 or "smoke-ok" not in smoke.stdout:
-        raise SystemExit(f"Smoke test failed:\n{smoke.stdout}\n{smoke.stderr}")
+    if import_check.returncode != 0 or "smoke-ok" not in import_check.stdout:
+        raise SystemExit(
+            f"Smoke test failed:\n{import_check.stdout}\n{import_check.stderr}"
+        )
+    pydantic_path = import_check.stdout.strip().split("smoke-ok", 1)[-1].strip()
+    runtime_prefix = str((backend_out / "runtime" / "python").resolve())
+    if not pydantic_path.startswith(runtime_prefix):
+        raise SystemExit(
+            f"Smoke test failed: pydantic loaded from host path {pydantic_path!r}"
+        )
 
 
 def main() -> None:

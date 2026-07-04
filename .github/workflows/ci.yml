@@ -125,4 +125,6 @@ jobs:
             PYTHON=/tmp/auto-writer-desktop/backend/runtime/python/bin/python
           fi
           test -x "$PYTHON"
-          (cd /tmp/auto-writer-desktop/backend && "$PYTHON" -c "import fastapi, app.launcher; print('ok')")
+          test -f /tmp/auto-writer-desktop/backend/run_desktop.py
+          (cd /tmp/auto-writer-desktop/backend && PYTHONNOUSERSITE=1 PYTHONPATH= \
+            "$PYTHON" -s -c "import run_desktop; run_desktop._isolate_from_host_packages(); import pydantic, app.launcher; print(pydantic.__file__)")
