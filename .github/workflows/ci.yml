@@ -118,8 +118,11 @@ jobs:
         run: |
           test -x /tmp/auto-writer-desktop/start.sh
           test -f /tmp/auto-writer-desktop/static/index.html
-          test -d /tmp/auto-writer-desktop/backend/.venv
-          test -x /tmp/auto-writer-desktop/backend/runtime/python/bin/python3 \
-            || test -x /tmp/auto-writer-desktop/backend/runtime/python/bin/python
-          /tmp/auto-writer-desktop/backend/runtime/python/bin/python3 -c \
-            "from pathlib import Path; import sys; b=Path('/tmp/auto-writer-desktop/backend'); s=next((b/'.venv'/'lib').glob('python*/site-packages')); sys.path[:0]=[str(s),str(b)]; import fastapi; print('ok')"
+          test ! -e /tmp/auto-writer-desktop/backend/.venv
+          if [[ -x /tmp/auto-writer-desktop/backend/runtime/python/bin/python3 ]]; then
+            PYTHON=/tmp/auto-writer-desktop/backend/runtime/python/bin/python3
+          else
+            PYTHON=/tmp/auto-writer-desktop/backend/runtime/python/bin/python
+          fi
+          test -x "$PYTHON"
+          (cd /tmp/auto-writer-desktop/backend && "$PYTHON" -c "import fastapi, app.launcher; print('ok')")
