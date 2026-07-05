@@ -186,6 +186,7 @@ async def generate_stages(work_id: int, db: AsyncSession = Depends(get_db)) -> O
             chapter_number += 1
 
     work.actual_chapter_count = None
+    work.total_word_count = 0
     await db.commit()
     logger.info("生成阶段树 work_id={} 阶段数={}", work_id, len(stage_names))
     return await _load_outline(db, work_id)

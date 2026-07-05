@@ -10,7 +10,7 @@ inject ``@``-referenced setting entries (G4).
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from loguru import logger
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -105,13 +105,15 @@ async def _summarize_and_cache_recap(
 
 
 async def _recompute_work_total(db: AsyncSession, work_id: int) -> None:
-    """Recompute and store a work's aggregate word count from its chapters."""
-    total = await db.scalar(
-        select(func.coalesce(func.sum(Chapter.word_count), 0)).where(Chapter.work_id == work_id)
-    )
+    """Recompute chapter word counts from body text and store the work aggregate."""
+    result = await db.execute(select(Chapter).where(Chapter.work_id == work_id))
+    total = 0
+    for chapter in result.scalars():
+        chapter.word_count = count_words(chapter.content)
+        total += chapter.word_count
     work = await db.get(Work, work_id)
     if work is not None:
-        work.total_word_count = int(total or 0)
+        work.total_word_count = total
 
 
 def _config_error(exc: Exception) -> HTTPException:
