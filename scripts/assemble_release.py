@@ -28,7 +28,7 @@ from pathlib import Path
 _SCRIPTS_DIR = Path(__file__).resolve().parent
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
-from ensure_frontend_dist import build_frontend, dist_is_fresh, missing_markers
+from ensure_frontend_dist import build_frontend, dist_is_fresh, missing_markers, resolve_executable
 
 PYTHON_VERSION = "3.11"
 
@@ -44,14 +44,17 @@ def _copy_backend(backend_src: Path, backend_out: Path) -> None:
 
 def _run(cmd: list[str], *, cwd: Path, env: dict[str, str] | None = None) -> None:
     """Run a subprocess and fail the build on non-zero exit."""
-    print("+", " ".join(cmd), flush=True)
-    subprocess.run(cmd, cwd=cwd, check=True, env=env)
+    executable = resolve_executable(cmd[0], f"{cmd[0]}.cmd", f"{cmd[0]}.exe")
+    resolved = [executable, *cmd[1:]]
+    print("+", " ".join(resolved), flush=True)
+    subprocess.run(resolved, cwd=cwd, check=True, env=env)
 
 
 def _git_commit(repo_root: Path) -> str:
     """Return the current git commit hash, or ``unknown`` when unavailable."""
+    git = resolve_executable("git", "git.exe")
     result = subprocess.run(
-        ["git", "rev-parse", "--short", "HEAD"],
+        [git, "rev-parse", "--short", "HEAD"],
         cwd=repo_root,
         capture_output=True,
         text=True,

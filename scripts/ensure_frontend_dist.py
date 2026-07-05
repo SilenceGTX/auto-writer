@@ -8,6 +8,7 @@ rebuilt automatically.
 from __future__ import annotations
 
 import argparse
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -48,10 +49,23 @@ def missing_markers(dist: Path) -> list[str]:
     return [marker for marker in _STATIC_BUNDLE_MARKERS if marker not in bundle_text]
 
 
+def resolve_executable(*candidates: str) -> str:
+    """Return the first candidate executable found on ``PATH``."""
+    for name in candidates:
+        if found := shutil.which(name):
+            return found
+    raise SystemExit(
+        f"Command not found in PATH: {candidates[0]}. "
+        "Install it or ensure it is available before building."
+    )
+
+
 def build_frontend(repo_root: Path) -> None:
     """Run ``pnpm install`` and ``pnpm build`` for the frontend package."""
+    pnpm = resolve_executable("pnpm", "pnpm.cmd", "pnpm.exe")
     frontend = repo_root / "frontend"
-    for cmd in (["pnpm", "install", "--frozen-lockfile"], ["pnpm", "build"]):
+    for args in (["install", "--frozen-lockfile"], ["build"]):
+        cmd = [pnpm, *args]
         print("+", " ".join(cmd), flush=True)
         subprocess.run(cmd, cwd=frontend, check=True)
 

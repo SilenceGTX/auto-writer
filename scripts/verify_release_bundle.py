@@ -11,7 +11,7 @@ from pathlib import Path
 _SCRIPTS_DIR = Path(__file__).resolve().parent
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
-from ensure_frontend_dist import dist_is_fresh, missing_markers
+from ensure_frontend_dist import dist_is_fresh, missing_markers, resolve_executable
 
 
 def _repo_root() -> Path:
@@ -21,8 +21,9 @@ def _repo_root() -> Path:
 
 def current_git_commit(repo_root: Path) -> str:
     """Return the short git commit hash for *repo_root*."""
+    git = resolve_executable("git", "git.exe")
     result = subprocess.run(
-        ["git", "rev-parse", "--short", "HEAD"],
+        [git, "rev-parse", "--short", "HEAD"],
         cwd=repo_root,
         capture_output=True,
         text=True,
