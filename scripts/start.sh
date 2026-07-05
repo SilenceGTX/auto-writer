@@ -3,10 +3,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-if [[ ! -d "$ROOT/frontend/dist" ]]; then
-  echo "Building frontend (first run)…"
-  (cd "$ROOT/frontend" && pnpm install --frozen-lockfile && pnpm build)
-fi
+python "$ROOT/scripts/ensure_frontend_dist.py"
 
 export AW_DESKTOP_MODE=1
 export AW_STATIC_DIR="$ROOT/frontend/dist"

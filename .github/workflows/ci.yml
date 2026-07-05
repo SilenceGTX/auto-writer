@@ -106,13 +106,11 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 
-      - name: Build frontend and assemble desktop bundle
+      - name: Assemble and verify desktop bundle
+        shell: bash
         run: |
-          cd frontend
-          pnpm install --frozen-lockfile
-          pnpm build
-          cd ..
-          python scripts/assemble_release.py --output /tmp/auto-writer-desktop --version ci --skip-frontend-build
+          python scripts/assemble_release.py --output /tmp/auto-writer-desktop --version ci
+          python scripts/verify_release_bundle.py /tmp/auto-writer-desktop --commit "$(git rev-parse --short HEAD)"
 
       - name: Verify bundle layout
         run: |

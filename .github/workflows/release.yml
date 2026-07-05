@@ -38,6 +38,21 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify tagged commit is on main
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: |
+          git fetch origin main --depth=1
+          git merge-base --is-ancestor HEAD origin/main
+
+      - name: Verify release sources
+        shell: bash
+        run: |
+          test -f backend/app/services/assistant_conversation_service.py
+          grep -q "清空记忆" frontend/src/pages/writing/WritingAssistant.tsx
 
       - name: Resolve version
         id: version
@@ -68,17 +83,21 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 
-      - name: Build frontend
-        working-directory: frontend
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm build
-
       - name: Assemble desktop bundle
-        run: python scripts/assemble_release.py --output release --version ${{ steps.version.outputs.value }} --skip-frontend-build
+        shell: bash
+        run: |
+          python scripts/assemble_release.py \
+            --output release \
+            --version "${{ steps.version.outputs.value }}"
+
+      - name: Verify assembled bundle
+        shell: bash
+        run: |
+          python scripts/verify_release_bundle.py release --commit "$(git rev-parse --short HEAD)"
 
       - name: Archive (Unix)
         if: matrix.archive == 'tar'
+        shell: bash
         run: |
           chmod +x release/start.sh release/start.command
           tar -czf "auto-writer-${{ steps.version.outputs.value }}-${{ matrix.platform }}.tar.gz" -C release .

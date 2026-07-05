@@ -2,29 +2,18 @@
 setlocal EnableExtensions
 cd /d "%~dp0\.."
 
-if not exist "frontend\dist\index.html" (
-  echo Building frontend (first run)...
-  cd frontend
-  where pnpm >nul 2>&1
-  if errorlevel 1 (
-    echo Error: pnpm is required for the development launcher.
-    echo Install Node.js and pnpm, or use a prebuilt release package instead.
-    pause
-    exit /b 1
-  )
-  call pnpm install --frozen-lockfile
-  if errorlevel 1 (
-    echo Frontend install failed.
-    pause
-    exit /b 1
-  )
-  call pnpm build
-  if errorlevel 1 (
-    echo Frontend build failed.
-    pause
-    exit /b 1
-  )
-  cd ..
+where python >nul 2>&1
+if errorlevel 1 (
+  echo Error: Python is required to verify or rebuild frontend/dist.
+  pause
+  exit /b 1
+)
+
+python "%~dp0ensure_frontend_dist.py"
+if errorlevel 1 (
+  echo Frontend build failed.
+  pause
+  exit /b 1
 )
 
 where uv >nul 2>&1
