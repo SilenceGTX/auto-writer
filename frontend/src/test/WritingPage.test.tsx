@@ -64,6 +64,9 @@ vi.mock("../api", () => ({
   getChapter: vi.fn().mockResolvedValue(chapterContent),
   saveChapterContent: vi.fn().mockResolvedValue(chapterContent),
   generateChapterDraft: vi.fn(),
+  getWritingChatMessages: vi.fn().mockResolvedValue([]),
+  clearWritingChatMemory: vi.fn().mockResolvedValue(undefined),
+  sendWritingChat: vi.fn(),
   listEntities: vi.fn().mockResolvedValue({ items: [], total: 0 }),
   getSettings: vi.fn().mockResolvedValue({
     data_save: { autosave_interval_seconds: 30 },
