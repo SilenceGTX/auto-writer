@@ -580,6 +580,15 @@ export interface ChatMessage {
   content: string;
 }
 
+/** One persisted assistant chat message loaded from the backend. */
+export interface AssistantChatMessage {
+  id: number;
+  role: "user" | "assistant";
+  content: string;
+  quoted?: string | null;
+  created_at: string;
+}
+
 /** Load a chapter's full payload (including body text) for the editor. */
 export async function getChapter(chapterId: number): Promise<ChapterContent> {
   return requestJson<ChapterContent>(`/chapters/${chapterId}`);
@@ -634,15 +643,38 @@ export async function rewritePassage(
   });
 }
 
-/** Send the writing-assistant chat conversation and get the assistant reply. */
+/** Load persisted writing-assistant messages for a chapter. */
+export async function getWritingChatMessages(
+  workId: number,
+  chapterId: number,
+): Promise<AssistantChatMessage[]> {
+  const params = new URLSearchParams({ chapter_id: String(chapterId) });
+  const data = await requestJson<{ messages: AssistantChatMessage[] }>(
+    `/works/${workId}/chat/messages?${params.toString()}`,
+  );
+  return data.messages;
+}
+
+/** Clear persisted writing-assistant messages for a chapter. */
+export async function clearWritingChatMemory(workId: number, chapterId: number): Promise<void> {
+  const params = new URLSearchParams({ chapter_id: String(chapterId) });
+  await requestJson<void>(`/works/${workId}/chat/messages?${params.toString()}`, {
+    method: "DELETE",
+  });
+}
+
+/** Send one writing-assistant turn and return the reply plus updated history. */
 export async function sendWritingChat(
   workId: number,
-  input: { messages: ChatMessage[]; chapter_id?: number | null; quoted?: string | null },
-): Promise<{ reply: string }> {
-  return requestJson<{ reply: string }>(`/works/${workId}/chat`, {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
+  input: { content: string; chapter_id: number; quoted?: string | null },
+): Promise<{ reply: string; messages: AssistantChatMessage[] }> {
+  return requestJson<{ reply: string; messages: AssistantChatMessage[] }>(
+    `/works/${workId}/chat`,
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export type InspirationSourcePage = "outline" | "writing" | "review";
@@ -736,13 +768,48 @@ export async function deleteTag(tagId: number): Promise<void> {
   await requestJson<void>(`/tags/${tagId}`, { method: "DELETE" });
 }
 
-/** Send the review-assistant chat conversation and get the assistant reply. */
+/** Load persisted review-assistant messages for the current scope. */
+export async function getReviewChatMessages(
+  workId: number,
+  chapterId: number | null,
+): Promise<AssistantChatMessage[]> {
+  const params = new URLSearchParams();
+  if (chapterId != null) {
+    params.set("chapter_id", String(chapterId));
+  }
+  const query = params.toString();
+  const data = await requestJson<{ messages: AssistantChatMessage[] }>(
+    `/works/${workId}/review/chat/messages${query ? `?${query}` : ""}`,
+  );
+  return data.messages;
+}
+
+/** Clear persisted review-assistant messages for the current scope. */
+export async function clearReviewChatMemory(
+  workId: number,
+  chapterId: number | null,
+): Promise<void> {
+  const params = new URLSearchParams();
+  if (chapterId != null) {
+    params.set("chapter_id", String(chapterId));
+  }
+  const query = params.toString();
+  await requestJson<void>(
+    `/works/${workId}/review/chat/messages${query ? `?${query}` : ""}`,
+    { method: "DELETE" },
+  );
+}
+
+/** Send one review-assistant turn and return the reply plus updated history. */
 export async function sendReviewChat(
   workId: number,
-  input: { messages: ChatMessage[]; chapter_id?: number | null; quoted?: string | null },
-): Promise<{ reply: string }> {
-  return requestJson<{ reply: string }>(`/works/${workId}/review/chat`, {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
+  input: { content: string; chapter_id?: number | null; quoted?: string | null },
+): Promise<{ reply: string; messages: AssistantChatMessage[] }> {
+  return requestJson<{ reply: string; messages: AssistantChatMessage[] }>(
+    `/works/${workId}/review/chat`,
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+  );
 }

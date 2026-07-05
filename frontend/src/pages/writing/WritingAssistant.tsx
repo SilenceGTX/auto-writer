@@ -1,12 +1,14 @@
 /** Writing assistant panel: AI chat, 前情提要, and 加入灵感 (``WRITING_PAGE_DESSIGN.md`` §3). */
-import { useState, type ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { Button } from "@heroui/react";
-import { History, Send, X } from "lucide-react";
+import { History, Send, Trash2, X } from "lucide-react";
 import {
+  clearWritingChatMemory,
   generateRecap,
   getRecap,
+  getWritingChatMessages,
   sendWritingChat,
-  type ChatMessage,
+  type AssistantChatMessage,
 } from "../../api";
 import { AddInspirationButton } from "../../components/AddInspirationButton";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
@@ -23,35 +25,73 @@ interface WritingAssistantProps {
 /** Render the chat, recap, and inspiration controls for the current chapter. */
 export function WritingAssistant(props: WritingAssistantProps): ReactElement {
   const { notify } = useToast();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<AssistantChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(true);
   const [recap, setRecap] = useState<string | null>(null);
   const [recapBusy, setRecapBusy] = useState(false);
   const [askRestale, setAskRestale] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [clearing, setClearing] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setLoadingHistory(true);
+    void getWritingChatMessages(props.workId, props.chapterId)
+      .then((history) => {
+        if (active) {
+          setMessages(history);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          notify("无法加载对话历史", "error");
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoadingHistory(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [props.workId, props.chapterId, notify]);
 
   async function handleSend(): Promise<void> {
     const text = input.trim();
     if (!text) {
       return;
     }
-    const next = [...messages, { role: "user", content: text } as ChatMessage];
-    setMessages(next);
     setInput("");
     setSending(true);
     try {
-      const { reply } = await sendWritingChat(props.workId, {
-        messages: next,
+      const { messages: updated } = await sendWritingChat(props.workId, {
+        content: text,
         chapter_id: props.chapterId,
         quoted: props.quoted,
       });
-      setMessages([...next, { role: "assistant", content: reply }]);
+      setMessages(updated);
       props.onClearQuote();
     } catch {
       notify("AI 回复失败，请检查 LLM 连接", "error");
-      setMessages(messages);
     } finally {
       setSending(false);
+    }
+  }
+
+  async function handleClearMemory(): Promise<void> {
+    setClearing(true);
+    try {
+      await clearWritingChatMemory(props.workId, props.chapterId);
+      setMessages([]);
+      setConfirmClear(false);
+      notify("对话记忆已清空", "success");
+    } catch {
+      notify("清空对话记忆失败", "error");
+    } finally {
+      setClearing(false);
     }
   }
 
@@ -125,11 +165,11 @@ export function WritingAssistant(props: WritingAssistantProps): ReactElement {
       )}
 
       <div className="chat-log">
-        {messages.length === 0 && (
+        {!loadingHistory && messages.length === 0 && (
           <p className="assistant-hint">向 AI 提问、请求续写或润色建议；可用 @ 引用设定。</p>
         )}
-        {messages.map((message, index) => (
-          <div key={index} className={`chat-bubble chat-${message.role}`}>
+        {messages.map((message) => (
+          <div key={message.id} className={`chat-bubble chat-${message.role}`}>
             {message.content}
           </div>
         ))}
@@ -151,19 +191,41 @@ export function WritingAssistant(props: WritingAssistantProps): ReactElement {
         minRows={3}
         placeholder="输入消息，@ 可引用设定…"
       />
-      <div className="form-actions">
+      <div className="form-actions form-actions-stacked">
         <AddInspirationButton
           source={{ source_page: "writing", work_id: props.workId, chapter_id: props.chapterId }}
         />
-        <Button
-          color="primary"
-          startContent={<Send size={15} />}
-          isLoading={sending}
-          onPress={() => void handleSend()}
-        >
-          发送
-        </Button>
+        <div className="form-actions-row">
+          <Button
+            color="danger"
+            variant="flat"
+            startContent={<Trash2 size={15} />}
+            isDisabled={messages.length === 0 || sending}
+            isLoading={clearing}
+            onPress={() => setConfirmClear(true)}
+          >
+            清空记忆
+          </Button>
+          <Button
+            color="primary"
+            startContent={<Send size={15} />}
+            isLoading={sending}
+            onPress={() => void handleSend()}
+          >
+            发送
+          </Button>
+        </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmClear}
+        title="清空对话记忆"
+        body="将删除本章写作助手下的全部对话记录，且无法恢复。"
+        confirmLabel="清空"
+        danger
+        onConfirm={() => void handleClearMemory()}
+        onCancel={() => setConfirmClear(false)}
+      />
 
       <ConfirmDialog
         isOpen={askRestale}

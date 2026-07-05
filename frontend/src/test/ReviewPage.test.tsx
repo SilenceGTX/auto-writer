@@ -63,6 +63,8 @@ const chapterContent = vi.hoisted(
 vi.mock("../api", () => ({
   getOutline: vi.fn().mockResolvedValue(sampleOutline),
   getChapter: vi.fn().mockResolvedValue(chapterContent),
+  getReviewChatMessages: vi.fn().mockResolvedValue([]),
+  clearReviewChatMemory: vi.fn().mockResolvedValue(undefined),
   sendReviewChat: vi.fn(),
   listEntities: vi.fn().mockResolvedValue({ items: [], total: 0 }),
   downloadWorkChapterExport: vi.fn().mockResolvedValue(undefined),

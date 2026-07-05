@@ -3,8 +3,9 @@
 Defines the full persistence schema described in
 ``designs/DATA_STORAGE_DESIGN.md``: works domain (series, story structures,
 works, stages, chapters, scenes), worldbuilding domain (entity categories and
-entities), inspiration domain (inspirations, tags), and the key-value settings
-store. Timestamps are stored as ISO text to match the design conventions.
+entities), inspiration domain (inspirations, tags), assistant chat history,
+and the key-value settings store. Timestamps are stored as ISO text to match
+the design conventions.
 """
 
 from datetime import UTC, datetime
@@ -299,6 +300,65 @@ class Tag(Base):
     inspirations: Mapped[list[Inspiration]] = relationship(
         secondary=inspiration_tags, back_populates="tags"
     )
+
+
+class AssistantConversation(Base):
+    """Persisted AI assistant chat thread for a work/chapter (writing or review)."""
+
+    __tablename__ = "assistant_conversations"
+    __table_args__ = (
+        UniqueConstraint(
+            "work_id",
+            "kind",
+            "chapter_key",
+            name="uq_assistant_conversations_work_kind_chapter",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    work_id: Mapped[int] = mapped_column(ForeignKey("works.id", ondelete="CASCADE"), nullable=False)
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    chapter_id: Mapped[int | None] = mapped_column(
+        ForeignKey("chapters.id", ondelete="CASCADE"), nullable=True
+    )
+    chapter_key: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    created_at: Mapped[str] = mapped_column(
+        Text, default=utcnow_iso, server_default=_SERVER_NOW, nullable=False
+    )
+    updated_at: Mapped[str] = mapped_column(
+        Text,
+        default=utcnow_iso,
+        onupdate=utcnow_iso,
+        server_default=_SERVER_NOW,
+        nullable=False,
+    )
+
+    messages: Mapped[list["AssistantMessage"]] = relationship(
+        back_populates="conversation",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="AssistantMessage.sort_order",
+    )
+
+
+class AssistantMessage(Base):
+    """One user or assistant turn within a persisted assistant conversation."""
+
+    __tablename__ = "assistant_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    conversation_id: Mapped[int] = mapped_column(
+        ForeignKey("assistant_conversations.id", ondelete="CASCADE"), nullable=False
+    )
+    role: Mapped[str] = mapped_column(String(20), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    quoted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[str] = mapped_column(
+        Text, default=utcnow_iso, server_default=_SERVER_NOW, nullable=False
+    )
+
+    conversation: Mapped[AssistantConversation] = relationship(back_populates="messages")
 
 
 class AppSetting(Base):

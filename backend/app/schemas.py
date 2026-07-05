@@ -408,8 +408,39 @@ class ChatMessage(BaseModel):
     content: str = Field(min_length=1)
 
 
+class ChatMessageRead(BaseModel):
+    """One persisted assistant message returned to the client."""
+
+    id: int
+    role: str
+    content: str
+    quoted: str | None = None
+    created_at: str
+
+
+class ChatHistoryResponse(BaseModel):
+    """Persisted assistant conversation history."""
+
+    messages: list[ChatMessageRead] = Field(default_factory=list)
+
+
+class ChatSendRequest(BaseModel):
+    """Request body for sending one assistant chat turn."""
+
+    content: str = Field(min_length=1)
+    chapter_id: int | None = None
+    quoted: str | None = None
+
+
+class ChatSendResponse(BaseModel):
+    """Assistant reply plus the updated persisted conversation."""
+
+    reply: str
+    messages: list[ChatMessageRead]
+
+
 class ChatRequest(BaseModel):
-    """Request body for the writing-assistant chat."""
+    """Internal chat payload assembled from persisted history for LLM calls."""
 
     messages: list[ChatMessage] = Field(min_length=1)
     chapter_id: int | None = None
@@ -417,7 +448,7 @@ class ChatRequest(BaseModel):
 
 
 class ChatReply(BaseModel):
-    """Assistant reply for the writing-assistant chat."""
+    """Legacy assistant reply shape (superseded by ``ChatSendResponse``)."""
 
     reply: str
 

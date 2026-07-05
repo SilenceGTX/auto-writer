@@ -56,6 +56,8 @@ export function WritingPage(): ReactElement {
   );
 
   const savedContentRef = useRef("");
+  const contentRef = useRef(content);
+  contentRef.current = content;
   const memoryRef = useRef<Map<number, ScrollMemory>>(new Map());
   const lastSnapshotRef = useRef("");
   const [autosaveIntervalMs, setAutosaveIntervalMs] = useState(30000);
@@ -142,6 +144,14 @@ export function WritingPage(): ReactElement {
     })();
     return () => {
       active = false;
+      const text = contentRef.current;
+      if (text !== savedContentRef.current) {
+        void saveChapterContent(selectedId, text)
+          .then((saved) => {
+            savedContentRef.current = saved.content ?? "";
+          })
+          .catch(() => undefined);
+      }
     };
   }, [selectedId, notify]);
 
@@ -173,6 +183,30 @@ export function WritingPage(): ReactElement {
       setSaveState("error");
     }
   }, [selectedId, content]);
+
+  const flushPendingSave = useCallback((): void => {
+    const id = selectedId;
+    const text = contentRef.current;
+    if (id == null || text === savedContentRef.current) {
+      return;
+    }
+    void saveChapterContent(id, text)
+      .then((saved) => {
+        savedContentRef.current = saved.content ?? "";
+      })
+      .catch(() => undefined);
+  }, [selectedId]);
+
+  useEffect(() => {
+    const handlePageHide = (): void => {
+      flushPendingSave();
+    };
+    window.addEventListener("pagehide", handlePageHide);
+    return () => {
+      window.removeEventListener("pagehide", handlePageHide);
+      flushPendingSave();
+    };
+  }, [flushPendingSave]);
 
   useEffect(() => {
     if (selectedId == null || content === savedContentRef.current) {

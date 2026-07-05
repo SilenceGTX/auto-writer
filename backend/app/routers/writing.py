@@ -8,9 +8,9 @@ persisted); and the writing-assistant chat. AI calls reuse the LLM service and
 inject ``@``-referenced setting entries (G4).
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from loguru import logger
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -18,12 +18,21 @@ from app.models import Chapter, Work, utcnow_iso
 from app.schemas import (
     ChapterContentRead,
     ChapterContentUpdate,
-    ChatReply,
-    ChatRequest,
+    ChatHistoryResponse,
+    ChatSendRequest,
+    ChatSendResponse,
     DraftGenerateRequest,
     RecapRead,
     RewriteRequest,
     RewriteResult,
+)
+from app.services.assistant_conversation_service import (
+    append_exchange,
+    build_chat_request,
+    clear_conversation,
+    get_or_create_conversation,
+    list_conversation_messages,
+    load_stored_messages,
 )
 from app.services.chat_service import build_chat_messages
 from app.services.generation_context import (
@@ -105,13 +114,15 @@ async def _summarize_and_cache_recap(
 
 
 async def _recompute_work_total(db: AsyncSession, work_id: int) -> None:
-    """Recompute and store a work's aggregate word count from its chapters."""
-    total = await db.scalar(
-        select(func.coalesce(func.sum(Chapter.word_count), 0)).where(Chapter.work_id == work_id)
-    )
+    """Recompute chapter word counts from body text and store the work aggregate."""
+    result = await db.execute(select(Chapter).where(Chapter.work_id == work_id))
+    total = 0
+    for chapter in result.scalars():
+        chapter.word_count = count_words(chapter.content)
+        total += chapter.word_count
     work = await db.get(Work, work_id)
     if work is not None:
-        work.total_word_count = int(total or 0)
+        work.total_word_count = total
 
 
 def _config_error(exc: Exception) -> HTTPException:
@@ -303,24 +314,77 @@ async def rewrite_passage(
     return RewriteResult(original=payload.selection, rewritten=rewritten.strip())
 
 
-@router.post("/works/{work_id}/chat", response_model=ChatReply)
+@router.get("/works/{work_id}/chat/messages", response_model=ChatHistoryResponse)
+async def get_writing_chat_messages(
+    work_id: int,
+    chapter_id: int = Query(..., description="Chapter scope for the writing assistant"),
+    db: AsyncSession = Depends(get_db),
+) -> ChatHistoryResponse:
+    """Return persisted writing-assistant messages for a chapter."""
+    await _get_work(db, work_id)
+    try:
+        messages = await list_conversation_messages(db, work_id, "writing", chapter_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return ChatHistoryResponse(messages=messages)
+
+
+@router.delete("/works/{work_id}/chat/messages", status_code=status.HTTP_204_NO_CONTENT)
+async def clear_writing_chat_messages(
+    work_id: int,
+    chapter_id: int = Query(..., description="Chapter scope for the writing assistant"),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Clear persisted writing-assistant messages for a chapter."""
+    await _get_work(db, work_id)
+    try:
+        await clear_conversation(db, work_id, "writing", chapter_id)
+        await db.commit()
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/works/{work_id}/chat", response_model=ChatSendResponse)
 async def writing_chat(
-    work_id: int, payload: ChatRequest, db: AsyncSession = Depends(get_db)
-) -> ChatReply:
-    """Answer the writing-assistant chat with work/chapter context and references."""
+    work_id: int, payload: ChatSendRequest, db: AsyncSession = Depends(get_db)
+) -> ChatSendResponse:
+    """Send a writing-assistant turn, persist it, and return the model reply."""
+    if payload.chapter_id is None:
+        raise HTTPException(status_code=400, detail="chapter_id is required")
+
     work = await _get_work(db, work_id)
-    chapter = await db.get(Chapter, payload.chapter_id) if payload.chapter_id else None
+    chapter = await db.get(Chapter, payload.chapter_id)
+    if chapter is None or chapter.work_id != work.id:
+        raise HTTPException(status_code=404, detail="Chapter not found")
 
     try:
+        conversation = await get_or_create_conversation(
+            db, work.id, "writing", payload.chapter_id
+        )
+        stored = await load_stored_messages(db, conversation.id)
+        chat_payload = build_chat_request(
+            stored,
+            content=payload.content,
+            chapter_id=payload.chapter_id,
+            quoted=payload.quoted,
+        )
         connection, system_prompt, params = await resolve_llm_context(db, "writing")
-        messages = await build_chat_messages(db, work, chapter, payload, system_prompt)
+        messages = await build_chat_messages(db, work, chapter, chat_payload, system_prompt)
         reply = await chat_completion(connection, messages, params)
+        persisted = await append_exchange(
+            db,
+            conversation,
+            user_content=payload.content,
+            user_quoted=payload.quoted,
+            assistant_content=reply.strip(),
+        )
+        await db.commit()
     except LLMConfigError as exc:
         raise _config_error(exc) from exc
     except LLMRequestError as exc:
         raise _request_error(exc) from exc
 
-    return ChatReply(reply=reply.strip())
+    return ChatSendResponse(reply=reply.strip(), messages=persisted)
 
 
 @router.get("/works/{work_id}/word-count", status_code=status.HTTP_200_OK)
