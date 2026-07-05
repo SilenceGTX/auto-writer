@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import Chapter
 from app.schemas import ChatReply, ChatRequest
-from app.services.chat_service import build_chat_messages
+from app.services.chat_service import build_review_chat_messages
 from app.services.generation_context import load_work_with_structure, resolve_llm_context
 from app.services.llm_service import LLMConfigError, LLMRequestError, chat_completion
 from app.services.prompts import build_review_instruction
@@ -33,8 +33,8 @@ async def review_chat(
 
     try:
         connection, system_prompt, params = await resolve_llm_context(db, "writing")
-        messages = await build_chat_messages(
-            db, work, chapter, payload, system_prompt, extra_system=build_review_instruction()
+        messages = await build_review_chat_messages(
+            db, work, chapter, payload, system_prompt, build_review_instruction()
         )
         reply = await chat_completion(connection, messages, params)
     except LLMConfigError as exc:

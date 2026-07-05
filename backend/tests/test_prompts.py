@@ -5,6 +5,7 @@ from unittest.mock import patch
 from app.services.prompts import (
     assemble_draft_prompt,
     build_draft_requirements,
+    build_review_context_block,
     build_system_prompt,
     build_work_info_block,
     log_assembled_prompt,
@@ -76,3 +77,24 @@ def test_assemble_draft_prompt_orders_work_info_before_references():
     ref_idx = prompt.index("【引用设定】")
     task_idx = prompt.index("请为「第1章《龙醒》」撰写正文。")
     assert work_idx < ref_idx < task_idx
+
+
+def test_build_review_context_block_orders_summary_outline_and_body():
+    """Review context renders summary, chapter outline, and chapter body sections."""
+    with patch("app.services.prompts.logger.debug"):
+        block = build_review_context_block(
+            summary="少年屠龙的故事",
+            chapter_number=2,
+            chapter_title="龙醒",
+            chapter_summary="巨龙苏醒",
+            chapter_content="火光映红了天空。",
+        )
+
+    summary_idx = block.index("【作品简介】")
+    outline_idx = block.index("【当前章节大纲】")
+    body_idx = block.index("【当前章节正文】")
+    assert summary_idx < outline_idx < body_idx
+    assert "少年屠龙的故事" in block
+    assert "第2章《龙醒》" in block
+    assert "概述：巨龙苏醒" in block
+    assert "火光映红了天空。" in block

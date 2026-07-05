@@ -22,6 +22,8 @@ const sampleWorks = vi.hoisted(() => {
     planned_chapter_count: null,
     actual_chapter_count: null,
     current_chapter: 0,
+    written_chapter_count: 0,
+    chapter_count: 0,
     total_word_count: 0,
     status: "创作中",
     summary: null,
@@ -29,14 +31,15 @@ const sampleWorks = vi.hoisted(() => {
     updated_at: "2026-01-02 00:00:00",
   };
   return [
-    { ...base, id: 1, title: "前期作品", current_chapter: 0 },
+    { ...base, id: 1, title: "前期作品", written_chapter_count: 0, actual_chapter_count: 10 },
     {
       ...base,
       id: 2,
       title: "进行中作品",
       series_name: "玄幻系列",
-      current_chapter: 3,
+      written_chapter_count: 3,
       actual_chapter_count: 10,
+      chapter_count: 10,
     },
   ] as Work[];
 });

@@ -65,7 +65,7 @@ async def test_review_chat_returns_reply(client, monkeypatch):
 
 
 async def test_review_chat_uses_editor_instruction(client, monkeypatch):
-    """The review chat injects the editor framing as a system instruction."""
+    """The review chat injects editor framing and attaches quotes to the user turn."""
     work, outline = await _setup_work_with_chapters(client, monkeypatch)
     chapter_id = outline["chapters"][0]["id"]
 
@@ -86,8 +86,14 @@ async def test_review_chat_uses_editor_instruction(client, monkeypatch):
         },
     )
     system_messages = [m["content"] for m in captured["messages"] if m["role"] == "system"]
+    user_messages = [m["content"] for m in captured["messages"] if m["role"] == "user"]
     assert any("小说编辑" in content for content in system_messages)
-    assert any("片段" in content for content in system_messages)
+    assert any("【作品简介】" in content for content in system_messages)
+    assert any("【当前章节正文】" in content for content in system_messages)
+    assert not any("【用户引用的片段】" in content for content in system_messages)
+    assert user_messages[-1].startswith("【用户引用的片段】")
+    assert "片段" in user_messages[-1]
+    assert "检查连贯性" in user_messages[-1]
 
 
 async def test_review_chat_injects_referenced_entities(client, monkeypatch):
@@ -118,3 +124,47 @@ async def test_review_chat_injects_referenced_entities(client, monkeypatch):
     context = "\n".join(m["content"] for m in captured["messages"] if m["role"] == "system")
     assert "【引用设定】" in context
     assert "果敢的女骑士" in context
+
+
+async def test_review_chat_resolves_at_in_summary_and_body(client, monkeypatch):
+    """`@` markers in work summary and chapter body are resolved like the outline flow."""
+    work, outline = await _setup_work_with_chapters(client, monkeypatch)
+    chapter_id = outline["chapters"][0]["id"]
+    await client.patch(
+        f"/api/works/{work['id']}",
+        json={"summary": "故事围绕 @魔法石 展开"},
+    )
+    await client.put(
+        f"/api/chapters/{chapter_id}/content",
+        json={"content": "主角握住了 @魔法石 。"},
+    )
+    categories = (await client.get(f"/api/works/{work['id']}/categories")).json()
+    await client.post(
+        f"/api/works/{work['id']}/entities",
+        json={
+            "category_id": categories[0]["id"],
+            "name": "魔法石",
+            "description": "蕴含远古力量的宝石",
+        },
+    )
+
+    captured: dict = {}
+
+    async def capturing(connection, messages, params=None):
+        captured["messages"] = messages
+        return "好的"
+
+    monkeypatch.setattr(review_router, "chat_completion", capturing)
+
+    await client.post(
+        f"/api/works/{work['id']}/review/chat",
+        json={
+            "messages": [{"role": "user", "content": "检查设定一致性"}],
+            "chapter_id": chapter_id,
+        },
+    )
+    context = "\n".join(m["content"] for m in captured["messages"] if m["role"] == "system")
+    assert "【引用设定】" in context
+    assert "蕴含远古力量的宝石" in context
+    assert "【当前章节正文】" in context
+    assert "主角握住了 @魔法石 。" in context

@@ -232,6 +232,36 @@ def build_review_instruction() -> str:
 
 
 @_log_prompt_builder
+def build_review_context_block(
+    *,
+    summary: str | None,
+    chapter_number: int | None = None,
+    chapter_title: str | None = None,
+    chapter_summary: str | None = None,
+    chapter_content: str | None = None,
+) -> str:
+    """Build the static review context block (summary, chapter outline, chapter body).
+
+    ``@``-referenced setting entries are prepended separately via ``with_references``.
+    """
+    summary_text = summary.strip() if summary and summary.strip() else "（暂无）"
+    parts = [f"【作品简介】\n{summary_text}"]
+    if chapter_number is not None:
+        heading = f"第{chapter_number}章" + (f"《{chapter_title}》" if chapter_title else "")
+        overview = (
+            chapter_summary.strip() if chapter_summary and chapter_summary.strip() else "（暂无）"
+        )
+        body = (
+            chapter_content.strip()
+            if chapter_content and chapter_content.strip()
+            else "（暂无正文）"
+        )
+        parts.append(f"【当前章节大纲】\n{heading}\n概述：{overview}")
+        parts.append(f"【当前章节正文】\n{body}")
+    return "\n\n".join(parts)
+
+
+@_log_prompt_builder
 def build_chapter_generation_prompt(
     work_info: str, stages: list[dict[str, object]], chapter_numbers: list[int]
 ) -> str:

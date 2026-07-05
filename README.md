@@ -172,3 +172,7 @@ pnpm exec vitest run
 ```
 
 运行时数据（`data/` 数据库、快照、导出、日志等）与本地环境文件（`.env`、`node_modules/` 等）见 `.gitignore`，不在仓库中跟踪。
+
+## License
+
+[MIT](LICENSE)
