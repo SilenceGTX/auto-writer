@@ -20,18 +20,17 @@ import os
 import shutil
 import stat
 import subprocess
+import sys
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 
-PYTHON_VERSION = "3.11"
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+from ensure_frontend_dist import build_frontend, dist_is_fresh, missing_markers
 
-# Markers that must appear in a fresh frontend production bundle.
-_STATIC_BUNDLE_MARKERS = (
-    "written_chapter_count",
-    "/chat/messages",
-    "清空记忆",
-)
+PYTHON_VERSION = "3.11"
 
 
 def _copy_backend(backend_src: Path, backend_out: Path) -> None:
@@ -64,26 +63,18 @@ def _git_commit(repo_root: Path) -> str:
 
 def _build_frontend(repo_root: Path) -> None:
     """Build the Vite production bundle into ``frontend/dist``."""
-    frontend = repo_root / "frontend"
-    _run(["pnpm", "install", "--frozen-lockfile"], cwd=frontend)
-    _run(["pnpm", "build"], cwd=frontend)
+    build_frontend(repo_root)
 
 
 def _verify_static_bundle(static_dir: Path) -> None:
     """Fail the build when the bundled frontend looks stale or incomplete."""
-    js_files = sorted(static_dir.glob("assets/*.js"))
-    if not js_files:
-        raise SystemExit(f"No JS assets under {static_dir / 'assets'}")
-
-    bundle_text = "".join(
-        path.read_text(encoding="utf-8", errors="replace") for path in js_files
+    if dist_is_fresh(static_dir):
+        return
+    missing = missing_markers(static_dir)
+    raise SystemExit(
+        "Frontend bundle looks stale or incomplete; missing markers: "
+        f"{', '.join(missing)}. Run `pnpm build` in frontend/ and retry."
     )
-    missing = [marker for marker in _STATIC_BUNDLE_MARKERS if marker not in bundle_text]
-    if missing:
-        raise SystemExit(
-            "Frontend bundle looks stale or incomplete; missing markers: "
-            f"{', '.join(missing)}. Run `pnpm build` in frontend/ and retry."
-        )
 
 
 def _write_build_info(path: Path, *, version: str, git_commit: str) -> None:

@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/SilenceGTX/auto-writer/actions/workflows/ci.yml/badge.svg)](https://github.com/SilenceGTX/auto-writer/actions/workflows/ci.yml)
 
-LLM 辅助小说写作 Web 应用：帮助作者管理作品、构建世界观、编排大纲、撰写正文并完成审阅，全程可由 AI 协作。面向**单用户、本地优先**场景，SQLite 始终是唯一数据真源。
+LLM 辅助小说写作 Web 应用：帮助作者管理作品、构建世界观、编排大纲、撰写正文并完成审阅，全程可由 AI 协作。面向**单用户、本地优先**场景。
 
 ## 功能概览
 
@@ -60,7 +60,7 @@ python scripts/assemble_release.py --output dist/desktop --version dev
 
 若刚在 ``frontend/`` 里执行过 ``pnpm build``，可加 ``--skip-frontend-build`` 跳过重复构建。
 
-打 tag `v*` 推送后，GitHub Actions [Release 工作流](.github/workflows/release.yml) 会自动构建三平台安装包并发布。
+打 tag 发布桌面版：先 **merge 到 `main`**，再在 `main` 上的提交打 `v*` tag 并推送。Release 工作流会重新 `pnpm build`、校验静态 bundle 是否包含最新功能，并确认 tag 在 `main` 历史内。
 
 ### Docker 生产部署（一键启动）
 
