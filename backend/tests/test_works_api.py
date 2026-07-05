@@ -148,3 +148,60 @@ async def test_delete_series_nulls_member_works(client):
     works = (await client.get("/api/works")).json()["items"]
     target = next(item for item in works if item["id"] == work_id)
     assert target["series_id"] is None
+
+
+async def test_list_works_includes_written_chapter_counts(client, monkeypatch):
+    """List items expose written/total chapter counts for progress display."""
+    import json
+
+    import app.routers.outline as outline_router
+
+    await client.put(
+        "/api/settings/connection",
+        json={"url": "https://stub/chat", "api_token": "t", "model": "m"},
+    )
+
+    async def fake_stages(connection, messages, params=None):
+        return json.dumps(
+            [
+                {"name": "铺垫", "chapter_count": 1, "overview": "a"},
+                {"name": "对抗", "chapter_count": 1, "overview": "b"},
+                {"name": "解决", "chapter_count": 1, "overview": "c"},
+            ],
+            ensure_ascii=False,
+        )
+
+    monkeypatch.setattr(outline_router, "chat_completion", fake_stages)
+
+    structures = (await client.get("/api/structures")).json()
+    structure_id = next(s["id"] for s in structures if s["name"] == "三幕式")
+    work = (
+        await client.post(
+            "/api/works",
+            json={"title": "进度作品", "structure_id": structure_id, "planned_chapter_count": 3},
+        )
+    ).json()
+    outline = (await client.post(f"/api/works/{work['id']}/outline/stages:generate")).json()
+    assert outline["chapters"]
+
+    async def fake_chapters(connection, messages, params=None):
+        return json.dumps(
+            [
+                {"chapter_number": 1, "title": "第一章", "summary": "起"},
+                {"chapter_number": 2, "title": "第二章", "summary": "承"},
+                {"chapter_number": 3, "title": "第三章", "summary": "合"},
+            ],
+            ensure_ascii=False,
+        )
+
+    monkeypatch.setattr(outline_router, "chat_completion", fake_chapters)
+    await client.post(f"/api/works/{work['id']}/outline/chapters:generate")
+
+    chapter_id = outline["chapters"][0]["id"]
+    await client.put(f"/api/chapters/{chapter_id}/content", json={"content": "第一章正文。"})
+
+    items = (await client.get("/api/works")).json()["items"]
+    listed = next(item for item in items if item["id"] == work["id"])
+    assert listed["written_chapter_count"] == 1
+    assert listed["chapter_count"] == 3
+    assert listed["actual_chapter_count"] == 3

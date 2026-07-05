@@ -15,6 +15,7 @@ from app.database import get_db
 from app.models import Series, StoryStructure, Work
 from app.schemas import WorkCreate, WorkListResponse, WorkRead, WorkUpdate
 from app.services.seed import seed_default_categories
+from app.services.work_stats import chapter_progress_counts
 
 router = APIRouter(prefix="/works", tags=["works"])
 
@@ -27,7 +28,12 @@ SORT_COLUMNS = {
 }
 
 
-def _to_read(work: Work) -> WorkRead:
+def _to_read(
+    work: Work,
+    *,
+    written_chapter_count: int = 0,
+    chapter_count: int = 0,
+) -> WorkRead:
     """Build a WorkRead, resolving series/structure display names."""
     return WorkRead(
         id=work.id,
@@ -39,6 +45,8 @@ def _to_read(work: Work) -> WorkRead:
         planned_chapter_count=work.planned_chapter_count,
         actual_chapter_count=work.actual_chapter_count,
         current_chapter=work.current_chapter,
+        written_chapter_count=written_chapter_count,
+        chapter_count=chapter_count,
         total_word_count=work.total_word_count,
         status=work.status,
         summary=work.summary,
@@ -54,7 +62,10 @@ async def _load_work_read(db: AsyncSession, work_id: int) -> WorkRead:
         .options(selectinload(Work.series), selectinload(Work.structure))
         .where(Work.id == work_id)
     )
-    return _to_read(result.scalar_one())
+    work = result.scalar_one()
+    counts = await chapter_progress_counts(db, [work_id])
+    written, total = counts.get(work_id, (0, 0))
+    return _to_read(work, written_chapter_count=written, chapter_count=total)
 
 
 async def _validate_references(
@@ -93,7 +104,16 @@ async def list_works(
         .limit(page_size)
     )
     result = await db.execute(stmt)
-    items = [_to_read(work) for work in result.scalars().all()]
+    works = list(result.scalars().all())
+    counts = await chapter_progress_counts(db, [work.id for work in works])
+    items = [
+        _to_read(
+            work,
+            written_chapter_count=counts.get(work.id, (0, 0))[0],
+            chapter_count=counts.get(work.id, (0, 0))[1],
+        )
+        for work in works
+    ]
     return WorkListResponse(items=items, total=total)
 
 

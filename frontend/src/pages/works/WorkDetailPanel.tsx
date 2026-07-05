@@ -45,8 +45,8 @@ export function WorkDetailPanel(props: WorkDetailPanelProps): ReactElement {
   const progress = computeProgress(work);
   const outlineLocked = work.actual_chapter_count != null;
   const avg =
-    work.current_chapter > 0
-      ? Math.round(work.total_word_count / work.current_chapter).toLocaleString()
+    work.written_chapter_count > 0
+      ? Math.round(work.total_word_count / work.written_chapter_count).toLocaleString()
       : "-";
 
   async function persist(): Promise<Work | null> {

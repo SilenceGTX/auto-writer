@@ -94,6 +94,8 @@ class WorkRead(BaseModel):
     planned_chapter_count: int | None
     actual_chapter_count: int | None
     current_chapter: int
+    written_chapter_count: int = 0
+    chapter_count: int = 0
     total_word_count: int
     status: str
     summary: str | None

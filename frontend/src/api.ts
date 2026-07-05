@@ -27,6 +27,8 @@ export interface Work {
   planned_chapter_count: number | null;
   actual_chapter_count: number | null;
   current_chapter: number;
+  written_chapter_count: number;
+  chapter_count: number;
   total_word_count: number;
   status: string;
   summary: string | null;

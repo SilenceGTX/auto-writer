@@ -1,7 +1,7 @@
-/** Tests for the work progress derivation helper (STORY_PAGE_DESIGN §4.3). */
+/** Tests for the work progress derivation helper. */
 import { describe, expect, it } from "vitest";
 import type { Work } from "../api";
-import { computeProgress } from "../utils/workProgress";
+import { computeProgress, progressTotalChapters } from "../utils/workProgress";
 
 function makeWork(overrides: Partial<Work>): Work {
   return {
@@ -14,6 +14,8 @@ function makeWork(overrides: Partial<Work>): Work {
     planned_chapter_count: null,
     actual_chapter_count: null,
     current_chapter: 0,
+    written_chapter_count: 0,
+    chapter_count: 0,
     total_word_count: 0,
     status: "创作中",
     summary: null,
@@ -24,27 +26,39 @@ function makeWork(overrides: Partial<Work>): Work {
 }
 
 describe("computeProgress", () => {
-  it("reports 前期筹备 when no body writing has started", () => {
-    const result = computeProgress(makeWork({ current_chapter: 0, actual_chapter_count: 20 }));
+  it("reports 前期筹备 when no chapter has body text", () => {
+    const result = computeProgress(
+      makeWork({ actual_chapter_count: 20, chapter_count: 20, written_chapter_count: 0 }),
+    );
     expect(result.isPrep).toBe(true);
     expect(result.label).toBe("前期筹备");
     expect(result.percent).toBe(0);
   });
 
-  it("reports 前期筹备 when the outline is not yet locked", () => {
-    const result = computeProgress(makeWork({ current_chapter: 3, actual_chapter_count: null }));
-    expect(result.isPrep).toBe(true);
-  });
-
-  it("computes the ratio and percentage once writing is underway", () => {
-    const result = computeProgress(makeWork({ current_chapter: 3, actual_chapter_count: 10 }));
+  it("uses written chapters over total once body writing has started", () => {
+    const result = computeProgress(
+      makeWork({ actual_chapter_count: 10, chapter_count: 10, written_chapter_count: 3 }),
+    );
     expect(result.isPrep).toBe(false);
     expect(result.label).toBe("3/10");
     expect(result.percent).toBe(30);
   });
 
+  it("falls back to planned or chapter_count for the denominator", () => {
+    expect(progressTotalChapters(makeWork({ planned_chapter_count: 8, chapter_count: 5 }))).toBe(8);
+    expect(progressTotalChapters(makeWork({ planned_chapter_count: null, chapter_count: 5 }))).toBe(5);
+  });
+
   it("caps the percentage at 100", () => {
-    const result = computeProgress(makeWork({ current_chapter: 25, actual_chapter_count: 20 }));
+    const result = computeProgress(
+      makeWork({ actual_chapter_count: 5, written_chapter_count: 7, chapter_count: 7 }),
+    );
     expect(result.percent).toBe(100);
+  });
+
+  it("shows written count alone when total chapters are unknown", () => {
+    const result = computeProgress(makeWork({ written_chapter_count: 2, total_word_count: 500 }));
+    expect(result.label).toBe("2");
+    expect(result.isPrep).toBe(false);
   });
 });
