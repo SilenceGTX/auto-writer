@@ -232,7 +232,7 @@ async def test_chat_returns_reply(client, monkeypatch):
     reply = (
         await client.post(
             f"/api/works/{work['id']}/chat",
-            json={"messages": [{"role": "user", "content": "怎么开头"}], "chapter_id": chapter_id},
+            json={"content": "怎么开头", "chapter_id": chapter_id},
         )
     ).json()
     assert reply["reply"] == "我建议这样开头……"
@@ -262,10 +262,7 @@ async def test_chat_injects_referenced_entities(client, monkeypatch):
 
     await client.post(
         f"/api/works/{work['id']}/chat",
-        json={
-            "messages": [{"role": "user", "content": "描写一下 @莉娜 的出场"}],
-            "chapter_id": chapter_id,
-        },
+        json={"content": "描写一下 @莉娜 的出场", "chapter_id": chapter_id},
     )
     context = captured["messages"][1]["content"]
     assert "【引用设定】" in context

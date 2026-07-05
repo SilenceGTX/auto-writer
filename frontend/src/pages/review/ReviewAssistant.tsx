@@ -4,11 +4,17 @@
  * from the reader is attached to the next message. Reuses the ``@`` mention
  * textarea and the global "加入灵感" action.
  */
-import { useState, type ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { Button } from "@heroui/react";
-import { Send, X } from "lucide-react";
-import { sendReviewChat, type ChatMessage } from "../../api";
+import { Send, Trash2, X } from "lucide-react";
+import {
+  clearReviewChatMemory,
+  getReviewChatMessages,
+  sendReviewChat,
+  type AssistantChatMessage,
+} from "../../api";
 import { AddInspirationButton } from "../../components/AddInspirationButton";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { MentionTextarea } from "../../components/MentionTextarea";
 import { useToast } from "../../components/Toast";
 
@@ -22,32 +28,70 @@ interface ReviewAssistantProps {
 /** Render the review chat and inspiration controls for the current chapter. */
 export function ReviewAssistant(props: ReviewAssistantProps): ReactElement {
   const { notify } = useToast();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<AssistantChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [clearing, setClearing] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setLoadingHistory(true);
+    void getReviewChatMessages(props.workId, props.chapterId)
+      .then((history) => {
+        if (active) {
+          setMessages(history);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          notify("无法加载对话历史", "error");
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoadingHistory(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [props.workId, props.chapterId, notify]);
 
   async function handleSend(): Promise<void> {
     const text = input.trim();
     if (!text) {
       return;
     }
-    const next = [...messages, { role: "user", content: text } as ChatMessage];
-    setMessages(next);
     setInput("");
     setSending(true);
     try {
-      const { reply } = await sendReviewChat(props.workId, {
-        messages: next,
+      const { messages: updated } = await sendReviewChat(props.workId, {
+        content: text,
         chapter_id: props.chapterId,
         quoted: props.quoted,
       });
-      setMessages([...next, { role: "assistant", content: reply }]);
+      setMessages(updated);
       props.onClearQuote();
     } catch {
       notify("AI 回复失败，请检查 LLM 连接", "error");
-      setMessages(messages);
     } finally {
       setSending(false);
+    }
+  }
+
+  async function handleClearMemory(): Promise<void> {
+    setClearing(true);
+    try {
+      await clearReviewChatMemory(props.workId, props.chapterId);
+      setMessages([]);
+      setConfirmClear(false);
+      notify("对话记忆已清空", "success");
+    } catch {
+      notify("清空对话记忆失败", "error");
+    } finally {
+      setClearing(false);
     }
   }
 
@@ -58,13 +102,13 @@ export function ReviewAssistant(props: ReviewAssistantProps): ReactElement {
       </div>
 
       <div className="chat-log">
-        {messages.length === 0 && (
+        {!loadingHistory && messages.length === 0 && (
           <p className="assistant-hint">
             选中正文片段后点击「引用到审阅」，请 AI 检查情节、设定与文字问题。
           </p>
         )}
-        {messages.map((message, index) => (
-          <div key={index} className={`chat-bubble chat-${message.role}`}>
+        {messages.map((message) => (
+          <div key={message.id} className={`chat-bubble chat-${message.role}`}>
             {message.content}
           </div>
         ))}
@@ -86,7 +130,7 @@ export function ReviewAssistant(props: ReviewAssistantProps): ReactElement {
         minRows={3}
         placeholder="向 AI 提问或请求审阅意见，@ 可引用设定…"
       />
-      <div className="form-actions">
+      <div className="form-actions form-actions-stacked">
         <AddInspirationButton
           source={{
             source_page: "review",
@@ -94,15 +138,37 @@ export function ReviewAssistant(props: ReviewAssistantProps): ReactElement {
             chapter_id: props.chapterId,
           }}
         />
-        <Button
-          color="primary"
-          startContent={<Send size={15} />}
-          isLoading={sending}
-          onPress={() => void handleSend()}
-        >
-          发送
-        </Button>
+        <div className="form-actions-row">
+          <Button
+            color="danger"
+            variant="flat"
+            startContent={<Trash2 size={15} />}
+            isDisabled={messages.length === 0 || sending}
+            isLoading={clearing}
+            onPress={() => setConfirmClear(true)}
+          >
+            清空记忆
+          </Button>
+          <Button
+            color="primary"
+            startContent={<Send size={15} />}
+            isLoading={sending}
+            onPress={() => void handleSend()}
+          >
+            发送
+          </Button>
+        </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmClear}
+        title="清空对话记忆"
+        body="将删除本章节审阅助手下的全部对话记录，且无法恢复。"
+        confirmLabel="清空"
+        danger
+        onConfirm={() => void handleClearMemory()}
+        onCancel={() => setConfirmClear(false)}
+      />
     </section>
   );
 }

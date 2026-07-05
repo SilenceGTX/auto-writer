@@ -143,6 +143,7 @@ export function ReviewPage(): ReactElement {
 
   const assistantContent = (
     <ReviewAssistant
+      key={selectedId ?? "none"}
       workId={currentWorkId}
       chapterId={selectedId}
       quoted={quoted}

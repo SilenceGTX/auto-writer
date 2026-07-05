@@ -55,7 +55,7 @@ async def test_review_chat_returns_reply(client, monkeypatch):
         await client.post(
             f"/api/works/{work['id']}/review/chat",
             json={
-                "messages": [{"role": "user", "content": "帮我检查这一段"}],
+                "content": "帮我检查这一段",
                 "chapter_id": chapter_id,
                 "quoted": "他在午夜抵达，却看见正午的阳光。",
             },
@@ -79,11 +79,7 @@ async def test_review_chat_uses_editor_instruction(client, monkeypatch):
 
     await client.post(
         f"/api/works/{work['id']}/review/chat",
-        json={
-            "messages": [{"role": "user", "content": "检查连贯性"}],
-            "chapter_id": chapter_id,
-            "quoted": "片段",
-        },
+        json={"content": "检查连贯性", "chapter_id": chapter_id, "quoted": "片段"},
     )
     system_messages = [m["content"] for m in captured["messages"] if m["role"] == "system"]
     user_messages = [m["content"] for m in captured["messages"] if m["role"] == "user"]
@@ -116,10 +112,7 @@ async def test_review_chat_injects_referenced_entities(client, monkeypatch):
 
     await client.post(
         f"/api/works/{work['id']}/review/chat",
-        json={
-            "messages": [{"role": "user", "content": "@莉娜 的描写是否一致"}],
-            "chapter_id": chapter_id,
-        },
+        json={"content": "@莉娜 的描写是否一致", "chapter_id": chapter_id},
     )
     context = "\n".join(m["content"] for m in captured["messages"] if m["role"] == "system")
     assert "【引用设定】" in context
@@ -158,10 +151,7 @@ async def test_review_chat_resolves_at_in_summary_and_body(client, monkeypatch):
 
     await client.post(
         f"/api/works/{work['id']}/review/chat",
-        json={
-            "messages": [{"role": "user", "content": "检查设定一致性"}],
-            "chapter_id": chapter_id,
-        },
+        json={"content": "检查设定一致性", "chapter_id": chapter_id},
     )
     context = "\n".join(m["content"] for m in captured["messages"] if m["role"] == "system")
     assert "【引用设定】" in context
