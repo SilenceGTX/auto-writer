@@ -14,6 +14,9 @@ class HealthResponse(BaseModel):
 
     status: str
     app_name: str
+    version: str | None = None
+    git_commit: str | None = None
+    built_at: str | None = None
 
 
 class SeriesCreate(BaseModel):

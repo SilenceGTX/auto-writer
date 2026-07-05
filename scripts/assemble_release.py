@@ -15,14 +15,23 @@ and no build-machine absolute paths are required at runtime.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import stat
 import subprocess
 import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
 
 PYTHON_VERSION = "3.11"
+
+# Markers that must appear in a fresh frontend production bundle.
+_STATIC_BUNDLE_MARKERS = (
+    "written_chapter_count",
+    "/chat/messages",
+    "清空记忆",
+)
 
 
 def _copy_backend(backend_src: Path, backend_out: Path) -> None:
@@ -38,6 +47,53 @@ def _run(cmd: list[str], *, cwd: Path, env: dict[str, str] | None = None) -> Non
     """Run a subprocess and fail the build on non-zero exit."""
     print("+", " ".join(cmd), flush=True)
     subprocess.run(cmd, cwd=cwd, check=True, env=env)
+
+
+def _git_commit(repo_root: Path) -> str:
+    """Return the current git commit hash, or ``unknown`` when unavailable."""
+    result = subprocess.run(
+        ["git", "rev-parse", "--short", "HEAD"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    commit = result.stdout.strip()
+    return commit if result.returncode == 0 and commit else "unknown"
+
+
+def _build_frontend(repo_root: Path) -> None:
+    """Build the Vite production bundle into ``frontend/dist``."""
+    frontend = repo_root / "frontend"
+    _run(["pnpm", "install", "--frozen-lockfile"], cwd=frontend)
+    _run(["pnpm", "build"], cwd=frontend)
+
+
+def _verify_static_bundle(static_dir: Path) -> None:
+    """Fail the build when the bundled frontend looks stale or incomplete."""
+    js_files = sorted(static_dir.glob("assets/*.js"))
+    if not js_files:
+        raise SystemExit(f"No JS assets under {static_dir / 'assets'}")
+
+    bundle_text = "".join(
+        path.read_text(encoding="utf-8", errors="replace") for path in js_files
+    )
+    missing = [marker for marker in _STATIC_BUNDLE_MARKERS if marker not in bundle_text]
+    if missing:
+        raise SystemExit(
+            "Frontend bundle looks stale or incomplete; missing markers: "
+            f"{', '.join(missing)}. Run `pnpm build` in frontend/ and retry."
+        )
+
+
+def _write_build_info(path: Path, *, version: str, git_commit: str) -> None:
+    """Write build metadata for runtime health checks and debugging."""
+    payload = {
+        "version": version,
+        "git_commit": git_commit,
+        "built_at": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+    }
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
 def _remove_path(path: Path) -> None:
@@ -261,23 +317,54 @@ macOS   : ~/Library/Application Support/Auto-Writer/
 Linux   : ~/.local/share/auto-writer/  (or $XDG_DATA_HOME/auto-writer/)
 
 Override with the AW_DATA_DIR environment variable before launching.
+
+Docker vs desktop data
+----------------------
+Docker stores data in the project ``data/`` folder (or a mounted volume).
+The desktop app uses the user data paths above by default. They are separate
+databases — writing in Docker does not appear in the desktop app unless you
+point AW_DATA_DIR at the same folder before launching.
+
+Verify your build
+-----------------
+Open http://127.0.0.1:8000/api/health after starting. When built from a recent
+release, the response includes version, git_commit, and built_at fields.
 """
     (output / "README-DESKTOP.txt").write_text(content, encoding="utf-8")
 
 
-def assemble_release(repo_root: Path, output: Path, version: str) -> None:
+def assemble_release(
+    repo_root: Path,
+    output: Path,
+    version: str,
+    *,
+    skip_frontend_build: bool = False,
+) -> None:
     """Build a release folder with static assets, portable Python, and launchers."""
-    dist = repo_root / "frontend" / "dist"
-    if not dist.is_dir():
-        raise SystemExit("frontend/dist not found — run `pnpm build` in frontend/ first")
+    if skip_frontend_build:
+        dist = repo_root / "frontend" / "dist"
+        if not dist.is_dir():
+            raise SystemExit(
+                "frontend/dist not found — run `pnpm build` in frontend/ first, "
+                "or omit --skip-frontend-build"
+            )
+    else:
+        print("Building frontend (pnpm build)...", flush=True)
+        _build_frontend(repo_root)
+        dist = repo_root / "frontend" / "dist"
 
     if output.exists():
         shutil.rmtree(output)
     output.mkdir(parents=True)
 
     shutil.copytree(dist, output / "static")
+    _verify_static_bundle(output / "static")
+
     backend_out = output / "backend"
     _copy_backend(repo_root / "backend", backend_out)
+    commit = _git_commit(repo_root)
+    _write_build_info(output / "BUILD_INFO.json", version=version, git_commit=commit)
+    _write_build_info(backend_out / "app" / "build_info.json", version=version, git_commit=commit)
 
     python_home = _install_portable_python(backend_out)
     runtime_python = _find_runtime_python(python_home)
@@ -308,6 +395,10 @@ def assemble_release(repo_root: Path, output: Path, version: str) -> None:
             "-c",
             "import run_desktop; run_desktop._isolate_from_host_packages(); "
             "import fastapi, pydantic, app.launcher; "
+            "from app.services import assistant_conversation_service, work_stats; "
+            "from app.core.build_info import load_build_info; "
+            "info = load_build_info(); "
+            "assert info.get('git_commit'), 'build_info.json missing in bundle'; "
             "print('smoke-ok', pydantic.__file__)",
         ],
         cwd=backend_out,
@@ -333,10 +424,20 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Assemble Auto-Writer desktop release")
     parser.add_argument("--output", required=True, help="Output directory for the bundle")
     parser.add_argument("--version", default=os.environ.get("AW_VERSION", "dev"))
+    parser.add_argument(
+        "--skip-frontend-build",
+        action="store_true",
+        help="Use existing frontend/dist (CI sets this after pnpm build)",
+    )
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parent.parent
-    assemble_release(repo_root, Path(args.output).resolve(), args.version)
+    assemble_release(
+        repo_root,
+        Path(args.output).resolve(),
+        args.version,
+        skip_frontend_build=args.skip_frontend_build,
+    )
     print(f"Assembled desktop release at {args.output}")
 
 
