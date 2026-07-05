@@ -75,7 +75,7 @@ jobs:
           pnpm build
 
       - name: Assemble desktop bundle
-        run: python scripts/assemble_release.py --output release --version ${{ steps.version.outputs.value }}
+        run: python scripts/assemble_release.py --output release --version ${{ steps.version.outputs.value }} --skip-frontend-build
 
       - name: Archive (Unix)
         if: matrix.archive == 'tar'

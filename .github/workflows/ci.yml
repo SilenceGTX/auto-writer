@@ -112,7 +112,7 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm build
           cd ..
-          python scripts/assemble_release.py --output /tmp/auto-writer-desktop --version ci
+          python scripts/assemble_release.py --output /tmp/auto-writer-desktop --version ci --skip-frontend-build
 
       - name: Verify bundle layout
         run: |
