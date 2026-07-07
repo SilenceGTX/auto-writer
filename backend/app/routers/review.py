@@ -92,11 +92,11 @@ async def review_chat(
             chapter_id=payload.chapter_id,
             quoted=payload.quoted,
         )
-        connection, system_prompt, params = await resolve_llm_context(db, "writing")
+        connection, system_prompt, params = await resolve_llm_context(db, "review_chat")
         messages = await build_review_chat_messages(
             db, work, chapter, chat_payload, system_prompt, build_review_instruction()
         )
-        reply = await chat_completion(connection, messages, params)
+        reply = await chat_completion(connection, messages, params, task="review_chat")
         persisted = await append_exchange(
             db,
             conversation,

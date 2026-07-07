@@ -11,7 +11,7 @@ from app.services.assistant_conversation_service import MAX_ASSISTANT_MESSAGES
 def _patch_llm(monkeypatch, router, value) -> None:
     """Patch a router's chat_completion to return canned text/JSON."""
 
-    async def fake_completion(connection, messages, params=None):
+    async def fake_completion(connection, messages, params=None, **kwargs):
         return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
 
     monkeypatch.setattr(router, "chat_completion", fake_completion)
