@@ -12,7 +12,7 @@ import app.routers.review as review_router
 def _patch_llm(monkeypatch, router, value) -> None:
     """Patch a router's chat_completion to return canned text/JSON."""
 
-    async def fake_completion(connection, messages, params=None):
+    async def fake_completion(connection, messages, params=None, **kwargs):
         return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
 
     monkeypatch.setattr(router, "chat_completion", fake_completion)
@@ -71,7 +71,7 @@ async def test_review_chat_uses_editor_instruction(client, monkeypatch):
 
     captured: dict = {}
 
-    async def capturing(connection, messages, params=None):
+    async def capturing(connection, messages, params=None, **kwargs):
         captured["messages"] = messages
         return "好的"
 
@@ -104,7 +104,7 @@ async def test_review_chat_injects_referenced_entities(client, monkeypatch):
 
     captured: dict = {}
 
-    async def capturing(connection, messages, params=None):
+    async def capturing(connection, messages, params=None, **kwargs):
         captured["messages"] = messages
         return "好的"
 
@@ -143,7 +143,7 @@ async def test_review_chat_resolves_at_in_summary_and_body(client, monkeypatch):
 
     captured: dict = {}
 
-    async def capturing(connection, messages, params=None):
+    async def capturing(connection, messages, params=None, **kwargs):
         captured["messages"] = messages
         return "好的"
 

@@ -32,10 +32,11 @@ class LLMConnection:
     url: str
     api_token: str
     model: str
+    profile_id: str | None = None
 
     @classmethod
     def from_settings(cls, connection: dict) -> "LLMConnection":
-        """Build a connection from the stored ``connection`` settings dict."""
+        """Build a connection from the legacy single-connection settings dict."""
         url = (connection.get("url") or "").strip()
         if not url:
             raise LLMConfigError("尚未配置 LLM 接口地址")
@@ -43,6 +44,19 @@ class LLMConnection:
             url=url,
             api_token=(connection.get("api_token") or "").strip(),
             model=(connection.get("model") or "").strip(),
+        )
+
+    @classmethod
+    def from_profile(cls, profile: dict) -> "LLMConnection":
+        """Build a connection from one stored LLM profile."""
+        url = (profile.get("url") or "").strip()
+        if not url:
+            raise LLMConfigError("尚未配置 LLM 接口地址")
+        return cls(
+            url=url,
+            api_token=(profile.get("api_token") or "").strip(),
+            model=(profile.get("model") or "").strip(),
+            profile_id=profile.get("id"),
         )
 
 
@@ -75,10 +89,18 @@ async def chat_completion(
     connection: LLMConnection,
     messages: list[dict[str, str]],
     params: dict | None = None,
+    *,
+    task: str | None = None,
 ) -> str:
     """Call the chat-completions endpoint and return the message content."""
     body = _payload(connection, messages, params, stream=False)
     model = connection.model or "(default)"
+    logger.debug(
+        "LLM task={} profile_id={} model={}",
+        task or "-",
+        connection.profile_id or "-",
+        model,
+    )
     logger.info("调用 LLM url={} model={}", connection.url, model)
     try:
         async with httpx.AsyncClient(timeout=_TEST_TIMEOUT_SECONDS) as client:

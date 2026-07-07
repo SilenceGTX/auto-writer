@@ -38,6 +38,15 @@ export const DEFAULT_STAGE_PREFERENCE: StagePreference = {
   max_tokens: 2048,
 };
 
+/** Default review-stage preference (more conservative than writing). */
+export const DEFAULT_REVIEW_PREFERENCE: StagePreference = {
+  temperature: 0.3,
+  top_p: 0.85,
+  presence_penalty: 0.3,
+  frequency_penalty: 0.3,
+  max_tokens: 2048,
+};
+
 /** Return the index of the level whose values all match the preference, or -1. */
 export function detectLevel(levels: PreferenceLevel[], preference: StagePreference): number {
   return levels.findIndex((level) =>

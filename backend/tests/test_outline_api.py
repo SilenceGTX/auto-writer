@@ -35,7 +35,7 @@ async def _three_act_structure_id(client) -> int:
 def _patch_llm(monkeypatch, payload) -> None:
     """Patch the outline router's chat_completion to return canned JSON."""
 
-    async def fake_completion(connection, messages, params=None):
+    async def fake_completion(connection, messages, params=None, **kwargs):
         return json.dumps(payload, ensure_ascii=False)
 
     import app.routers.outline as outline_router
@@ -273,7 +273,7 @@ async def test_generate_stages_injects_referenced_entities(client, monkeypatch):
 
     captured: dict = {}
 
-    async def capturing_completion(connection, messages, params=None):
+    async def capturing_completion(connection, messages, params=None, **kwargs):
         captured["messages"] = messages
         return json.dumps(
             [{"name": "铺垫", "chapter_count": 1, "overview": "x"}], ensure_ascii=False

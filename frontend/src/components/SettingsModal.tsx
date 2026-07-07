@@ -1,47 +1,59 @@
-/** System settings modal: connection, preferences, writing style, data save,
- * typography, and one-click configuration import / export.
+/** System settings modal: LLM profiles, assignments, preferences, and more.
  *
  * Covers all tabs of ``SYSTEM_SETTINGS_PAGE_DESIGN.md`` (§3–8).
  */
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 import {
   Button,
-  Chip,
   Input,
   Modal,
   ModalBody,
   ModalContent,
   ModalFooter,
   ModalHeader,
+  Accordion,
+  AccordionItem,
   Select,
   SelectItem,
   Tab,
   Tabs,
   Textarea,
 } from "@heroui/react";
-import { Download, Eye, EyeOff, Upload } from "lucide-react";
+import { Download, Plus, Trash2, Upload } from "lucide-react";
 import {
   exportSettings,
   getSettings,
   importSettings,
-  testConnection,
   triggerDownload,
-  updateConnection,
   updateDataSave,
+  updateLlmSettings,
   updatePreferences,
   updateTypography,
   updateWritingStyle,
   type AppSettings,
   type ConnectionSettings,
-  type ConnectionTestResult,
   type DataSaveSettings,
+  type LLMAssignments,
+  type LLMProfile,
   type Preferences,
   type ReadingTheme,
   type TypographySettings,
 } from "../api";
-import { DEFAULT_STAGE_PREFERENCE } from "../utils/preferences";
+import {
+  DEFAULT_REVIEW_PREFERENCE,
+  DEFAULT_STAGE_PREFERENCE,
+} from "../utils/preferences";
+import {
+  MAX_LLM_PROFILES,
+  createEmptyProfile,
+  defaultAssignments,
+  fallbackAssignments,
+  profileLabel,
+} from "../utils/llmSettings";
 import { applyTypography } from "../utils/typography";
 import { useToast } from "./Toast";
+import { LLMAssignmentPanel } from "./settings/LLMAssignmentPanel";
+import { LLMProfileFields } from "./settings/LLMProfileFields";
 import { StagePreferenceEditor } from "./settings/StagePreferenceEditor";
 
 interface SettingsModalProps {
@@ -49,10 +61,10 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-const EMPTY_CONNECTION: ConnectionSettings = { url: "", api_token: "", model: "" };
 const DEFAULT_PREFERENCES: Preferences = {
   outline: { ...DEFAULT_STAGE_PREFERENCE },
   writing: { ...DEFAULT_STAGE_PREFERENCE },
+  review: { ...DEFAULT_REVIEW_PREFERENCE },
 };
 const DEFAULT_DATA_SAVE: DataSaveSettings = {
   input_debounce_seconds: 2,
@@ -72,32 +84,66 @@ const READING_THEMES: { key: ReadingTheme; label: string }[] = [
   { key: "dark", label: "深色" },
 ];
 
+function normalizePreferences(preferences: Preferences): Preferences {
+  return {
+    outline: preferences.outline ?? { ...DEFAULT_STAGE_PREFERENCE },
+    writing: preferences.writing ?? { ...DEFAULT_STAGE_PREFERENCE },
+    review: preferences.review ?? { ...DEFAULT_REVIEW_PREFERENCE },
+  };
+}
+
+function normalizeLoadedSettings(
+  data: AppSettings & { connection?: ConnectionSettings },
+): { profiles: LLMProfile[]; assignments: LLMAssignments } {
+  let profiles = data.llm_profiles;
+  if (!profiles?.length) {
+    if (data.connection) {
+      profiles = [
+        {
+          id: crypto.randomUUID(),
+          url: data.connection.url ?? "",
+          api_token: data.connection.api_token ?? "",
+          model: data.connection.model ?? "",
+        },
+      ];
+    } else {
+      profiles = [createEmptyProfile()];
+    }
+  }
+  return {
+    profiles,
+    assignments: data.llm_assignments ?? defaultAssignments(profiles),
+  };
+}
+
 /** Render the system settings modal with editable settings groups. */
 export function SettingsModal(props: SettingsModalProps): ReactElement {
   const { notify } = useToast();
-  const [connection, setConnection] = useState<ConnectionSettings>(EMPTY_CONNECTION);
+  const initialProfile = createEmptyProfile();
+  const [llmProfiles, setLlmProfiles] = useState<LLMProfile[]>([initialProfile]);
+  const [llmAssignments, setLlmAssignments] = useState<LLMAssignments>(() =>
+    defaultAssignments([initialProfile]),
+  );
   const [preferences, setPreferences] = useState<Preferences>(DEFAULT_PREFERENCES);
   const [writingStyle, setWritingStyle] = useState("");
   const [dataSave, setDataSave] = useState<DataSaveSettings>(DEFAULT_DATA_SAVE);
   const [typography, setTypography] = useState<TypographySettings>(DEFAULT_TYPOGRAPHY);
-  const [showToken, setShowToken] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<ConnectionTestResult | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
-  const applyLoaded = useCallback((data: AppSettings) => {
-    setConnection(data.connection);
-    setPreferences(data.preferences);
-    setWritingStyle(data.writing_style.text);
-    setDataSave(data.data_save);
-    setTypography(data.typography);
+  const applyLoaded = useCallback((data: AppSettings & { connection?: ConnectionSettings }) => {
+    const { profiles, assignments } = normalizeLoadedSettings(data);
+    setLlmProfiles(profiles);
+    setLlmAssignments(assignments);
+    setPreferences(normalizePreferences(data.preferences ?? DEFAULT_PREFERENCES));
+    setWritingStyle(data.writing_style?.text ?? "");
+    setDataSave(data.data_save ?? DEFAULT_DATA_SAVE);
+    setTypography(data.typography ?? DEFAULT_TYPOGRAPHY);
   }, []);
 
   const load = useCallback(async () => {
     try {
       applyLoaded(await getSettings());
-      setTestResult(null);
     } catch {
       notify("无法加载系统设置", "error");
     }
@@ -109,11 +155,29 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
     }
   }, [props.isOpen, load]);
 
+  function handleAddProfile(): void {
+    if (llmProfiles.length >= MAX_LLM_PROFILES) {
+      notify(`最多添加 ${MAX_LLM_PROFILES} 个模型`, "info");
+      return;
+    }
+    setLlmProfiles((current) => [...current, createEmptyProfile()]);
+  }
+
+  function handleDeleteProfile(profileId: string): void {
+    if (llmProfiles.length <= 1) {
+      return;
+    }
+    const nextProfiles = llmProfiles.filter((profile) => profile.id !== profileId);
+    const fallbackId = nextProfiles[0].id;
+    setLlmProfiles(nextProfiles);
+    setLlmAssignments((current) => fallbackAssignments(current, profileId, fallbackId));
+  }
+
   async function handleSave(): Promise<void> {
     setSaving(true);
     try {
       await Promise.all([
-        updateConnection(connection),
+        updateLlmSettings({ profiles: llmProfiles, assignments: llmAssignments }),
         updatePreferences(preferences),
         updateWritingStyle({ text: writingStyle }),
         updateDataSave(dataSave),
@@ -129,18 +193,6 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
     }
   }
 
-  async function handleTest(): Promise<void> {
-    setTesting(true);
-    setTestResult(null);
-    try {
-      setTestResult(await testConnection(connection));
-    } catch {
-      setTestResult({ ok: false, message: "测试请求失败", sample: null });
-    } finally {
-      setTesting(false);
-    }
-  }
-
   async function handleExportConfig(): Promise<void> {
     try {
       const config = await exportSettings();
@@ -153,7 +205,9 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
 
   async function handleImportConfig(file: File): Promise<void> {
     try {
-      const parsed = JSON.parse(await file.text()) as Partial<AppSettings>;
+      const parsed = JSON.parse(await file.text()) as Partial<AppSettings> & {
+        connection?: ConnectionSettings;
+      };
       const applied = await importSettings(parsed);
       applyLoaded(applied);
       applyTypography(applied.typography);
@@ -164,52 +218,83 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
   }
 
   return (
-    <Modal isOpen={props.isOpen} onClose={props.onClose} size="2xl" scrollBehavior="inside">
+    <Modal
+      isOpen={props.isOpen}
+      onClose={props.onClose}
+      size="4xl"
+      scrollBehavior="inside"
+      classNames={{ base: "settings-modal" }}
+    >
       <ModalContent>
         <ModalHeader>系统设置</ModalHeader>
         <ModalBody>
-          <Tabs aria-label="系统设置标签">
+          <Tabs aria-label="系统设置标签" className="settings-modal-tabs">
             <Tab key="connection" title="连接配置">
               <div className="settings-section">
-                <Input
-                  label="URL"
-                  placeholder="https://api.example.com/v1/chat/completions"
-                  value={connection.url}
-                  onValueChange={(url) => setConnection((c) => ({ ...c, url }))}
-                />
-                <Input
-                  label="API Token"
-                  type={showToken ? "text" : "password"}
-                  value={connection.api_token}
-                  onValueChange={(token) => setConnection((c) => ({ ...c, api_token: token }))}
-                  endContent={
-                    <button
-                      type="button"
-                      className="token-toggle"
-                      aria-label={showToken ? "隐藏 Token" : "显示 Token"}
-                      onClick={() => setShowToken((value) => !value)}
-                    >
-                      {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
+                <Accordion
+                  selectionMode="multiple"
+                  className="llm-profile-accordion"
+                  defaultExpandedKeys={
+                    llmProfiles[0]?.id ? [llmProfiles[0].id] : []
                   }
-                />
-                <Input
-                  label="模型"
-                  placeholder="如 gpt-4o-mini"
-                  value={connection.model}
-                  onValueChange={(model) => setConnection((c) => ({ ...c, model }))}
-                />
-                <div className="test-row">
-                  <Button variant="flat" isLoading={testing} onPress={() => void handleTest()}>
-                    测试连接
-                  </Button>
-                  {testResult && (
-                    <Chip color={testResult.ok ? "success" : "danger"} variant="flat">
-                      {testResult.message}
-                    </Chip>
-                  )}
-                </div>
+                >
+                  {llmProfiles.map((profile, index) => (
+                    <AccordionItem
+                      key={profile.id}
+                      aria-label={profileLabel(profile, index)}
+                      className="llm-profile-accordion-item"
+                      title={
+                        <div className="llm-profile-accordion-title">
+                          <span>{profileLabel(profile, index)}</span>
+                          {llmProfiles.length > 1 && (
+                            <div
+                              className="llm-profile-delete-wrap"
+                              onPointerDown={(event) => event.stopPropagation()}
+                              onClick={(event) => event.stopPropagation()}
+                              onKeyDown={(event) => event.stopPropagation()}
+                            >
+                              <Button
+                                size="sm"
+                                color="danger"
+                                variant="light"
+                                startContent={<Trash2 size={15} />}
+                                onPress={() => handleDeleteProfile(profile.id)}
+                              >
+                                删除
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      }
+                    >
+                      <LLMProfileFields
+                        profile={profile}
+                        onChange={(next) =>
+                          setLlmProfiles((current) =>
+                            current.map((item) => (item.id === next.id ? next : item)),
+                          )
+                        }
+                      />
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+                <Button
+                  variant="flat"
+                  startContent={<Plus size={16} />}
+                  isDisabled={llmProfiles.length >= MAX_LLM_PROFILES}
+                  onPress={handleAddProfile}
+                >
+                  新增模型
+                </Button>
               </div>
+            </Tab>
+
+            <Tab key="llm_assignments" title="LLM 分工">
+              <LLMAssignmentPanel
+                profiles={llmProfiles}
+                assignments={llmAssignments}
+                onChange={setLlmAssignments}
+              />
             </Tab>
 
             <Tab key="preferences" title="全局偏好">
@@ -223,6 +308,11 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
                   title="写作"
                   value={preferences.writing}
                   onChange={(writing) => setPreferences((p) => ({ ...p, writing }))}
+                />
+                <StagePreferenceEditor
+                  title="审阅"
+                  value={preferences.review}
+                  onChange={(review) => setPreferences((p) => ({ ...p, review }))}
                 />
               </div>
             </Tab>

@@ -103,6 +103,7 @@ async def _summarize_and_cache_recap(
             {"role": "user", "content": user_prompt},
         ],
         params,
+        task="writing_draft",
     )
     # Pin recap_generated_at to updated_at so a freshly generated recap is not
     # considered stale; a later content edit bumps updated_at and marks it stale.
@@ -165,7 +166,7 @@ async def generate_draft(
     work = await _get_work(db, chapter.work_id)
 
     try:
-        connection, system_prompt, params = await resolve_llm_context(db, "writing")
+        connection, system_prompt, params = await resolve_llm_context(db, "writing_draft")
 
         # When requested, include the previous chapter's recap. Reuse the cached
         # recap if present; otherwise generate one now (and cache it) as long as
@@ -201,6 +202,7 @@ async def generate_draft(
                 {"role": "user", "content": user_prompt},
             ],
             params,
+            task="writing_draft",
         )
     except LLMConfigError as exc:
         raise _config_error(exc) from exc
@@ -249,7 +251,7 @@ async def generate_recap(chapter_id: int, db: AsyncSession = Depends(get_db)) ->
         raise HTTPException(status_code=400, detail="前一章节尚无正文，无法生成前情提要")
 
     try:
-        connection, system_prompt, params = await resolve_llm_context(db, "writing")
+        connection, system_prompt, params = await resolve_llm_context(db, "writing_draft")
         recap_text = await _summarize_and_cache_recap(
             db, previous, connection, system_prompt, params
         )
@@ -276,7 +278,7 @@ async def rewrite_passage(
     """Rewrite a selected passage and return original + new for a diff preview."""
     chapter = await _get_chapter(db, chapter_id)
     try:
-        connection, system_prompt, params = await resolve_llm_context(db, "writing")
+        connection, system_prompt, params = await resolve_llm_context(db, "writing_rewrite")
         reference_block = await reference_block_for_texts(
             db,
             chapter.work_id,
@@ -305,6 +307,7 @@ async def rewrite_passage(
                 {"role": "user", "content": user_prompt},
             ],
             params,
+            task="writing_rewrite",
         )
     except LLMConfigError as exc:
         raise _config_error(exc) from exc
@@ -368,9 +371,9 @@ async def writing_chat(
             chapter_id=payload.chapter_id,
             quoted=payload.quoted,
         )
-        connection, system_prompt, params = await resolve_llm_context(db, "writing")
+        connection, system_prompt, params = await resolve_llm_context(db, "writing_chat")
         messages = await build_chat_messages(db, work, chapter, chat_payload, system_prompt)
-        reply = await chat_completion(connection, messages, params)
+        reply = await chat_completion(connection, messages, params, task="writing_chat")
         persisted = await append_exchange(
             db,
             conversation,

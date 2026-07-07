@@ -16,7 +16,7 @@ import app.routers.outline as outline_router
 def _patch_outline(monkeypatch, value) -> None:
     """Patch the outline router's chat_completion to return canned JSON."""
 
-    async def fake_completion(connection, messages, params=None):
+    async def fake_completion(connection, messages, params=None, **kwargs):
         return json.dumps(value, ensure_ascii=False)
 
     monkeypatch.setattr(outline_router, "chat_completion", fake_completion)

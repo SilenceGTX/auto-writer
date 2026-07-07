@@ -140,7 +140,7 @@ async def generate_stages(work_id: int, db: AsyncSession = Depends(get_db)) -> O
         raise HTTPException(status_code=400, detail="请先为作品选择包含阶段的故事结构")
 
     try:
-        connection, system_prompt, params = await resolve_llm_context(db, "outline")
+        connection, system_prompt, params = await resolve_llm_context(db, "outline_stages")
         reference_block = await reference_block_for_texts(db, work_id, [work.summary or ""])
         user_prompt = with_references(
             build_stage_generation_prompt(
@@ -152,7 +152,7 @@ async def generate_stages(work_id: int, db: AsyncSession = Depends(get_db)) -> O
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
-        content = await chat_completion(connection, messages, params)
+        content = await chat_completion(connection, messages, params, task="outline_stages")
         parsed = extract_json(content)
     except LLMConfigError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -211,7 +211,7 @@ async def generate_chapter_outlines(
         )
 
     try:
-        connection, system_prompt, params = await resolve_llm_context(db, "outline")
+        connection, system_prompt, params = await resolve_llm_context(db, "outline_chapters")
         texts = [work.summary or ""] + [stage.overview or "" for stage in stages]
         reference_block = await reference_block_for_texts(db, work_id, texts)
         user_prompt = with_references(
@@ -224,7 +224,7 @@ async def generate_chapter_outlines(
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
-        content = await chat_completion(connection, messages, params)
+        content = await chat_completion(connection, messages, params, task="outline_chapters")
         parsed = extract_json(content)
     except LLMConfigError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
