@@ -24,6 +24,8 @@ interface EntityFormProps {
   categories: EntityCategory[];
   defaultCategoryId: number;
   entity: WorldEntity | null;
+  initialName?: string;
+  embedded?: boolean;
   onSaved: (entity: WorldEntity) => void;
   onCancel: () => void;
 }
@@ -34,7 +36,7 @@ export function EntityForm(props: EntityFormProps): ReactElement {
   const isEdit = entity !== null;
   const { notify } = useToast();
 
-  const [name, setName] = useState(entity?.name ?? "");
+  const [name, setName] = useState(entity?.name ?? props.initialName ?? "");
   const [categoryId, setCategoryId] = useState(entity?.category_id ?? props.defaultCategoryId);
   const [description, setDescription] = useState(entity?.description ?? "");
   const [properties, setProperties] = useState<EntityProperty[]>(entity?.properties ?? []);
@@ -116,8 +118,8 @@ export function EntityForm(props: EntityFormProps): ReactElement {
   }
 
   return (
-    <section className="assistant-section work-form">
-      <h2>{isEdit ? "编辑条目" : "新建条目"}</h2>
+    <section className={props.embedded ? "entity-form-embedded" : "assistant-section work-form"}>
+      {!props.embedded && <h2>{isEdit ? "编辑条目" : "新建条目"}</h2>}
       <Input label="条目名称" value={name} onValueChange={setName} autoFocus isRequired />
       <Select
         label="设定种类"
