@@ -161,7 +161,7 @@ async def test_list_works_includes_written_chapter_counts(client, monkeypatch):
         json={"url": "https://stub/chat", "api_token": "t", "model": "m"},
     )
 
-    async def fake_stages(connection, messages, params=None):
+    async def fake_stages(connection, messages, params=None, **kwargs):
         return json.dumps(
             [
                 {"name": "铺垫", "chapter_count": 1, "overview": "a"},
@@ -184,7 +184,7 @@ async def test_list_works_includes_written_chapter_counts(client, monkeypatch):
     outline = (await client.post(f"/api/works/{work['id']}/outline/stages:generate")).json()
     assert outline["chapters"]
 
-    async def fake_chapters(connection, messages, params=None):
+    async def fake_chapters(connection, messages, params=None, **kwargs):
         return json.dumps(
             [
                 {"chapter_number": 1, "title": "第一章", "summary": "起"},

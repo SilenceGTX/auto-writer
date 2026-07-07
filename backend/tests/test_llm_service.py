@@ -62,7 +62,12 @@ async def test_llm_test_endpoint_ok(client, monkeypatch):
     _patch_transport(monkeypatch, handler)
     response = await client.post(
         "/api/llm/test",
-        json={"url": "https://x/chat", "api_token": "secret", "model": "m"},
+        json={
+            "id": "test-profile",
+            "url": "https://x/chat",
+            "api_token": "secret",
+            "model": "m",
+        },
     )
     assert response.status_code == 200
     body = response.json()
@@ -72,6 +77,9 @@ async def test_llm_test_endpoint_ok(client, monkeypatch):
 
 async def test_llm_test_endpoint_missing_url(client):
     """POST /api/llm/test reports failure when no URL is configured."""
-    response = await client.post("/api/llm/test", json={"url": "", "api_token": "", "model": ""})
+    response = await client.post(
+        "/api/llm/test",
+        json={"id": "test-profile", "url": "", "api_token": "", "model": ""},
+    )
     assert response.status_code == 200
     assert response.json()["ok"] is False

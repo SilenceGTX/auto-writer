@@ -198,11 +198,38 @@ class OutlineRead(BaseModel):
 
 
 class ConnectionSettings(BaseModel):
-    """LLM connection configuration (OpenAI-compatible endpoint)."""
+    """Legacy single LLM connection configuration (import compatibility)."""
 
     url: str = ""
     api_token: str = ""
     model: str = ""
+
+
+class LLMProfile(BaseModel):
+    """One OpenAI-compatible LLM endpoint configuration."""
+
+    id: str = Field(min_length=1)
+    url: str = ""
+    api_token: str = ""
+    model: str = ""
+
+
+class LLMAssignments(BaseModel):
+    """Maps each generation/chat task to an LLM profile id."""
+
+    outline_stages: str = Field(min_length=1)
+    outline_chapters: str = Field(min_length=1)
+    writing_draft: str = Field(min_length=1)
+    writing_chat: str = Field(min_length=1)
+    writing_rewrite: str = Field(min_length=1)
+    review_chat: str = Field(min_length=1)
+
+
+class LLMSettingsUpdate(BaseModel):
+    """Request body for saving LLM profiles and task assignments."""
+
+    profiles: list[LLMProfile] = Field(min_length=1, max_length=5)
+    assignments: LLMAssignments
 
 
 class StagePreference(BaseModel):
@@ -215,11 +242,23 @@ class StagePreference(BaseModel):
     max_tokens: int | None = Field(default=2048, ge=1)
 
 
+def _default_review_stage_preference() -> StagePreference:
+    """Return conservative defaults for review-stage LLM calls."""
+    return StagePreference(
+        temperature=0.3,
+        top_p=0.85,
+        presence_penalty=0.3,
+        frequency_penalty=0.3,
+        max_tokens=2048,
+    )
+
+
 class Preferences(BaseModel):
-    """Global preferences for the outline and writing generation stages."""
+    """Global preferences for outline, writing, and review generation."""
 
     outline: StagePreference = Field(default_factory=StagePreference)
     writing: StagePreference = Field(default_factory=StagePreference)
+    review: StagePreference = Field(default_factory=_default_review_stage_preference)
 
 
 class WritingStyle(BaseModel):
@@ -248,7 +287,8 @@ class TypographySettings(BaseModel):
 class SettingsResponse(BaseModel):
     """All known settings groups returned to the client."""
 
-    connection: ConnectionSettings
+    llm_profiles: list[LLMProfile]
+    llm_assignments: LLMAssignments
     preferences: Preferences
     writing_style: WritingStyle
     data_save: DataSaveSettings
@@ -259,6 +299,8 @@ class SettingsImport(BaseModel):
     """A configuration import payload; each group is optional (partial import)."""
 
     connection: ConnectionSettings | None = None
+    llm_profiles: list[LLMProfile] | None = None
+    llm_assignments: LLMAssignments | None = None
     preferences: Preferences | None = None
     writing_style: WritingStyle | None = None
     data_save: DataSaveSettings | None = None

@@ -274,6 +274,27 @@ export interface ConnectionSettings {
   model: string;
 }
 
+export interface LLMProfile {
+  id: string;
+  url: string;
+  api_token: string;
+  model: string;
+}
+
+export interface LLMAssignments {
+  outline_stages: string;
+  outline_chapters: string;
+  writing_draft: string;
+  writing_chat: string;
+  writing_rewrite: string;
+  review_chat: string;
+}
+
+export interface LLMSettings {
+  profiles: LLMProfile[];
+  assignments: LLMAssignments;
+}
+
 export interface StagePreference {
   temperature: number;
   top_p: number;
@@ -285,6 +306,7 @@ export interface StagePreference {
 export interface Preferences {
   outline: StagePreference;
   writing: StagePreference;
+  review: StagePreference;
 }
 
 export interface WritingStyle {
@@ -307,7 +329,8 @@ export interface TypographySettings {
 }
 
 export interface AppSettings {
-  connection: ConnectionSettings;
+  llm_profiles: LLMProfile[];
+  llm_assignments: LLMAssignments;
   preferences: Preferences;
   writing_style: WritingStyle;
   data_save: DataSaveSettings;
@@ -325,7 +348,15 @@ export async function getSettings(): Promise<AppSettings> {
   return requestJson<AppSettings>("/settings");
 }
 
-/** Persist the LLM connection configuration. */
+/** Persist LLM profiles and per-task assignments. */
+export async function updateLlmSettings(input: LLMSettings): Promise<LLMSettings> {
+  return requestJson<LLMSettings>("/settings/llm", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
+/** @deprecated Use updateLlmSettings; kept for compatibility with older callers. */
 export async function updateConnection(input: ConnectionSettings): Promise<ConnectionSettings> {
   return requestJson<ConnectionSettings>("/settings/connection", {
     method: "PUT",
@@ -378,11 +409,11 @@ export async function importSettings(config: Partial<AppSettings>): Promise<AppS
   });
 }
 
-/** Test an LLM connection with a lightweight completion. */
-export async function testConnection(input: ConnectionSettings): Promise<ConnectionTestResult> {
+/** Test one LLM profile with a lightweight completion. */
+export async function testConnection(profile: LLMProfile): Promise<ConnectionTestResult> {
   return requestJson<ConnectionTestResult>("/llm/test", {
     method: "POST",
-    body: JSON.stringify(input),
+    body: JSON.stringify(profile),
   });
 }
 

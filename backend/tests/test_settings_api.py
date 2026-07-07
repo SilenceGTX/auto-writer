@@ -6,8 +6,11 @@ async def test_get_settings_returns_defaults(client):
     response = await client.get("/api/settings")
     assert response.status_code == 200
     data = response.json()
-    assert data["connection"] == {"url": "", "api_token": "", "model": ""}
+    assert len(data["llm_profiles"]) == 1
+    assert data["llm_profiles"][0]["url"] == ""
+    assert data["llm_assignments"]["writing_chat"] == data["llm_profiles"][0]["id"]
     assert data["preferences"]["outline"]["temperature"] == 0.7
+    assert data["preferences"]["review"]["temperature"] == 0.3
     assert data["writing_style"]["text"] == ""
     assert data["data_save"]["autosave_interval_seconds"] == 30
     assert data["typography"]["reading_theme"] == "sepia"
@@ -65,8 +68,8 @@ async def test_import_rejects_invalid_config(client):
     assert response.status_code == 422
 
 
-async def test_update_connection_persists(client):
-    """Saving the connection config is reflected on subsequent reads."""
+async def test_update_connection_migrates_to_llm_profiles(client):
+    """Legacy connection updates map onto the first LLM profile."""
     payload = {
         "url": "https://api.example.com/v1/chat/completions",
         "api_token": "secret",
@@ -76,7 +79,60 @@ async def test_update_connection_persists(client):
     assert put.status_code == 200
 
     data = (await client.get("/api/settings")).json()
-    assert data["connection"] == payload
+    assert data["llm_profiles"][0]["url"] == payload["url"]
+    assert data["llm_profiles"][0]["model"] == payload["model"]
+    assert data["llm_assignments"]["review_chat"] == data["llm_profiles"][0]["id"]
+
+
+async def test_update_llm_profiles_and_assignments(client):
+    """LLM profiles and assignments are validated and persisted."""
+    first = {
+        "id": "profile-a",
+        "url": "https://api.example.com/v1/chat/completions",
+        "api_token": "secret",
+        "model": "gpt-a",
+    }
+    second = {
+        "id": "profile-b",
+        "url": "https://api.example.com/v1/chat/completions",
+        "api_token": "secret",
+        "model": "gpt-b",
+    }
+    assignments = {
+        "outline_stages": "profile-a",
+        "outline_chapters": "profile-a",
+        "writing_draft": "profile-a",
+        "writing_chat": "profile-b",
+        "writing_rewrite": "profile-b",
+        "review_chat": "profile-b",
+    }
+    response = await client.put(
+        "/api/settings/llm",
+        json={"profiles": [first, second], "assignments": assignments},
+    )
+    assert response.status_code == 200
+
+    data = (await client.get("/api/settings")).json()
+    assert len(data["llm_profiles"]) == 2
+    assert data["llm_assignments"]["writing_chat"] == "profile-b"
+
+
+async def test_import_legacy_connection_payload(client):
+    """Importing an old single-connection config creates one profile."""
+    payload = {
+        "connection": {
+            "url": "https://legacy.example.com/v1/chat/completions",
+            "api_token": "legacy",
+            "model": "legacy-model",
+        }
+    }
+    response = await client.post("/api/settings/import", json=payload)
+    assert response.status_code == 200
+
+    data = (await client.get("/api/settings")).json()
+    assert data["llm_profiles"][0]["url"] == payload["connection"]["url"]
+    assert data["llm_profiles"][0]["model"] == payload["connection"]["model"]
+    assert data["llm_assignments"]["outline_stages"] == data["llm_profiles"][0]["id"]
 
 
 async def test_update_preferences_and_writing_style(client):
@@ -96,6 +152,13 @@ async def test_update_preferences_and_writing_style(client):
             "frequency_penalty": 0.0,
             "max_tokens": 512,
         },
+        "review": {
+            "temperature": 0.2,
+            "top_p": 0.8,
+            "presence_penalty": 0.5,
+            "frequency_penalty": 0.5,
+            "max_tokens": 1024,
+        },
     }
     assert (await client.put("/api/settings/preferences", json=prefs)).status_code == 200
     assert (
@@ -104,11 +167,42 @@ async def test_update_preferences_and_writing_style(client):
 
     data = (await client.get("/api/settings")).json()
     assert data["preferences"]["outline"]["max_tokens"] == 4096
+    assert data["preferences"]["review"]["max_tokens"] == 1024
     assert data["writing_style"]["text"] == "古典雅致"
 
 
 async def test_preferences_validation_rejects_out_of_range(client):
     """Out-of-range sampling parameters are rejected."""
-    bad = {"outline": {"temperature": 5}, "writing": {}}
+    bad = {
+        "outline": {"temperature": 5},
+        "writing": {},
+        "review": {},
+    }
     response = await client.put("/api/settings/preferences", json=bad)
+    assert response.status_code == 422
+
+
+async def test_llm_profiles_reject_more_than_five(client):
+    """Saving more than five LLM profiles is rejected."""
+    profiles = [
+        {
+            "id": f"profile-{index}",
+            "url": "https://api.example.com/v1/chat/completions",
+            "api_token": "",
+            "model": f"m-{index}",
+        }
+        for index in range(6)
+    ]
+    assignments = {task: "profile-0" for task in [
+        "outline_stages",
+        "outline_chapters",
+        "writing_draft",
+        "writing_chat",
+        "writing_rewrite",
+        "review_chat",
+    ]}
+    response = await client.put(
+        "/api/settings/llm",
+        json={"profiles": profiles, "assignments": assignments},
+    )
     assert response.status_code == 422

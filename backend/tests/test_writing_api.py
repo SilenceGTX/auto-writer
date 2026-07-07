@@ -13,7 +13,7 @@ from app.models import Chapter
 def _patch_llm(monkeypatch, router, value) -> None:
     """Patch a router's chat_completion to return canned text/JSON."""
 
-    async def fake_completion(connection, messages, params=None):
+    async def fake_completion(connection, messages, params=None, **kwargs):
         return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
 
     monkeypatch.setattr(router, "chat_completion", fake_completion)
@@ -85,7 +85,7 @@ async def test_generate_draft_with_recap_auto_summarizes_and_caches(client, monk
 
     calls: list = []
 
-    async def capturing(connection, messages, params=None):
+    async def capturing(connection, messages, params=None, **kwargs):
         """Record every LLM call's messages and return a canned recap/draft text."""
         calls.append(messages)
         return "第一章前情提要"
@@ -118,7 +118,7 @@ async def test_generate_draft_with_recap_skips_when_previous_has_no_content(clie
 
     calls: list = []
 
-    async def capturing(connection, messages, params=None):
+    async def capturing(connection, messages, params=None, **kwargs):
         """Record every LLM call's messages and return canned draft text."""
         calls.append(messages)
         return "这是生成的正文。"
@@ -201,7 +201,7 @@ async def test_rewrite_with_neighbors_injects_cohesion_context(client, monkeypat
 
     captured: dict = {}
 
-    async def capturing(connection, messages, params=None):
+    async def capturing(connection, messages, params=None, **kwargs):
         captured["messages"] = messages
         return "重写后的文字"
 
@@ -254,7 +254,7 @@ async def test_chat_injects_referenced_entities(client, monkeypatch):
 
     captured: dict = {}
 
-    async def capturing(connection, messages, params=None):
+    async def capturing(connection, messages, params=None, **kwargs):
         captured["messages"] = messages
         return "好的"
 

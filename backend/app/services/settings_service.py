@@ -12,6 +12,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AppSetting
+from app.services.llm_settings import (
+    LLM_ASSIGNMENTS_KEY,
+    LLM_PROFILES_KEY,
+    default_assignments,
+    default_review_preference,
+    new_profile_id,
+    normalize_llm_settings,
+    normalize_preferences,
+)
 
 CONNECTION_KEY = "connection"
 PREFERENCES_KEY = "preferences"
@@ -27,11 +36,21 @@ _DEFAULT_STAGE_PREFERENCE = {
     "max_tokens": 2048,
 }
 
+_DEFAULT_EMPTY_PROFILE = {
+    "id": new_profile_id(),
+    "url": "",
+    "api_token": "",
+    "model": "",
+}
+
 DEFAULT_SETTINGS: dict[str, dict] = {
     CONNECTION_KEY: {"url": "", "api_token": "", "model": ""},
+    LLM_PROFILES_KEY: [_DEFAULT_EMPTY_PROFILE],
+    LLM_ASSIGNMENTS_KEY: default_assignments(_DEFAULT_EMPTY_PROFILE["id"]),
     PREFERENCES_KEY: {
         "outline": deepcopy(_DEFAULT_STAGE_PREFERENCE),
         "writing": deepcopy(_DEFAULT_STAGE_PREFERENCE),
+        "review": default_review_preference(),
     },
     WRITING_STYLE_KEY: {"text": ""},
     DATA_SAVE_KEY: {
@@ -42,6 +61,25 @@ DEFAULT_SETTINGS: dict[str, dict] = {
     },
     TYPOGRAPHY_KEY: {"font_family": "", "line_height": 1.8, "reading_theme": "sepia"},
 }
+
+
+def _normalize_loaded_settings(stored: dict[str, dict]) -> tuple[dict[str, dict], bool]:
+    """Apply LLM migration and preference defaults to loaded settings."""
+    changed = False
+    merged = {key: deepcopy(default) for key, default in DEFAULT_SETTINGS.items()}
+    merged.update({key: deepcopy(value) for key, value in stored.items()})
+
+    llm, llm_changed = normalize_llm_settings(stored)
+    merged[LLM_PROFILES_KEY] = llm["profiles"]
+    merged[LLM_ASSIGNMENTS_KEY] = llm["assignments"]
+    changed = changed or llm_changed
+
+    normalized_prefs = normalize_preferences(merged[PREFERENCES_KEY])
+    if normalized_prefs != merged[PREFERENCES_KEY]:
+        merged[PREFERENCES_KEY] = normalized_prefs
+        changed = True
+
+    return merged, changed
 
 
 async def get_setting(session: AsyncSession, key: str) -> dict:
@@ -56,7 +94,14 @@ async def get_all_settings(session: AsyncSession) -> dict[str, dict]:
     """Return every known settings group, merged over the defaults."""
     result = await session.execute(select(AppSetting))
     stored = {row.key: json.loads(row.value) for row in result.scalars().all()}
-    return {key: stored.get(key, deepcopy(default)) for key, default in DEFAULT_SETTINGS.items()}
+    merged, changed = _normalize_loaded_settings(stored)
+    if changed:
+        await set_settings(session, {
+            LLM_PROFILES_KEY: merged[LLM_PROFILES_KEY],
+            LLM_ASSIGNMENTS_KEY: merged[LLM_ASSIGNMENTS_KEY],
+            PREFERENCES_KEY: merged[PREFERENCES_KEY],
+        })
+    return merged
 
 
 async def set_setting(session: AsyncSession, key: str, value: dict) -> dict:
