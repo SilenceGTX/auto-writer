@@ -476,6 +476,25 @@ textarea {
   align-self: flex-start;
 }
 
+.form-actions-inline-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.form-actions-stacked .form-actions-inline-tools .add-inspiration-btn,
+.form-actions-stacked .form-actions-inline-tools .add-entity-btn {
+  margin-right: 0;
+  align-self: flex-start;
+}
+
+.entity-form-embedded {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
 .form-actions-row {
   display: flex;
   justify-content: flex-end;
@@ -1298,6 +1317,35 @@ textarea {
 .app-root.dark .add-inspiration-btn:hover {
   background: #3a2e10;
   border-color: #b45309;
+}
+
+.add-entity-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: transparent;
+  color: #6d28d9;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.add-entity-btn:hover {
+  background: #ede9fe;
+  border-color: #8b5cf6;
+}
+
+.app-root.dark .add-entity-btn {
+  border-color: #26334d;
+  color: #c4b5fd;
+}
+
+.app-root.dark .add-entity-btn:hover {
+  background: #2a2240;
+  border-color: #7c3aed;
 }
 
 /* Writing page */
