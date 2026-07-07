@@ -7,6 +7,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { listEntities, type WorldEntity } from "../api";
+import { buildMentionMarker } from "../utils/mentionText";
 
 export type MentionElement = HTMLTextAreaElement | HTMLInputElement;
 
@@ -78,7 +79,7 @@ export function useEntityMentions(workId: number): UseEntityMentions {
     const caret = element ? (element.selectionStart ?? value.length) : value.length;
     const before = value.slice(0, mentionStart);
     const after = value.slice(caret);
-    const marker = `@${entity.name} `;
+    const marker = buildMentionMarker(entity.name);
     onValueChange(before + marker + after);
     setQuery(null);
     requestAnimationFrame(() => {
