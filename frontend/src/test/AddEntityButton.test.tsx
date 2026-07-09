@@ -5,6 +5,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HeroUIProvider } from "@heroui/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import i18n from "../i18n";
 import { createEntity, listCategories } from "../api";
 import { AddEntityButton } from "../components/AddEntityButton";
 import { ToastProvider } from "../components/Toast";
@@ -66,9 +67,15 @@ describe("AddEntityButton", () => {
     vi.mocked(createEntity).mockResolvedValue(createdEntity);
   });
 
+  function addEntityButton(): HTMLElement {
+    return screen.getByRole("button", {
+      name: i18n.t("outline:selectionActions.addEntity.label"),
+    });
+  }
+
   it("warns when nothing is selected", async () => {
     render(<Harness />);
-    await userEvent.click(screen.getByRole("button", { name: /加入设定/ }));
+    await userEvent.click(addEntityButton());
     expect(await screen.findByText("请先选择要加入设定的文字")).toBeInTheDocument();
     expect(listCategories).not.toHaveBeenCalled();
   });
@@ -79,12 +86,14 @@ describe("AddEntityButton", () => {
     textarea.focus();
     textarea.setSelectionRange(4, 8);
 
-    const button = screen.getByRole("button", { name: /加入设定/ });
+    const button = addEntityButton();
     fireEvent.mouseDown(button);
     await userEvent.click(button);
 
     expect(await screen.findByDisplayValue("机械神器")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "创建条目" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("concept:form.createSubmit") }),
+    );
 
     await waitFor(() =>
       expect(createEntity).toHaveBeenCalledWith(1, {
