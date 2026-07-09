@@ -1,15 +1,19 @@
 /** Shared display helpers for inspiration cards and the detail modal. */
+import type { TFunction } from "i18next";
 
-/** Human-readable label for an inspiration's source page. */
-export const SOURCE_LABELS: Record<string, string> = {
-  outline: "大纲",
-  writing: "写作",
-  review: "审阅",
+const SOURCE_KEYS: Record<string, "outline" | "writing" | "review"> = {
+  outline: "outline",
+  writing: "writing",
+  review: "review",
 };
 
-/** Map a stored source-page value to its Chinese label (or a fallback). */
-export function sourceLabel(source: string | null): string {
-  return source ? (SOURCE_LABELS[source] ?? source) : "灵光一闪";
+/** Map a stored source-page value to a localized label (or a fallback). */
+export function sourceLabel(source: string | null, t: TFunction<"inspiration">): string {
+  if (!source) {
+    return t("sources.flash");
+  }
+  const key = SOURCE_KEYS[source];
+  return key ? t(`sources.${key}`) : source;
 }
 
 /** Format an ISO-like UTC timestamp ("YYYY-MM-DD HH:MM:SS") for display. */

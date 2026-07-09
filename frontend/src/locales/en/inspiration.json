@@ -1,1 +1,49 @@
-{}
+{
+  "page": {
+    "title": "Inspiration",
+    "subtitle": "Collect creative sparks as you write—search, re-insert, and tag them anytime.",
+    "empty": "No inspirations yet. Select text on the outline, writing, or review page and click “Add to inspirations” to save snippets here."
+  },
+  "toolbar": {
+    "searchPlaceholder": "Search inspirations",
+    "sourceFilterAria": "Filter by source",
+    "tagFilterAria": "Filter by tag",
+    "allSources": "All sources",
+    "allTags": "All tags"
+  },
+  "sources": {
+    "outline": "Outline",
+    "writing": "Writing",
+    "review": "Review",
+    "flash": "Flash of insight"
+  },
+  "modal": {
+    "title": "Inspiration details",
+    "tagsLabel": "Tags",
+    "noTagsHint": "No tags yet—create one below.",
+    "newTagAria": "New tag",
+    "newTagPlaceholder": "Enter a tag name and add",
+    "addTagAria": "Add tag",
+    "copy": "Copy",
+    "insertBack": "Insert at chapter end",
+    "insertBackTitle": "Append this inspiration to the end of the current chapter",
+    "jumpSource": "Go to source",
+    "delete": "Delete"
+  },
+  "deleteDialog": {
+    "title": "Delete inspiration",
+    "body": "Delete this inspiration? This cannot be undone.",
+    "confirm": "Delete"
+  },
+  "toast": {
+    "loadTagsFailed": "Failed to load tags",
+    "loadFailed": "Failed to load inspirations",
+    "copied": "Copied to clipboard",
+    "copyFailed": "Copy failed",
+    "selectWorkForInsert": "Select a work on the Works page before inserting",
+    "updateTagsFailed": "Failed to update tags",
+    "createTagFailed": "Failed to create tag",
+    "deleted": "Inspiration deleted",
+    "deleteFailed": "Failed to delete inspiration"
+  }
+}
