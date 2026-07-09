@@ -15,10 +15,10 @@ from app.schemas import (
     LLMAssignments,
     LLMProfile,
     LLMSettingsUpdate,
+    LocaleSettings,
     Preferences,
     SettingsImport,
     SettingsResponse,
-    LocaleSettings,
     TypographySettings,
     WritingStyle,
 )

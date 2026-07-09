@@ -20,7 +20,13 @@ _STREAM_TIMEOUT_SECONDS = 300.0
 class LLMConfigError(Exception):
     """Raised when the LLM connection is not configured correctly."""
 
-    def __init__(self, message: str, *, code: str = "config_error", detail: str | None = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str = "config_error",
+        detail: str | None = None,
+    ) -> None:
         super().__init__(message)
         self.code = code
         self.detail = detail
@@ -29,7 +35,13 @@ class LLMConfigError(Exception):
 class LLMRequestError(Exception):
     """Raised when the LLM endpoint returns an error or is unreachable."""
 
-    def __init__(self, message: str, *, code: str = "request_error", detail: str | None = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str = "request_error",
+        detail: str | None = None,
+    ) -> None:
         super().__init__(message)
         self.code = code
         self.detail = detail
@@ -117,7 +129,11 @@ async def chat_completion(
             response = await client.post(connection.url, headers=_headers(connection), json=body)
     except httpx.HTTPError as exc:
         logger.error("连接 LLM 失败 url={} error={}", connection.url, exc)
-        raise LLMRequestError(f"无法连接 LLM 服务：{exc}", code="connection_failed", detail=str(exc)) from exc
+        raise LLMRequestError(
+            f"无法连接 LLM 服务：{exc}",
+            code="connection_failed",
+            detail=str(exc),
+        ) from exc
 
     if response.status_code != httpx.codes.OK:
         logger.warning("LLM 返回错误 status={} body={}", response.status_code, response.text[:200])
@@ -162,7 +178,11 @@ async def stream_chat_completion(
                     if delta:
                         yield delta
     except httpx.HTTPError as exc:
-        raise LLMRequestError(f"无法连接 LLM 服务：{exc}", code="connection_failed", detail=str(exc)) from exc
+        raise LLMRequestError(
+            f"无法连接 LLM 服务：{exc}",
+            code="connection_failed",
+            detail=str(exc),
+        ) from exc
 
 
 def _parse_sse_delta(line: str) -> str:
