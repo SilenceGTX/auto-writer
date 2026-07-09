@@ -3,5 +3,14 @@
   "appTagline": "AI-assisted novel writing",
   "save": "Save",
   "cancel": "Cancel",
-  "loading": "Loading…"
+  "loading": "Loading…",
+  "assistant": {
+    "title": "Assistant",
+    "subtitle": "Context & AI",
+    "expand": "Expand assistant panel",
+    "collapse": "Collapse assistant panel",
+    "inspirationDraftTitle": "Inspiration scratchpad",
+    "inspirationDraftPlaceholder": "Jot down a line of dialogue, a plot turn, or a worldbuilding note…",
+    "saveToInspiration": "Save to inspirations"
+  }
 }

@@ -3,6 +3,7 @@
  */
 import { useCallback, useEffect, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
   Button,
@@ -40,23 +41,18 @@ import { useAssistant } from "../context/AssistantContext";
 import { useToast } from "../components/Toast";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { computeProgress } from "../utils/workProgress";
+import { WORK_STATUS_VALUES, workStatusColor, workStatusLabelKey } from "../utils/workStatus";
+import { translatePresetStructureName } from "../utils/storyStructureI18n";
 import { WorkCreateForm } from "./works/WorkCreateForm";
 import { WorkDetailPanel } from "./works/WorkDetailPanel";
 
 const PAGE_SIZE = 10;
-const WORK_STATUSES = ["创作中", "已完成", "搁置"];
 
 type PanelState = { mode: "none" } | { mode: "create" } | { mode: "detail"; work: Work };
 
-/** Map a work status to a chip color. */
-function statusColor(status: string): "primary" | "success" | "default" {
-  if (status === "已完成") return "success";
-  if (status === "创作中") return "primary";
-  return "default";
-}
-
 /** Render the full works management page. */
 export function WorksPage(): ReactElement {
+  const { t } = useTranslation(["works", "nav", "common"]);
   const navigate = useNavigate();
   const { notify } = useToast();
   const { setCurrentWorkId } = useApp();
@@ -110,9 +106,9 @@ export function WorksPage(): ReactElement {
       setWorks(data.items);
       setTotal(data.total);
     } catch {
-      notify("无法加载作品列表", "error");
+      notify(t("works:toast.loadWorksFailed"), "error");
     }
-  }, [search, sortDescriptor, page, notify]);
+  }, [search, sortDescriptor, page, notify, t]);
 
   useEffect(() => {
     void loadWorks();
@@ -125,10 +121,10 @@ export function WorksPage(): ReactElement {
         setSeriesList(seriesData);
         setStructures(structureData);
       } catch {
-        notify("无法加载系列或故事结构", "error");
+        notify(t("works:toast.loadMetaFailed"), "error");
       }
     })();
-  }, [notify]);
+  }, [notify, t]);
 
   function openWork(work: Work, path: string): void {
     setCurrentWorkId(work.id);
@@ -148,16 +144,16 @@ export function WorksPage(): ReactElement {
           : current,
       );
     } catch {
-      notify("更新状态失败", "error");
+      notify(t("works:toast.statusUpdateFailed"), "error");
     }
   }
 
   async function handleExport(work: Work, format: "json" | "md"): Promise<void> {
     try {
       await downloadWorkExport(work.id, format);
-      notify("导出已开始下载", "success");
+      notify(t("works:toast.exportStarted"), "success");
     } catch {
-      notify("导出失败", "error");
+      notify(t("works:toast.exportFailed"), "error");
     }
   }
 
@@ -167,7 +163,7 @@ export function WorksPage(): ReactElement {
     }
     try {
       await deleteWork(pendingDelete.id);
-      notify("作品已删除", "success");
+      notify(t("works:toast.deleted"), "success");
       setPanel((current) =>
         current.mode === "detail" && current.work.id === pendingDelete.id
           ? { mode: "none" }
@@ -175,13 +171,14 @@ export function WorksPage(): ReactElement {
       );
       await loadWorks();
     } catch {
-      notify("删除作品失败", "error");
+      notify(t("works:toast.deleteFailed"), "error");
     } finally {
       setPendingDelete(null);
     }
   }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const prepLabel = t("works:progress.prep");
 
   const assistantContent =
     panel.mode === "create" ? (
@@ -193,7 +190,7 @@ export function WorksPage(): ReactElement {
         onCreated={(work) => {
           setPanel({ mode: "none" });
           setCurrentWorkId(work.id);
-          notify("作品已创建", "success");
+          notify(t("works:toast.created"), "success");
           navigate("/outline");
         }}
         onCancel={() => setPanel({ mode: "none" })}
@@ -218,21 +215,21 @@ export function WorksPage(): ReactElement {
     <section className="workspace-page">
       <div className="page-header">
         <div>
-          <h1>作品</h1>
-          <p>管理你的系列与作品，并进入大纲、写作或审阅流程。</p>
+          <h1>{t("works:page.title")}</h1>
+          <p>{t("works:page.subtitle")}</p>
         </div>
         <Button
           color="primary"
           startContent={<Plus size={18} />}
           onPress={() => openPanel({ mode: "create" })}
         >
-          新建作品
+          {t("works:actions.createWork")}
         </Button>
       </div>
 
       <Input
         className="search-input"
-        placeholder="搜索作品或系列名称"
+        placeholder={t("works:page.searchPlaceholder")}
         startContent={<Search size={16} />}
         value={searchInput}
         onValueChange={setSearchInput}
@@ -241,7 +238,7 @@ export function WorksPage(): ReactElement {
       />
 
       <Table
-        aria-label="作品列表"
+        aria-label={t("works:page.tableLabel")}
         sortDescriptor={sortDescriptor}
         onSortChange={(descriptor) => {
           setSortDescriptor(descriptor);
@@ -249,27 +246,27 @@ export function WorksPage(): ReactElement {
         }}
       >
         <TableHeader>
-          <TableColumn key="series">系列</TableColumn>
+          <TableColumn key="series">{t("works:columns.series")}</TableColumn>
           <TableColumn key="title" allowsSorting>
-            作品
+            {t("works:columns.title")}
           </TableColumn>
-          <TableColumn key="structure">结构</TableColumn>
+          <TableColumn key="structure">{t("works:columns.structure")}</TableColumn>
           <TableColumn key="status" allowsSorting>
-            状态
+            {t("works:columns.status")}
           </TableColumn>
-          <TableColumn key="progress">进度</TableColumn>
+          <TableColumn key="progress">{t("works:columns.progress")}</TableColumn>
           <TableColumn key="word_count" allowsSorting>
-            字数
+            {t("works:columns.wordCount")}
           </TableColumn>
           <TableColumn key="created_at" allowsSorting>
-            创建时间
+            {t("works:columns.createdAt")}
           </TableColumn>
           <TableColumn key="updated_at" allowsSorting>
-            更新时间
+            {t("works:columns.updatedAt")}
           </TableColumn>
-          <TableColumn key="actions">操作</TableColumn>
+          <TableColumn key="actions">{t("works:columns.actions")}</TableColumn>
         </TableHeader>
-        <TableBody emptyContent="还没有作品，点击右上角“新建作品”开始创作。">
+        <TableBody emptyContent={t("works:page.empty")}>
           {works.map((work) => {
             const progress = computeProgress(work);
             return (
@@ -284,20 +281,24 @@ export function WorksPage(): ReactElement {
                     {work.title}
                   </button>
                 </TableCell>
-                <TableCell>{work.structure_name ?? "-"}</TableCell>
+                <TableCell>
+                  {work.structure_name
+                    ? translatePresetStructureName(work.structure_name, t)
+                    : "-"}
+                </TableCell>
                 <TableCell>
                   <Dropdown>
                     <DropdownTrigger>
-                      <Button size="sm" variant="flat" color={statusColor(work.status)}>
-                        {work.status}
+                      <Button size="sm" variant="flat" color={workStatusColor(work.status)}>
+                        {t(workStatusLabelKey(work.status))}
                       </Button>
                     </DropdownTrigger>
                     <DropdownMenu
-                      aria-label="切换状态"
+                      aria-label={t("works:status.changeLabel")}
                       onAction={(key) => void handleStatusChange(work, String(key))}
                     >
-                      {WORK_STATUSES.map((value) => (
-                        <DropdownItem key={value}>{value}</DropdownItem>
+                      {WORK_STATUS_VALUES.map((value) => (
+                        <DropdownItem key={value}>{t(workStatusLabelKey(value))}</DropdownItem>
                       ))}
                     </DropdownMenu>
                   </Dropdown>
@@ -305,11 +306,11 @@ export function WorksPage(): ReactElement {
                 <TableCell>
                   {progress.isPrep ? (
                     <Chip size="sm" variant="flat">
-                      前期筹备
+                      {prepLabel}
                     </Chip>
                   ) : (
                     <div className="progress-cell">
-                      <Progress aria-label="写作进度" size="sm" value={progress.percent} />
+                      <Progress aria-label={t("works:progress.ariaLabel")} size="sm" value={progress.percent} />
                       <span>{progress.label}</span>
                     </div>
                   )}
@@ -319,75 +320,80 @@ export function WorksPage(): ReactElement {
                 <TableCell>{work.updated_at}</TableCell>
                 <TableCell>
                   <div className="row-actions">
-                    <Tooltip content="设定">
+                    <Tooltip content={t("nav:worldbuilding")}>
                       <Button
                         isIconOnly
                         size="sm"
                         variant="light"
-                        aria-label="设定"
+                        aria-label={t("nav:worldbuilding")}
                         onPress={() => openWork(work, "/worldbuilding")}
                       >
                         <Sparkles size={16} />
                       </Button>
                     </Tooltip>
-                    <Tooltip content="大纲">
+                    <Tooltip content={t("nav:outline")}>
                       <Button
                         isIconOnly
                         size="sm"
                         variant="light"
-                        aria-label="大纲"
+                        aria-label={t("nav:outline")}
                         onPress={() => openWork(work, "/outline")}
                       >
                         <FileText size={16} />
                       </Button>
                     </Tooltip>
-                    <Tooltip content="写作">
+                    <Tooltip content={t("nav:writing")}>
                       <Button
                         isIconOnly
                         size="sm"
                         variant="light"
-                        aria-label="写作"
+                        aria-label={t("nav:writing")}
                         onPress={() => openWork(work, "/writing")}
                       >
                         <PenLine size={16} />
                       </Button>
                     </Tooltip>
-                    <Tooltip content="审阅">
+                    <Tooltip content={t("nav:review")}>
                       <Button
                         isIconOnly
                         size="sm"
                         variant="light"
-                        aria-label="审阅"
+                        aria-label={t("nav:review")}
                         onPress={() => openWork(work, "/review")}
                       >
                         <SearchCheck size={16} />
                       </Button>
                     </Tooltip>
                     <Dropdown>
-                      <Tooltip content="导出">
+                      <Tooltip content={t("works:actions.export")}>
                         <div>
                           <DropdownTrigger>
-                            <Button isIconOnly size="sm" variant="light" aria-label="导出">
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="light"
+                              aria-label={t("works:actions.export")}
+                            >
                               <Download size={16} />
                             </Button>
                           </DropdownTrigger>
                         </div>
                       </Tooltip>
                       <DropdownMenu
-                        aria-label="导出格式"
+                        aria-label={t("works:actions.exportFormatLabel")}
                         onAction={(key) => void handleExport(work, key as "json" | "md")}
                       >
-                        <DropdownItem key="json">导出 JSON</DropdownItem>
-                        <DropdownItem key="md">导出 Markdown</DropdownItem>
+                        <DropdownItem key="json">{t("works:actions.exportJson")}</DropdownItem>
+                        <DropdownItem key="md">{t("works:actions.exportMarkdown")}</DropdownItem>
                       </DropdownMenu>
                     </Dropdown>
-                    <Tooltip content="删除" color="danger">
+                    <Tooltip content={t("works:actions.delete")} color="danger">
                       <Button
                         isIconOnly
                         size="sm"
                         variant="light"
                         color="danger"
-                        aria-label="删除"
+                        aria-label={t("works:actions.delete")}
                         onPress={() => setPendingDelete(work)}
                       >
                         <Trash2 size={16} />
@@ -411,9 +417,10 @@ export function WorksPage(): ReactElement {
 
       <ConfirmDialog
         isOpen={pendingDelete !== null}
-        title="删除作品"
-        body={`确定要删除作品「${pendingDelete?.title ?? ""}」吗？此操作不可恢复。`}
-        confirmLabel="删除"
+        title={t("works:deleteDialog.title")}
+        body={t("works:deleteDialog.body", { title: pendingDelete?.title ?? "" })}
+        confirmLabel={t("works:actions.delete")}
+        cancelLabel={t("common:cancel")}
         danger
         onConfirm={() => void handleConfirmDelete()}
         onCancel={() => setPendingDelete(null)}

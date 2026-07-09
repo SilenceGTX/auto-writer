@@ -3,5 +3,14 @@
   "appTagline": "小说辅助创作工具",
   "save": "保存",
   "cancel": "取消",
-  "loading": "加载中…"
+  "loading": "加载中…",
+  "assistant": {
+    "title": "辅助区",
+    "subtitle": "当前上下文与 AI 操作",
+    "expand": "展开辅助区",
+    "collapse": "折叠辅助区",
+    "inspirationDraftTitle": "灵感暂存",
+    "inspirationDraftPlaceholder": "记录一句对白、一个转折或一个设定碎片…",
+    "saveToInspiration": "保存到灵感"
+  }
 }

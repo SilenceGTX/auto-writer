@@ -1,5 +1,6 @@
 /** Assistant-panel editor for a selected chapter (``OUTLINE_PAGE_DESIGN.md`` §3.2). */
 import { useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { Button, Input, Select, SelectItem } from "@heroui/react";
 import { updateChapter, type Chapter, type WorkStage } from "../../api";
 import { AddEntityButton } from "../../components/AddEntityButton";
@@ -7,6 +8,7 @@ import { AddInspirationButton } from "../../components/AddInspirationButton";
 import { LinkEntityButton } from "../../components/LinkEntityButton";
 import { MentionTextarea } from "../../components/MentionTextarea";
 import { useToast } from "../../components/Toast";
+import { translatePresetStageName } from "../../utils/storyStructureI18n";
 
 const CHAPTER_STATUSES = ["草稿", "已完成"];
 const UNASSIGNED_KEY = "none";
@@ -14,6 +16,7 @@ const UNASSIGNED_KEY = "none";
 interface ChapterPanelProps {
   chapter: Chapter;
   stages: WorkStage[];
+  structureName: string | null | undefined;
   onSaved: (chapter: Chapter) => void;
   onGenerate: (chapter: Chapter) => void;
   onCancel: () => void;
@@ -22,6 +25,7 @@ interface ChapterPanelProps {
 /** Edit a chapter's outline (title, summary, status, stage) and generate body. */
 export function ChapterPanel(props: ChapterPanelProps): ReactElement {
   const { chapter } = props;
+  const { t } = useTranslation("works");
   const { notify } = useToast();
   const [title, setTitle] = useState(chapter.title ?? "");
   const [summary, setSummary] = useState(chapter.summary ?? "");
@@ -76,7 +80,9 @@ export function ChapterPanel(props: ChapterPanelProps): ReactElement {
         {[
           <SelectItem key={UNASSIGNED_KEY}>未分配</SelectItem>,
           ...props.stages.map((stage) => (
-            <SelectItem key={String(stage.id)}>{stage.name}</SelectItem>
+            <SelectItem key={String(stage.id)}>
+              {translatePresetStageName(props.structureName, stage.name, t)}
+            </SelectItem>
           )),
         ]}
       </Select>

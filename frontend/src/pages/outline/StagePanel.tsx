@@ -1,5 +1,6 @@
 /** Assistant-panel editor for a selected stage (``OUTLINE_PAGE_DESIGN.md`` §3.1). */
 import { useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@heroui/react";
 import { updateStage, type WorkStage } from "../../api";
 import { AddEntityButton } from "../../components/AddEntityButton";
@@ -7,9 +8,11 @@ import { AddInspirationButton } from "../../components/AddInspirationButton";
 import { LinkEntityButton } from "../../components/LinkEntityButton";
 import { MentionTextarea } from "../../components/MentionTextarea";
 import { useToast } from "../../components/Toast";
+import { translatePresetStageName } from "../../utils/storyStructureI18n";
 
 interface StagePanelProps {
   stage: WorkStage;
+  structureName: string | null | undefined;
   totalChapters: number;
   onSaved: (stage: WorkStage) => void;
   onCancel: () => void;
@@ -18,6 +21,7 @@ interface StagePanelProps {
 /** Edit a stage's synopsis (总纲) and show its chapter share. */
 export function StagePanel(props: StagePanelProps): ReactElement {
   const { stage } = props;
+  const { t } = useTranslation("works");
   const { notify } = useToast();
   const [overview, setOverview] = useState(stage.overview ?? "");
   const [saving, setSaving] = useState(false);
@@ -41,7 +45,7 @@ export function StagePanel(props: StagePanelProps): ReactElement {
 
   return (
     <section className="assistant-section work-form">
-      <h2>阶段：{stage.name}</h2>
+      <h2>阶段：{translatePresetStageName(props.structureName, stage.name, t)}</h2>
       <div className="detail-stats">
         <div className="detail-stat">
           <span>章节总数</span>

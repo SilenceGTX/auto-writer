@@ -7,6 +7,7 @@
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Button, Chip } from "@heroui/react";
 import { Sparkles, Wand2 } from "lucide-react";
@@ -28,6 +29,7 @@ import { useToast } from "../components/Toast";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { WorkTitleSelect } from "../components/WorkTitleSelect";
 import { stageColorMap } from "../utils/outline";
+import { translatePresetStructureName } from "../utils/storyStructureI18n";
 import { ChapterOutline } from "./outline/ChapterOutline";
 import { ChapterPanel } from "./outline/ChapterPanel";
 import { StagePanel } from "./outline/StagePanel";
@@ -37,6 +39,7 @@ type Selection = { type: "stage"; id: number } | { type: "chapter"; id: number }
 
 /** Render the outline workspace for the current work. */
 export function OutlinePage(): ReactElement {
+  const { t } = useTranslation("works");
   const navigate = useNavigate();
   const { notify } = useToast();
   const { currentWorkId } = useApp();
@@ -176,6 +179,7 @@ export function OutlinePage(): ReactElement {
     <StagePanel
       key={`stage-${selectedStage.id}`}
       stage={selectedStage}
+      structureName={outline?.structure_name}
       totalChapters={outline?.chapters.length ?? 0}
       onSaved={() => void loadOutline()}
       onCancel={() => setSelection(null)}
@@ -185,6 +189,7 @@ export function OutlinePage(): ReactElement {
       key={`chapter-${selectedChapter.id}`}
       chapter={selectedChapter}
       stages={outline?.stages ?? []}
+      structureName={outline?.structure_name}
       onSaved={() => void loadOutline()}
       onGenerate={(chapter) => navigate(`/writing?chapter=${chapter.id}`)}
       onCancel={() => setSelection(null)}
@@ -204,7 +209,9 @@ export function OutlinePage(): ReactElement {
         <div>
           <WorkTitleSelect fallback={outline?.title ?? "大纲"} />
           <p>
-            {outline?.structure_name ? `结构：${outline.structure_name} · ` : ""}
+            {outline?.structure_name
+              ? `${t("structures.outlinePrefix")}${translatePresetStructureName(outline.structure_name, t)} · `
+              : ""}
             已规划 {outline?.chapters.length ?? 0} 章
             {outline?.planned_chapter_count != null
               ? ` / 计划 ${outline.planned_chapter_count} 章`
@@ -248,6 +255,7 @@ export function OutlinePage(): ReactElement {
         <div className="outline-grid">
           <StageTree
             stages={outline?.stages ?? []}
+            structureName={outline?.structure_name}
             totalChapters={outline?.chapters.length ?? 0}
             selectedStageId={selection?.type === "stage" ? selection.id : null}
             locked={outline?.locked ?? false}
@@ -257,6 +265,7 @@ export function OutlinePage(): ReactElement {
           <ChapterOutline
             chapters={outline?.chapters ?? []}
             stages={outline?.stages ?? []}
+            structureName={outline?.structure_name}
             colorMap={colorMap}
             selectedChapterId={selection?.type === "chapter" ? selection.id : null}
             onSelectChapter={(id) => select({ type: "chapter", id })}

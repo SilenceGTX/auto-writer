@@ -5,6 +5,7 @@
  * returning to the works list.
  */
 import { useCallback, useEffect, useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { Select, SelectItem } from "@heroui/react";
 import { listWorks, type Work } from "../api";
 import { useApp } from "../context/AppContext";
@@ -19,6 +20,7 @@ interface WorkTitleSelectProps {
 
 /** Render a heading-style select for switching the active work. */
 export function WorkTitleSelect(props: WorkTitleSelectProps): ReactElement {
+  const { t } = useTranslation("works");
   const { currentWorkId, setCurrentWorkId } = useApp();
   const { notify } = useToast();
   const [works, setWorks] = useState<Work[]>([]);
@@ -32,23 +34,25 @@ export function WorkTitleSelect(props: WorkTitleSelectProps): ReactElement {
       });
       setWorks(data.items);
     } catch {
-      notify("无法加载作品列表", "error");
+      notify(t("toast.loadWorksFailed"), "error");
     }
-  }, [notify]);
+  }, [notify, t]);
 
   useEffect(() => {
     void loadWorks();
   }, [loadWorks]);
 
-  const currentTitle =
-    works.find((work) => work.id === currentWorkId)?.title ?? props.fallback ?? "选择作品";
+  const placeholder =
+    works.find((work) => work.id === currentWorkId)?.title ??
+    props.fallback ??
+    t("titleSelect.placeholder");
 
   return (
     <Select
-      aria-label="选择作品"
+      aria-label={t("titleSelect.ariaLabel")}
       className="work-title-select"
       selectedKeys={currentWorkId != null ? [String(currentWorkId)] : []}
-      placeholder={currentTitle}
+      placeholder={placeholder}
       classNames={{
         base: "work-title-select-base",
         trigger: "work-title-select-trigger",

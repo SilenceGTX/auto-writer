@@ -1,5 +1,6 @@
 /** Chapter outline: filterable, searchable, draggable chapter cards (§2.2). */
 import { useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Button,
   Chip,
@@ -10,12 +11,14 @@ import {
 } from "@heroui/react";
 import { GripVertical, Plus, Search, Trash2 } from "lucide-react";
 import type { Chapter, ChapterOrderItem, WorkStage } from "../../api";
+import { translatePresetStageName } from "../../utils/storyStructureI18n";
 
 const UNASSIGNED_KEY = "none";
 
 interface ChapterOutlineProps {
   chapters: Chapter[];
   stages: WorkStage[];
+  structureName: string | null | undefined;
   colorMap: Map<number, string>;
   selectedChapterId: number | null;
   onSelectChapter: (id: number) => void;
@@ -26,6 +29,7 @@ interface ChapterOutlineProps {
 
 /** Render the chapter outline column with its toolbar and cards. */
 export function ChapterOutline(props: ChapterOutlineProps): ReactElement {
+  const { t } = useTranslation("works");
   const [stageFilter, setStageFilter] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [draggingId, setDraggingId] = useState<number | null>(null);
@@ -81,7 +85,9 @@ export function ChapterOutline(props: ChapterOutlineProps): ReactElement {
           {[
             <SelectItem key={UNASSIGNED_KEY}>未分配</SelectItem>,
             ...props.stages.map((stage) => (
-              <SelectItem key={String(stage.id)}>{stage.name}</SelectItem>
+              <SelectItem key={String(stage.id)}>
+                {translatePresetStageName(props.structureName, stage.name, t)}
+              </SelectItem>
             )),
           ]}
         </Select>
