@@ -1,1 +1,97 @@
-{}
+{
+  "page": {
+    "title": "Worldbuilding",
+    "subtitle": "Manage characters, locations, items, and concepts; reference them with @ while writing.",
+    "fallbackTitle": "Worldbuilding",
+    "emptyWork": {
+      "body": "Select a work on the Works page before managing worldbuilding.",
+      "goToWorks": "Go to Works"
+    },
+    "createEntity": "New entry"
+  },
+  "categories": {
+    "ariaLabel": "Worldbuilding categories",
+    "add": "Add category",
+    "modalTitle": "Add category",
+    "nameLabel": "Category name",
+    "addButton": "Add",
+    "deleteAria": "Delete category {{name}}",
+    "presets": {
+      "characters": "Characters",
+      "locations": "Locations",
+      "items": "Items",
+      "concepts": "Concepts"
+    }
+  },
+  "toolbar": {
+    "searchPlaceholder": "Search entry name or description",
+    "sortAria": "Sort by",
+    "sortDefault": "Default order",
+    "sortName": "Name",
+    "sortCreatedAt": "Created",
+    "orderAscTooltip": "Ascending (click for descending)",
+    "orderDescTooltip": "Descending (click for ascending)",
+    "switchToDesc": "Switch to descending",
+    "switchToAsc": "Switch to ascending"
+  },
+  "entity": {
+    "emptyNoCategory": "Select a category first.",
+    "emptyInCategory": "No entries in “{{category}}” yet.",
+    "emptyHint": " Click “New entry” in the top right to add one.",
+    "copy": "Copy",
+    "copyAria": "Copy entry",
+    "delete": "Delete",
+    "deleteAria": "Delete entry",
+    "copySuffix": "Copy"
+  },
+  "form": {
+    "createTitle": "New entry",
+    "editTitle": "Edit entry",
+    "nameLabel": "Name",
+    "categoryLabel": "Category",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "A short description of this entry…",
+    "propertiesTitle": "Properties",
+    "addProperty": "Add property",
+    "propertyNameAria": "Property name",
+    "propertyNamePlaceholder": "Name",
+    "propertyValueAria": "Property value",
+    "propertyValuePlaceholder": "Value",
+    "deletePropertyAria": "Remove property",
+    "commonProperties": "Common properties:",
+    "referencesTitle": "References",
+    "referencesEmpty": "No references yet (shown when @ mentions are tracked).",
+    "createdAt": "Created {{date}}",
+    "updatedAt": "Updated {{date}}",
+    "timestamps": "Created {{created}} · Updated {{updated}}",
+    "createSubmit": "Create entry"
+  },
+  "modal": {
+    "createTitle": "New entry"
+  },
+  "toast": {
+    "loadCategoriesFailed": "Failed to load categories",
+    "loadEntitiesFailed": "Failed to load entries",
+    "copied": "Entry copied",
+    "copyFailed": "Failed to copy entry",
+    "entityDeleted": "Entry deleted",
+    "entityDeleteFailed": "Failed to delete entry",
+    "categoryDeleted": "Category deleted",
+    "categoryDeleteFailed": "Failed to delete category",
+    "nameRequired": "Enter an entry name",
+    "entitySaved": "Entry saved",
+    "entityCreated": "Entry created",
+    "entitySaveFailed": "Failed to save entry",
+    "entityCreateFailed": "Failed to create entry",
+    "categoryNameRequired": "Enter a category name",
+    "categoryAdded": "Category added",
+    "categoryAddFailed": "Failed to add category (name may already exist)"
+  },
+  "deleteDialog": {
+    "entityTitle": "Delete entry",
+    "entityBody": "Delete “{{name}}”? This cannot be undone.",
+    "categoryTitle": "Delete category",
+    "categoryBody": "Delete category “{{name}}” and all its entries? This cannot be undone.",
+    "confirm": "Delete"
+  }
+}

@@ -1,4 +1,6 @@
 /** Integration test for the worldbuilding page (tabs, cards, create form). */
+import "../i18n";
+import i18n from "../i18n";
 import { useState, type ReactElement } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -75,7 +77,9 @@ function renderPage() {
 }
 
 describe("ConceptPage", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    localStorage.setItem("aw.locale", "zh");
+    await i18n.changeLanguage("zh");
     vi.clearAllMocks();
     localStorage.clear();
   });

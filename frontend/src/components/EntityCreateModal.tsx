@@ -1,5 +1,6 @@
 /** Modal wrapper around ``EntityForm`` for creating a setting entry from another page. */
 import { type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { Modal, ModalBody, ModalContent, ModalHeader } from "@heroui/react";
 import type { EntityCategory, WorldEntity } from "../api";
 import { EntityForm } from "../pages/worldbuilding/EntityForm";
@@ -16,6 +17,8 @@ interface EntityCreateModalProps {
 
 /** Render the create-entry form inside a modal dialog. */
 export function EntityCreateModal(props: EntityCreateModalProps): ReactElement {
+  const { t } = useTranslation("concept");
+
   return (
     <Modal
       isOpen={props.isOpen}
@@ -25,7 +28,7 @@ export function EntityCreateModal(props: EntityCreateModalProps): ReactElement {
       classNames={{ base: "entity-create-modal" }}
     >
       <ModalContent>
-        <ModalHeader>新建条目</ModalHeader>
+        <ModalHeader>{t("modal.createTitle")}</ModalHeader>
         <ModalBody>
           <EntityForm
             key={`${props.initialName}-${props.defaultCategoryId}`}

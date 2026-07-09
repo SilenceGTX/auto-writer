@@ -4,6 +4,7 @@
  * A trailing "添加种类" tab opens a modal to create a custom category.
  */
 import { useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Button,
   Input,
@@ -16,6 +17,7 @@ import {
 import { Plus, X } from "lucide-react";
 import { createCategory, type EntityCategory } from "../../api";
 import { useToast } from "../../components/Toast";
+import { translateCategoryName } from "../../utils/entityCategoryI18n";
 
 interface CategoryTabsProps {
   workId: number;
@@ -28,6 +30,7 @@ interface CategoryTabsProps {
 
 /** Render the category tab bar and the custom-category creation modal. */
 export function CategoryTabs(props: CategoryTabsProps): ReactElement {
+  const { t } = useTranslation(["concept", "common"]);
   const { notify } = useToast();
   const [isModalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState("");
@@ -35,7 +38,7 @@ export function CategoryTabs(props: CategoryTabsProps): ReactElement {
 
   async function handleCreate(): Promise<void> {
     if (!name.trim()) {
-      notify("请填写种类名称", "error");
+      notify(t("concept:toast.categoryNameRequired"), "error");
       return;
     }
     setSaving(true);
@@ -44,64 +47,72 @@ export function CategoryTabs(props: CategoryTabsProps): ReactElement {
       props.onCreated(created);
       setName("");
       setModalOpen(false);
-      notify("种类已添加", "success");
+      notify(t("concept:toast.categoryAdded"), "success");
     } catch {
-      notify("添加种类失败（名称可能重复）", "error");
+      notify(t("concept:toast.categoryAddFailed"), "error");
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div className="category-tabs" role="tablist" aria-label="设定种类">
-      {props.categories.map((category) => (
-        <div
-          key={category.id}
-          className={`category-tab ${category.id === props.activeId ? "active" : ""}`}
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={category.id === props.activeId}
-            className="category-tab-label"
-            onClick={() => props.onSelect(category.id)}
+    <div className="category-tabs" role="tablist" aria-label={t("concept:categories.ariaLabel")}>
+      {props.categories.map((category) => {
+        const label = translateCategoryName(category, t);
+        return (
+          <div
+            key={category.id}
+            className={`category-tab ${category.id === props.activeId ? "active" : ""}`}
           >
-            {category.name}
-            <span className="category-tab-count">{category.entity_count}</span>
-          </button>
-          {category.is_preset === 0 && (
             <button
               type="button"
-              className="category-tab-delete"
-              aria-label={`删除种类 ${category.name}`}
-              onClick={() => props.onRequestDelete(category)}
+              role="tab"
+              aria-selected={category.id === props.activeId}
+              className="category-tab-label"
+              onClick={() => props.onSelect(category.id)}
             >
-              <X size={13} />
+              {label}
+              <span className="category-tab-count">{category.entity_count}</span>
             </button>
-          )}
-        </div>
-      ))}
+            {category.is_preset === 0 && (
+              <button
+                type="button"
+                className="category-tab-delete"
+                aria-label={t("concept:categories.deleteAria", { name: label })}
+                onClick={() => props.onRequestDelete(category)}
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+        );
+      })}
       <Button
         size="sm"
         variant="flat"
         startContent={<Plus size={15} />}
         onPress={() => setModalOpen(true)}
       >
-        添加种类
+        {t("concept:categories.add")}
       </Button>
 
       <Modal isOpen={isModalOpen} onClose={() => setModalOpen(false)}>
         <ModalContent>
-          <ModalHeader>添加设定种类</ModalHeader>
+          <ModalHeader>{t("concept:categories.modalTitle")}</ModalHeader>
           <ModalBody className="modal-form">
-            <Input label="种类名称" value={name} onValueChange={setName} autoFocus />
+            <Input
+              label={t("concept:categories.nameLabel")}
+              value={name}
+              onValueChange={setName}
+              autoFocus
+            />
           </ModalBody>
           <ModalFooter>
             <Button variant="light" onPress={() => setModalOpen(false)}>
-              取消
+              {t("common:cancel")}
             </Button>
             <Button color="primary" isLoading={saving} onPress={() => void handleCreate()}>
-              添加
+              {t("concept:categories.addButton")}
             </Button>
           </ModalFooter>
         </ModalContent>
