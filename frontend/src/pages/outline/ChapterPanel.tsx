@@ -4,6 +4,7 @@ import { Button, Input, Select, SelectItem } from "@heroui/react";
 import { updateChapter, type Chapter, type WorkStage } from "../../api";
 import { AddEntityButton } from "../../components/AddEntityButton";
 import { AddInspirationButton } from "../../components/AddInspirationButton";
+import { LinkEntityButton } from "../../components/LinkEntityButton";
 import { MentionTextarea } from "../../components/MentionTextarea";
 import { useToast } from "../../components/Toast";
 
@@ -106,6 +107,7 @@ export function ChapterPanel(props: ChapterPanelProps): ReactElement {
             getFallbackText={() => summary}
           />
           <AddEntityButton workId={chapter.work_id} text={summary} onTextChange={setSummary} />
+          <LinkEntityButton workId={chapter.work_id} text={summary} onTextChange={setSummary} />
         </div>
         <div className="form-actions-row">
           <Button variant="light" onPress={props.onCancel}>

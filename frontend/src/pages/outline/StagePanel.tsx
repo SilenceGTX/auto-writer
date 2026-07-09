@@ -4,6 +4,7 @@ import { Button } from "@heroui/react";
 import { updateStage, type WorkStage } from "../../api";
 import { AddEntityButton } from "../../components/AddEntityButton";
 import { AddInspirationButton } from "../../components/AddInspirationButton";
+import { LinkEntityButton } from "../../components/LinkEntityButton";
 import { MentionTextarea } from "../../components/MentionTextarea";
 import { useToast } from "../../components/Toast";
 
@@ -66,6 +67,7 @@ export function StagePanel(props: StagePanelProps): ReactElement {
             getFallbackText={() => overview}
           />
           <AddEntityButton workId={stage.work_id} text={overview} onTextChange={setOverview} />
+          <LinkEntityButton workId={stage.work_id} text={overview} onTextChange={setOverview} />
         </div>
         <div className="form-actions-row">
           <Button variant="light" onPress={props.onCancel}>
