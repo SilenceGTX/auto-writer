@@ -1,9 +1,12 @@
 /** Tests for the system settings modal rendering. */
+import "../i18n";
+import i18n from "../i18n";
 import { render, screen, waitFor } from "@testing-library/react";
 import { HeroUIProvider } from "@heroui/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SettingsModal } from "../components/SettingsModal";
 import { ToastProvider } from "../components/Toast";
+import { AppProvider } from "../context/AppContext";
 
 vi.mock("../api", () => ({
   getSettings: vi.fn().mockResolvedValue({
@@ -47,6 +50,7 @@ vi.mock("../api", () => ({
       history_versions: 3,
     },
     typography: { font_family: "", line_height: 1.8, reading_theme: "sepia" },
+    locale: { locale: "zh" },
   }),
   exportSettings: vi.fn(),
   importSettings: vi.fn(),
@@ -55,20 +59,28 @@ vi.mock("../api", () => ({
   updateWritingStyle: vi.fn(),
   updateDataSave: vi.fn(),
   updateTypography: vi.fn(),
+  updateLocale: vi.fn(),
   triggerDownload: vi.fn(),
 }));
 
 function renderModal(): ReturnType<typeof render> {
   return render(
     <HeroUIProvider>
-      <ToastProvider>
-        <SettingsModal isOpen onClose={() => {}} />
-      </ToastProvider>
+      <AppProvider>
+        <ToastProvider>
+          <SettingsModal isOpen onClose={() => {}} />
+        </ToastProvider>
+      </AppProvider>
     </HeroUIProvider>,
   );
 }
 
 describe("SettingsModal", () => {
+  beforeEach(async () => {
+    localStorage.setItem("aw.locale", "zh");
+    await i18n.changeLanguage("zh");
+  });
+
   it("renders when open without crashing", async () => {
     renderModal();
     expect(await screen.findByText("系统设置")).toBeInTheDocument();

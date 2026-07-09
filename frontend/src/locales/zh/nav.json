@@ -1,0 +1,16 @@
+{
+  "main": "主导航",
+  "works": "作品",
+  "worldbuilding": "设定",
+  "outline": "大纲",
+  "writing": "写作",
+  "inspiration": "灵感",
+  "review": "审阅",
+  "themeLight": "浅色主题",
+  "themeDark": "深色主题",
+  "settings": "系统设置",
+  "language": "界面语言",
+  "languageZh": "中文",
+  "languageEn": "English",
+  "languageSaveFailed": "语言设置保存失败"
+}

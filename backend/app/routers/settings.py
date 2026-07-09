@@ -18,6 +18,7 @@ from app.schemas import (
     Preferences,
     SettingsImport,
     SettingsResponse,
+    LocaleSettings,
     TypographySettings,
     WritingStyle,
 )
@@ -32,6 +33,7 @@ from app.services.llm_settings import (
 from app.services.settings_service import (
     CONNECTION_KEY,
     DATA_SAVE_KEY,
+    LOCALE_KEY,
     PREFERENCES_KEY,
     TYPOGRAPHY_KEY,
     WRITING_STYLE_KEY,
@@ -53,6 +55,7 @@ async def _read_all(db: AsyncSession) -> SettingsResponse:
         writing_style=data[WRITING_STYLE_KEY],
         data_save=data[DATA_SAVE_KEY],
         typography=data[TYPOGRAPHY_KEY],
+        locale=data[LOCALE_KEY],
     )
 
 
@@ -149,6 +152,15 @@ async def update_typography(
     return payload
 
 
+@router.put("/locale", response_model=LocaleSettings)
+async def update_locale(
+    payload: LocaleSettings, db: AsyncSession = Depends(get_db)
+) -> LocaleSettings:
+    """Persist the UI and AI prompt language preference."""
+    await set_setting(db, LOCALE_KEY, payload.model_dump())
+    return payload
+
+
 @router.get("/export", response_model=SettingsResponse)
 async def export_settings(db: AsyncSession = Depends(get_db)) -> SettingsResponse:
     """Export all settings groups as a single configuration document."""
@@ -196,6 +208,8 @@ async def import_settings(
         groups[DATA_SAVE_KEY] = payload.data_save.model_dump()
     if payload.typography is not None:
         groups[TYPOGRAPHY_KEY] = payload.typography.model_dump()
+    if payload.locale is not None:
+        groups[LOCALE_KEY] = payload.locale.model_dump()
 
     if groups:
         await set_settings(db, groups)

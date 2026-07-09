@@ -1,5 +1,8 @@
 /** API client and shared types for communicating with the Auto-Writer backend. */
 
+import { getApiLocale } from "./apiLocale";
+import type { AppLocale } from "./utils/locale";
+
 const API_BASE = import.meta.env.VITE_API_BASE ?? "/api";
 
 export interface Series {
@@ -86,7 +89,11 @@ export class ApiError extends Error {
 /** Fetch JSON from the backend and raise ApiError for non-OK responses. */
 export async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    headers: {
+      "Content-Type": "application/json",
+      "Accept-Language": getApiLocale(),
+      ...(init?.headers ?? {}),
+    },
     ...init,
   });
 
@@ -328,6 +335,10 @@ export interface TypographySettings {
   reading_theme: ReadingTheme;
 }
 
+export interface LocaleSettings {
+  locale: AppLocale;
+}
+
 export interface AppSettings {
   llm_profiles: LLMProfile[];
   llm_assignments: LLMAssignments;
@@ -335,6 +346,7 @@ export interface AppSettings {
   writing_style: WritingStyle;
   data_save: DataSaveSettings;
   typography: TypographySettings;
+  locale: LocaleSettings;
 }
 
 export interface ConnectionTestResult {
@@ -391,6 +403,14 @@ export async function updateDataSave(input: DataSaveSettings): Promise<DataSaveS
 /** Persist the reading font, line height, and eye-care theme. */
 export async function updateTypography(input: TypographySettings): Promise<TypographySettings> {
   return requestJson<TypographySettings>("/settings/typography", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
+/** Persist the UI and AI prompt language preference. */
+export async function updateLocale(input: LocaleSettings): Promise<LocaleSettings> {
+  return requestJson<LocaleSettings>("/settings/locale", {
     method: "PUT",
     body: JSON.stringify(input),
   });

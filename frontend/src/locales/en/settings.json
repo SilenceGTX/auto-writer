@@ -1,0 +1,22 @@
+{
+  "title": "Settings",
+  "tabs": {
+    "connection": "Connection",
+    "llm_assignments": "LLM tasks",
+    "preferences": "Preferences",
+    "writing_style": "Writing style",
+    "data_save": "Data & snapshots",
+    "typography": "Typography",
+    "locale": "Language",
+    "config": "Import / export"
+  },
+  "locale": {
+    "label": "Interface language",
+    "description": "Controls UI copy and AI prompt language.",
+    "zh": "简体中文",
+    "en": "English"
+  },
+  "saved": "Settings saved",
+  "saveFailed": "Failed to save settings",
+  "loadFailed": "Failed to load settings"
+}

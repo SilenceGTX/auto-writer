@@ -71,6 +71,7 @@ vi.mock("../api", () => ({
   getSettings: vi.fn().mockResolvedValue({
     data_save: { autosave_interval_seconds: 30 },
     typography: { font_family: "", line_height: 1.8, reading_theme: "sepia" },
+    locale: { locale: "zh" },
   }),
   snapshotWork: vi.fn().mockResolvedValue({ snapshot_dir: null, chapters: 0 }),
 }));

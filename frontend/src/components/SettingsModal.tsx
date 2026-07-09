@@ -3,6 +3,7 @@
  * Covers all tabs of ``SYSTEM_SETTINGS_PAGE_DESIGN.md`` (§3–8).
  */
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Button,
   Input,
@@ -39,6 +40,7 @@ import {
   type ReadingTheme,
   type TypographySettings,
 } from "../api";
+import { useApp } from "../context/AppContext";
 import {
   DEFAULT_REVIEW_PREFERENCE,
   DEFAULT_STAGE_PREFERENCE,
@@ -118,7 +120,9 @@ function normalizeLoadedSettings(
 
 /** Render the system settings modal with editable settings groups. */
 export function SettingsModal(props: SettingsModalProps): ReactElement {
+  const { t } = useTranslation(["settings", "common"]);
   const { notify } = useToast();
+  const { setLocale } = useApp();
   const initialProfile = createEmptyProfile();
   const [llmProfiles, setLlmProfiles] = useState<LLMProfile[]>([initialProfile]);
   const [llmAssignments, setLlmAssignments] = useState<LLMAssignments>(() =>
@@ -145,9 +149,9 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
     try {
       applyLoaded(await getSettings());
     } catch {
-      notify("无法加载系统设置", "error");
+      notify(t("settings:loadFailed"), "error");
     }
-  }, [applyLoaded, notify]);
+  }, [applyLoaded, notify, t]);
 
   useEffect(() => {
     if (props.isOpen) {
@@ -184,10 +188,10 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
         updateTypography(typography),
       ]);
       applyTypography(typography);
-      notify("设置已保存", "success");
+      notify(t("settings:saved"), "success");
       props.onClose();
     } catch {
-      notify("保存设置失败", "error");
+      notify(t("settings:saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -211,6 +215,7 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
       const applied = await importSettings(parsed);
       applyLoaded(applied);
       applyTypography(applied.typography);
+      setLocale(applied.locale.locale);
       notify("配置导入成功", "success");
     } catch {
       notify("配置文件无效或导入失败", "error");
@@ -226,10 +231,10 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
       classNames={{ base: "settings-modal" }}
     >
       <ModalContent>
-        <ModalHeader>系统设置</ModalHeader>
+        <ModalHeader>{t("settings:title")}</ModalHeader>
         <ModalBody>
-          <Tabs aria-label="系统设置标签" className="settings-modal-tabs">
-            <Tab key="connection" title="连接配置">
+          <Tabs aria-label={t("settings:title")} className="settings-modal-tabs">
+            <Tab key="connection" title={t("settings:tabs.connection")}>
               <div className="settings-section">
                 <Accordion
                   selectionMode="multiple"
@@ -289,7 +294,7 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
               </div>
             </Tab>
 
-            <Tab key="llm_assignments" title="LLM 分工">
+            <Tab key="llm_assignments" title={t("settings:tabs.llm_assignments")}>
               <LLMAssignmentPanel
                 profiles={llmProfiles}
                 assignments={llmAssignments}
@@ -297,7 +302,7 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
               />
             </Tab>
 
-            <Tab key="preferences" title="全局偏好">
+            <Tab key="preferences" title={t("settings:tabs.preferences")}>
               <div className="settings-section">
                 <StagePreferenceEditor
                   title="大纲"
@@ -317,7 +322,7 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
               </div>
             </Tab>
 
-            <Tab key="writing_style" title="写作风格">
+            <Tab key="writing_style" title={t("settings:tabs.writing_style")}>
               <div className="settings-section">
                 <Textarea
                   label="写作风格"
@@ -329,7 +334,7 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
               </div>
             </Tab>
 
-            <Tab key="data_save" title="数据保存">
+            <Tab key="data_save" title={t("settings:tabs.data_save")}>
               <div className="settings-section">
                 <Input
                   type="number"
@@ -370,7 +375,7 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
               </div>
             </Tab>
 
-            <Tab key="typography" title="字体与排版">
+            <Tab key="typography" title={t("settings:tabs.typography")}>
               <div className="settings-section">
                 <Input
                   label="字体"
@@ -406,7 +411,7 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
               </div>
             </Tab>
 
-            <Tab key="config" title="配置导入/导出">
+            <Tab key="config" title={t("settings:tabs.config")}>
               <div className="settings-section">
                 <p className="settings-hint">
                   将全部系统设置导出为配置文件用于备份或迁移；导入时会校验并覆盖对应分组。
@@ -446,10 +451,10 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
         </ModalBody>
         <ModalFooter>
           <Button variant="light" onPress={props.onClose}>
-            取消
+            {t("common:cancel")}
           </Button>
           <Button color="primary" isLoading={saving} onPress={() => void handleSave()}>
-            保存
+            {t("common:save")}
           </Button>
         </ModalFooter>
       </ModalContent>
