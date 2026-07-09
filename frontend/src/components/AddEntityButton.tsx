@@ -5,9 +5,11 @@
  * ``@名称`` reference marker in the parent field.
  */
 import { useRef, useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { Sparkles } from "lucide-react";
 import { listCategories, type EntityCategory, type WorldEntity } from "../api";
 import { EntityCreateModal } from "./EntityCreateModal";
+import { SelectionActionPlus } from "./SelectionActionPlus";
 import { useToast } from "./Toast";
 import { replaceRangeWithMention } from "../utils/mentionText";
 import { getActiveSelectionRange, type TextSelectionRange } from "../utils/selection";
@@ -17,29 +19,30 @@ interface AddEntityButtonProps {
   workId: number;
   text: string;
   onTextChange: (value: string) => void;
-  label?: string;
 }
 
-/** Render a button that creates a setting entry from the current selection. */
+/** Render a compact button that creates a setting entry from the current selection. */
 export function AddEntityButton(props: AddEntityButtonProps): ReactElement {
+  const { t } = useTranslation("outline");
   const { notify } = useToast();
   const capturedRange = useRef<TextSelectionRange | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [categories, setCategories] = useState<EntityCategory[]>([]);
   const [initialName, setInitialName] = useState("");
   const [defaultCategoryId, setDefaultCategoryId] = useState(0);
+  const label = t("selectionActions.addEntity.label");
 
   async function openModal(): Promise<void> {
     const range = capturedRange.current;
     capturedRange.current = null;
     if (!range?.text.trim()) {
-      notify("请先选择要加入设定的文字", "info");
+      notify(t("selectionActions.addEntity.emptySelection"), "info");
       return;
     }
     try {
       const loaded = await listCategories(props.workId);
       if (loaded.length === 0) {
-        notify("当前作品还没有设定种类", "error");
+        notify(t("selectionActions.addEntity.noCategories"), "error");
         return;
       }
       capturedRange.current = range;
@@ -48,7 +51,7 @@ export function AddEntityButton(props: AddEntityButtonProps): ReactElement {
       setDefaultCategoryId(defaultEntityCategoryId(loaded));
       setModalOpen(true);
     } catch {
-      notify("无法加载设定种类", "error");
+      notify(t("selectionActions.addEntity.loadCategoriesFailed"), "error");
     }
   }
 
@@ -72,16 +75,17 @@ export function AddEntityButton(props: AddEntityButtonProps): ReactElement {
     <>
       <button
         type="button"
-        className="add-entity-btn"
-        title="将选中的文字加入设定"
+        className="selection-action-btn selection-action-entity"
+        title={label}
+        aria-label={label}
         onMouseDown={(event) => {
           event.preventDefault();
           capturedRange.current = getActiveSelectionRange();
         }}
         onClick={() => void openModal()}
       >
-        <Sparkles size={15} />
-        <span>{props.label ?? "加入设定"}</span>
+        <SelectionActionPlus />
+        <Sparkles aria-hidden />
       </button>
       <EntityCreateModal
         isOpen={modalOpen}

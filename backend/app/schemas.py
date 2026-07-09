@@ -319,7 +319,8 @@ class ConnectionTestResult(BaseModel):
     """Result of a lightweight LLM connection test."""
 
     ok: bool
-    message: str
+    code: str
+    detail: str | None = None
     sample: str | None = None
 
 

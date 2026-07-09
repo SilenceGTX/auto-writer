@@ -18,5 +18,102 @@
   },
   "saved": "Settings saved",
   "saveFailed": "Failed to save settings",
-  "loadFailed": "Failed to load settings"
+  "loadFailed": "Failed to load settings",
+  "connection": {
+    "delete": "Delete",
+    "addProfile": "Add model",
+    "maxProfiles": "You can add up to {{max}} models",
+    "profileFallback": "Model {{index}}",
+    "urlLabel": "URL",
+    "urlPlaceholder": "https://api.example.com/v1/chat/completions",
+    "tokenLabel": "API Token",
+    "showToken": "Show token",
+    "hideToken": "Hide token",
+    "modelLabel": "Model",
+    "modelPlaceholder": "e.g. gpt-4o-mini",
+    "testConnection": "Test connection",
+    "testRequestFailed": "Connection test failed",
+    "testResults": {
+      "success": "Connected",
+      "missing_url": "LLM endpoint URL is not configured",
+      "connection_failed": "Could not reach LLM service: {{detail}}",
+      "http_error": "LLM returned an error: {{detail}}",
+      "parse_error": "Could not parse LLM response",
+      "config_error": "Invalid LLM configuration",
+      "request_error": "LLM request failed",
+      "request_failed": "Connection test failed"
+    }
+  },
+  "llmTasks": {
+    "outline_stages": "Stage tree generation",
+    "outline_chapters": "Chapter outline generation",
+    "writing_draft": "Draft generation (incl. recap)",
+    "writing_chat": "Writing assistant chat",
+    "writing_rewrite": "Partial rewrite",
+    "review_chat": "Review assistant chat"
+  },
+  "llmAssignments": {
+    "hint": "Each task must use a model. If a model is removed, affected tasks fall back to the first model in the list."
+  },
+  "preferences": {
+    "stages": {
+      "outline": "Outline",
+      "writing": "Writing",
+      "review": "Review"
+    },
+    "sliders": {
+      "creativity": "Creativity",
+      "focus": "Focus",
+      "length": "Length"
+    },
+    "levels": {
+      "creativity": {
+        "conservative": "Conservative",
+        "balanced": "Balanced",
+        "bold": "Bold"
+      },
+      "focus": {
+        "open": "Open",
+        "moderate": "Moderate",
+        "strict": "Strict"
+      },
+      "length": {
+        "concise": "Concise",
+        "standard": "Standard",
+        "detailed": "Detailed"
+      }
+    },
+    "custom": "Custom",
+    "advanced": "Advanced"
+  },
+  "writingStyle": {
+    "label": "Writing style",
+    "description": "Injected into the system prompt by default to keep tone consistent."
+  },
+  "dataSave": {
+    "inputDebounce": "Save delay after typing stops (seconds)",
+    "autosaveInterval": "Auto-save interval (seconds)",
+    "snapshotPath": "Snapshot storage path",
+    "snapshotPathDescription": "Backend snapshot location; relative paths are resolved from the data directory.",
+    "historyVersions": "History versions to keep"
+  },
+  "typography": {
+    "fontFamily": "Font",
+    "fontFamilyPlaceholder": "Leave blank for system default, e.g. Noto Serif",
+    "lineHeight": "Line height",
+    "readingTheme": "Reading background",
+    "themes": {
+      "sepia": "Sepia (easy on eyes)",
+      "light": "Light",
+      "dark": "Dark"
+    }
+  },
+  "config": {
+    "hint": "Export all settings for backup or migration. Import validates and overwrites the matching groups.",
+    "export": "Export config",
+    "import": "Import config",
+    "exportFailed": "Failed to export config",
+    "importSuccess": "Config imported",
+    "importFailed": "Invalid config file or import failed"
+  }
 }

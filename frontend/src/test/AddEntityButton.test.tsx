@@ -1,4 +1,5 @@
 /** Tests the reusable "加入设定" button (selection capture, modal create, @ replace). */
+import "../i18n";
 import { useState, type ReactElement } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

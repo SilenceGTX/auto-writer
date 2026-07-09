@@ -351,7 +351,8 @@ export interface AppSettings {
 
 export interface ConnectionTestResult {
   ok: boolean;
-  message: string;
+  code: string;
+  detail: string | null;
   sample: string | null;
 }
 

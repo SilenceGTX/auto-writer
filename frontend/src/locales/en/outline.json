@@ -1,1 +1,26 @@
-{}
+{
+  "selectionActions": {
+    "addInspiration": {
+      "label": "Add selection to inspirations",
+      "saveFallback": "Save as inspiration",
+      "emptySelection": "Select text to add to inspirations",
+      "saved": "Added to inspirations",
+      "saveFailed": "Failed to add to inspirations"
+    },
+    "addEntity": {
+      "label": "Add selection to worldbuilding",
+      "emptySelection": "Select text to add to worldbuilding",
+      "noCategories": "This work has no worldbuilding categories yet",
+      "loadCategoriesFailed": "Failed to load worldbuilding categories"
+    },
+    "linkEntity": {
+      "label": "Link selection to an existing setting (@)",
+      "emptySelection": "Select text to link as a setting reference",
+      "alreadyLinked": "Selection is already a setting reference",
+      "notFound": "No setting named “{{name}}”. Use + worldbuilding to create one",
+      "duplicateName": "Multiple settings named “{{name}}”. Distinguish them on the Worldbuilding page",
+      "linked": "Setting reference added",
+      "lookupFailed": "Failed to look up setting"
+    }
+  }
+}

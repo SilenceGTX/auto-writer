@@ -1,1 +1,26 @@
-{}
+{
+  "selectionActions": {
+    "addInspiration": {
+      "label": "将选中的文字加入灵感",
+      "saveFallback": "存为灵感",
+      "emptySelection": "请先选择要加入灵感的文字",
+      "saved": "已加入灵感",
+      "saveFailed": "加入灵感失败"
+    },
+    "addEntity": {
+      "label": "将选中的文字加入设定",
+      "emptySelection": "请先选择要加入设定的文字",
+      "noCategories": "当前作品还没有设定种类",
+      "loadCategoriesFailed": "无法加载设定种类"
+    },
+    "linkEntity": {
+      "label": "将选中文字替换为已有设定的 @ 引用",
+      "emptySelection": "请先选择要引用的文字",
+      "alreadyLinked": "选中内容已是设定引用",
+      "notFound": "未找到名为「{{name}}」的设定条目，可使用「+ 设定」新建",
+      "duplicateName": "存在多个名为「{{name}}」的设定条目，请先在设定页区分",
+      "linked": "已添加设定引用",
+      "lookupFailed": "查找设定条目失败"
+    }
+  }
+}

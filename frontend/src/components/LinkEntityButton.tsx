@@ -5,6 +5,7 @@
  * space matches ``useEntityMentions`` / ``AddEntityButton``).
  */
 import { useRef, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { useToast } from "./Toast";
 import { findEntitiesByExactName } from "../utils/entityLookup";
 import { replaceRangeWithMention } from "../utils/mentionText";
@@ -18,45 +19,48 @@ interface LinkEntityButtonProps {
 
 /** Render a compact ``@`` button that links the selection to an existing entry. */
 export function LinkEntityButton(props: LinkEntityButtonProps): ReactElement {
+  const { t } = useTranslation("outline");
   const { notify } = useToast();
   const capturedRange = useRef<TextSelectionRange | null>(null);
+  const label = t("selectionActions.linkEntity.label");
 
   async function link(): Promise<void> {
     const range = capturedRange.current;
     capturedRange.current = null;
     if (!range?.text.trim()) {
-      notify("请先选择要引用的文字", "info");
+      notify(t("selectionActions.linkEntity.emptySelection"), "info");
       return;
     }
     const name = range.text.trim();
     if (name.startsWith("@")) {
-      notify("选中内容已是设定引用", "info");
+      notify(t("selectionActions.linkEntity.alreadyLinked"), "info");
       return;
     }
     try {
       const matches = await findEntitiesByExactName(props.workId, name);
       if (matches.length === 0) {
-        notify(`未找到名为「${name}」的设定条目，可使用「加入设定」新建`, "info");
+        notify(t("selectionActions.linkEntity.notFound", { name }), "info");
         return;
       }
       if (matches.length > 1) {
-        notify(`存在多个名为「${name}」的设定条目，请先在设定页区分`, "info");
+        notify(t("selectionActions.linkEntity.duplicateName", { name }), "info");
         return;
       }
       props.onTextChange(
         replaceRangeWithMention(props.text, range.start, range.end, matches[0].name),
       );
-      notify("已添加设定引用", "success");
+      notify(t("selectionActions.linkEntity.linked"), "success");
     } catch {
-      notify("查找设定条目失败", "error");
+      notify(t("selectionActions.linkEntity.lookupFailed"), "error");
     }
   }
 
   return (
     <button
       type="button"
-      className="link-entity-btn"
-      title="将选中文字替换为已有设定的 @ 引用"
+      className="selection-action-btn selection-action-link"
+      title={label}
+      aria-label={label}
       onMouseDown={(event) => {
         event.preventDefault();
         capturedRange.current = getActiveSelectionRange();

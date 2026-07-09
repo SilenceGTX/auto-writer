@@ -1,4 +1,5 @@
 /** Tests the reusable "加入灵感" button (selection capture + fallback + save). */
+import "../i18n";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";

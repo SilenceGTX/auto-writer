@@ -88,4 +88,14 @@ describe("SettingsModal", () => {
       expect(screen.getByText("新增模型")).toBeInTheDocument();
     });
   });
+
+  it("renders in English when locale is en", async () => {
+    localStorage.setItem("aw.locale", "en");
+    await i18n.changeLanguage("en");
+    renderModal();
+    expect(await screen.findByText("Settings")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Add model")).toBeInTheDocument();
+    });
+  });
 });
