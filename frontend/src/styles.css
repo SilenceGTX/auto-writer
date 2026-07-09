@@ -483,7 +483,8 @@ textarea {
 }
 
 .form-actions-stacked .form-actions-inline-tools .add-inspiration-btn,
-.form-actions-stacked .form-actions-inline-tools .add-entity-btn {
+.form-actions-stacked .form-actions-inline-tools .add-entity-btn,
+.form-actions-stacked .form-actions-inline-tools .link-entity-btn {
   margin-right: 0;
   align-self: flex-start;
 }
@@ -1346,6 +1347,37 @@ textarea {
 .app-root.dark .add-entity-btn:hover {
   background: #2a2240;
   border-color: #7c3aed;
+}
+
+.link-entity-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  padding: 6px 10px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: transparent;
+  color: #1d4ed8;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.link-entity-btn:hover {
+  background: #dbeafe;
+  border-color: #3b82f6;
+}
+
+.app-root.dark .link-entity-btn {
+  border-color: #26334d;
+  color: #93c5fd;
+}
+
+.app-root.dark .link-entity-btn:hover {
+  background: #1e3a5f;
+  border-color: #2563eb;
 }
 
 /* Writing page */
