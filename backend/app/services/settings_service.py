@@ -27,6 +27,7 @@ PREFERENCES_KEY = "preferences"
 WRITING_STYLE_KEY = "writing_style"
 DATA_SAVE_KEY = "data_save"
 TYPOGRAPHY_KEY = "typography"
+LOCALE_KEY = "locale"
 
 _DEFAULT_STAGE_PREFERENCE = {
     "temperature": 0.7,
@@ -60,6 +61,7 @@ DEFAULT_SETTINGS: dict[str, dict] = {
         "history_versions": 3,
     },
     TYPOGRAPHY_KEY: {"font_family": "", "line_height": 1.8, "reading_theme": "sepia"},
+    LOCALE_KEY: {"locale": "zh"},
 }
 
 

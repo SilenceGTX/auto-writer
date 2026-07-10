@@ -1,0 +1,119 @@
+{
+  "title": "系统设置",
+  "tabs": {
+    "connection": "连接配置",
+    "llm_assignments": "LLM 分工",
+    "preferences": "全局偏好",
+    "writing_style": "写作风格",
+    "data_save": "数据保存",
+    "typography": "字体与排版",
+    "locale": "界面语言",
+    "config": "配置导入/导出"
+  },
+  "locale": {
+    "label": "界面语言",
+    "description": "同时影响界面文案与 AI 提示词语言。",
+    "zh": "简体中文",
+    "en": "English"
+  },
+  "saved": "设置已保存",
+  "saveFailed": "保存设置失败",
+  "loadFailed": "无法加载系统设置",
+  "connection": {
+    "delete": "删除",
+    "addProfile": "新增模型",
+    "maxProfiles": "最多添加 {{max}} 个模型",
+    "profileFallback": "模型 {{index}}",
+    "urlLabel": "URL",
+    "urlPlaceholder": "https://api.example.com/v1/chat/completions",
+    "tokenLabel": "API Token",
+    "showToken": "显示 Token",
+    "hideToken": "隐藏 Token",
+    "modelLabel": "模型",
+    "modelPlaceholder": "如 gpt-4o-mini",
+    "testConnection": "测试连接",
+    "testRequestFailed": "测试请求失败",
+    "testResults": {
+      "success": "连接成功",
+      "missing_url": "尚未配置 LLM 接口地址",
+      "connection_failed": "无法连接 LLM 服务：{{detail}}",
+      "http_error": "LLM 返回错误：{{detail}}",
+      "parse_error": "无法解析 LLM 响应内容",
+      "config_error": "LLM 配置无效",
+      "request_error": "LLM 请求失败",
+      "request_failed": "测试请求失败"
+    }
+  },
+  "llmTasks": {
+    "outline_stages": "阶段树生成",
+    "outline_chapters": "章节大纲生成",
+    "writing_draft": "初稿生成（含前情提要）",
+    "writing_chat": "写作辅助区聊天",
+    "writing_rewrite": "局部重写",
+    "review_chat": "审阅辅助区聊天"
+  },
+  "llmAssignments": {
+    "hint": "每个环节必须指定一个模型。删除模型后，相关环节会自动改用最上方的第一个模型。"
+  },
+  "preferences": {
+    "stages": {
+      "outline": "大纲",
+      "writing": "写作",
+      "review": "审阅"
+    },
+    "sliders": {
+      "creativity": "创造力",
+      "focus": "聚焦度",
+      "length": "篇幅"
+    },
+    "levels": {
+      "creativity": {
+        "conservative": "保守",
+        "balanced": "平衡",
+        "bold": "大胆"
+      },
+      "focus": {
+        "open": "发散",
+        "moderate": "适度",
+        "strict": "严谨"
+      },
+      "length": {
+        "concise": "精炼",
+        "standard": "标准",
+        "detailed": "详尽"
+      }
+    },
+    "custom": "自定义",
+    "advanced": "高级设置"
+  },
+  "writingStyle": {
+    "label": "写作风格",
+    "description": "将作为默认值注入 system prompt，用于统一行文风格。"
+  },
+  "dataSave": {
+    "inputDebounce": "停止输入后保存延迟（秒）",
+    "autosaveInterval": "定时自动保存间隔（秒）",
+    "snapshotPath": "持久化文件存储路径",
+    "snapshotPathDescription": "后端 snapshot 持久化位置，相对路径基于数据目录。",
+    "historyVersions": "历史版本数量"
+  },
+  "typography": {
+    "fontFamily": "字体",
+    "fontFamilyPlaceholder": "留空使用系统默认，如 Noto Serif SC",
+    "lineHeight": "行间距",
+    "readingTheme": "正文护眼色",
+    "themes": {
+      "sepia": "护眼（米黄）",
+      "light": "浅色",
+      "dark": "深色"
+    }
+  },
+  "config": {
+    "hint": "将全部系统设置导出为配置文件用于备份或迁移；导入时会校验并覆盖对应分组。",
+    "export": "导出配置",
+    "import": "导入配置",
+    "exportFailed": "导出配置失败",
+    "importSuccess": "配置导入成功",
+    "importFailed": "配置文件无效或导入失败"
+  }
+}

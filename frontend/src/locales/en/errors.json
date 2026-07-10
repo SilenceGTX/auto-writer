@@ -1,0 +1,15 @@
+{
+  "notFound": {
+    "work": "Work not found",
+    "chapter": "Chapter not found",
+    "stage": "Stage not found"
+  },
+  "llm": {
+    "missingUrl": "LLM endpoint URL is not configured",
+    "parseError": "Could not parse LLM response",
+    "jsonParseFailed": "Could not parse JSON from the LLM response",
+    "connectionFailed": "Could not reach LLM service: {{detail}}",
+    "httpError": "LLM returned an error ({{status}}): {{detail}}",
+    "aiFailed": "AI request failed: {{detail}}"
+  }
+}

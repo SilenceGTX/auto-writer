@@ -1,4 +1,6 @@
 /** Integration test for the works list rendering (table, progress, search). */
+import "../i18n";
+import i18n from "../i18n";
 import { useState, type ReactElement } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -82,7 +84,9 @@ function renderPage() {
 }
 
 describe("WorksPage", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    localStorage.setItem("aw.locale", "zh");
+    await i18n.changeLanguage("zh");
     vi.clearAllMocks();
   });
 

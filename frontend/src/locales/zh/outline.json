@@ -1,0 +1,119 @@
+{
+  "page": {
+    "title": "大纲",
+    "fallbackTitle": "大纲",
+    "emptyWork": {
+      "body": "请先在作品页选择一个作品，再来编排大纲。",
+      "goToWorks": "前往作品页"
+    },
+    "planned": "已规划 {{count}} 章",
+    "plannedWithTarget": "已规划 {{count}} 章 / 计划 {{planned}} 章",
+    "locked": "大纲已锁定",
+    "generateStages": "生成阶段树",
+    "regenerateStages": "重新生成阶段树",
+    "generateChapters": "生成章节大纲",
+    "emptyStages": "还没有阶段树。请确认已在作品页选择含阶段的故事结构，并在系统设置中配置好 LLM 连接，然后点击「生成阶段树」。"
+  },
+  "assistant": {
+    "title": "大纲助手",
+    "hint": "在左侧选择一个阶段或章节即可在此编辑。"
+  },
+  "stageTree": {
+    "title": "阶段树",
+    "ratio": "占比 {{ratio}}%",
+    "chapterCountAria": "{{name}} 章节数",
+    "chapterUnit": "章"
+  },
+  "chapters": {
+    "filterAria": "按阶段筛选",
+    "allStages": "全部阶段",
+    "unassigned": "未分配",
+    "selectAll": "全选",
+    "deselectAll": "全不选",
+    "searchPlaceholder": "搜索章节标题",
+    "add": "添加章节",
+    "reorderHint": "筛选或搜索时不可拖拽排序，清除后可恢复。",
+    "empty": "没有符合条件的章节。",
+    "chapterLabel": "第 {{number}} 章",
+    "wordCount": "{{count}} 字",
+    "deleteTooltip": "删除",
+    "deleteAria": "删除章节",
+    "noSummary": "（尚无章节概述）"
+  },
+  "chapterStatus": {
+    "draft": "草稿",
+    "completed": "已完成"
+  },
+  "stagePanel": {
+    "title": "阶段：{{name}}",
+    "chapterTotal": "章节总数",
+    "chapterTotalValue": "{{count}} 章",
+    "chapterRatio": "章节占比",
+    "overviewLabel": "阶段总纲",
+    "overviewPlaceholder": "该阶段的关键剧情走向...（输入 @ 可引用设定条目）"
+  },
+  "chapterPanel": {
+    "title": "第 {{number}} 章",
+    "titleLabel": "章节标题",
+    "stageLabel": "所属阶段",
+    "statusLabel": "状态",
+    "summaryLabel": "章节概述",
+    "summaryPlaceholder": "本章大致写什么...（输入 @ 可引用设定条目）",
+    "writeBody": "撰写正文"
+  },
+  "regenerateDialog": {
+    "title": "重新生成阶段树",
+    "body": "重新生成将替换现有阶段树、总纲与章节大纲，且无法恢复。确定继续吗？",
+    "confirm": "重新生成"
+  },
+  "deleteDialog": {
+    "title": "删除章节",
+    "body": "确定要删除第 {{number}} 章吗？此操作不可恢复。",
+    "confirm": "删除"
+  },
+  "toast": {
+    "loadFailed": "无法加载大纲",
+    "stagesGenerated": "阶段树与总纲已生成",
+    "generateStagesFailed": "生成阶段树失败",
+    "chaptersGenerated": "章节大纲已生成",
+    "generateChaptersFailed": "生成章节大纲失败",
+    "adjustCountFailed": "调整章节数失败",
+    "reorderFailed": "章节排序失败",
+    "addChapterFailed": "添加章节失败",
+    "chapterDeleted": "章节已删除",
+    "deleteChapterFailed": "删除章节失败",
+    "chapterSaved": "章节已保存",
+    "saveChapterFailed": "保存章节失败",
+    "stageSaved": "阶段总纲已保存",
+    "saveStageFailed": "保存阶段总纲失败"
+  },
+  "errors": {
+    "needStructure": "请先为作品选择包含阶段的故事结构",
+    "needStages": "请先生成阶段树并分配章节",
+    "chapterWrongWork": "章节不属于该作品"
+  },
+  "selectionActions": {
+    "addInspiration": {
+      "label": "将选中的文字加入灵感",
+      "saveFallback": "存为灵感",
+      "emptySelection": "请先选择要加入灵感的文字",
+      "saved": "已加入灵感",
+      "saveFailed": "加入灵感失败"
+    },
+    "addEntity": {
+      "label": "将选中的文字加入设定",
+      "emptySelection": "请先选择要加入设定的文字",
+      "noCategories": "当前作品还没有设定种类",
+      "loadCategoriesFailed": "无法加载设定种类"
+    },
+    "linkEntity": {
+      "label": "将选中文字替换为已有设定的 @ 引用",
+      "emptySelection": "请先选择要引用的文字",
+      "alreadyLinked": "选中内容已是设定引用",
+      "notFound": "未找到名为「{{name}}」的设定条目，可使用「+ 设定」新建",
+      "duplicateName": "存在多个名为「{{name}}」的设定条目，请先在设定页区分",
+      "linked": "已添加设定引用",
+      "lookupFailed": "查找设定条目失败"
+    }
+  }
+}

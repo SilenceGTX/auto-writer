@@ -5,6 +5,7 @@
  * actions to quote the selection into the AI chat or trigger a local rewrite.
  */
 import { useEffect, useRef, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { Button, Checkbox, Tooltip } from "@heroui/react";
 import { Maximize2, Minimize2, MessageSquareQuote, Sparkles, WandSparkles } from "lucide-react";
 import { useEntityMentions } from "../../hooks/useEntityMentions";
@@ -42,6 +43,7 @@ interface ChapterEditorProps {
 
 /** Render the chapter text editor with history, mentions, and a status footer. */
 export function ChapterEditor(props: ChapterEditorProps): ReactElement {
+  const { t } = useTranslation("writing");
   const areaRef = useRef<HTMLTextAreaElement | null>(null);
   const pastRef = useRef<string[]>([]);
   const futureRef = useRef<string[]>([]);
@@ -133,6 +135,8 @@ export function ChapterEditor(props: ChapterEditorProps): ReactElement {
     };
   }
 
+  const focusLabel = props.focusMode ? t("editor.exitFocusMode") : t("editor.focusMode");
+
   return (
     <div className="chapter-editor">
       <div className="chapter-editor-toolbar">
@@ -145,18 +149,18 @@ export function ChapterEditor(props: ChapterEditorProps): ReactElement {
           isLoading={props.generating}
           onPress={props.onGenerateDraft}
         >
-          AI 生成初稿
+          {t("editor.generateDraft")}
         </Button>
-        <Tooltip content="生成时附带上一章的前情提要；若无缓存会自动总结一次">
+        <Tooltip content={t("editor.includeRecapTooltip")}>
           <Checkbox
             size="sm"
             isSelected={props.includeRecap}
             onValueChange={props.onIncludeRecapChange}
           >
-            含前情提要
+            {t("editor.includeRecap")}
           </Checkbox>
         </Tooltip>
-        <Tooltip content="将选中文字引用到 AI 对话">
+        <Tooltip content={t("editor.quoteToChatTooltip")}>
           <Button
             size="sm"
             variant="flat"
@@ -166,10 +170,10 @@ export function ChapterEditor(props: ChapterEditorProps): ReactElement {
               if (text.trim()) props.onQuote(text.trim());
             }}
           >
-            引用到对话
+            {t("editor.quoteToChat")}
           </Button>
         </Tooltip>
-        <Tooltip content="让 AI 重写选中段落">
+        <Tooltip content={t("editor.rewriteSelectionTooltip")}>
           <Button
             size="sm"
             variant="flat"
@@ -179,15 +183,15 @@ export function ChapterEditor(props: ChapterEditorProps): ReactElement {
               if (text.trim()) props.onRewrite(text, start, end);
             }}
           >
-            重写选中
+            {t("editor.rewriteSelection")}
           </Button>
         </Tooltip>
-        <Tooltip content={props.focusMode ? "退出专注模式" : "专注模式"}>
+        <Tooltip content={focusLabel}>
           <Button
             isIconOnly
             size="sm"
             variant="light"
-            aria-label={props.focusMode ? "退出专注模式" : "专注模式"}
+            aria-label={focusLabel}
             onPress={props.onToggleFocus}
           >
             {props.focusMode ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
@@ -200,7 +204,7 @@ export function ChapterEditor(props: ChapterEditorProps): ReactElement {
           ref={areaRef}
           className="chapter-editor-area"
           value={props.value}
-          placeholder="在此撰写本章正文…（输入 @ 引用设定，Ctrl/Cmd+Z 撤销）"
+          placeholder={t("editor.placeholder")}
           onChange={(event) => handleInput(event.target.value)}
           onScroll={remember}
           onKeyUp={(event) => {
@@ -213,7 +217,11 @@ export function ChapterEditor(props: ChapterEditorProps): ReactElement {
             if (mod && event.key.toLowerCase() === "z" && !event.shiftKey) {
               event.preventDefault();
               undo();
-            } else if (mod && (event.key.toLowerCase() === "y" || (event.shiftKey && event.key.toLowerCase() === "z"))) {
+            } else if (
+              mod &&
+              (event.key.toLowerCase() === "y" ||
+                (event.shiftKey && event.key.toLowerCase() === "z"))
+            ) {
               event.preventDefault();
               redo();
             } else if (event.key === "Escape" && mentions.query !== null) {
@@ -241,7 +249,10 @@ export function ChapterEditor(props: ChapterEditorProps): ReactElement {
       <div className="chapter-editor-footer">
         <SaveStatus state={props.saveState} />
         <span className="chapter-editor-count">
-          本章 {countWords(props.value)} 字 · 全书 {props.totalWordCount} 字
+          {t("editor.wordCount", {
+            chapter: countWords(props.value),
+            total: props.totalWordCount,
+          })}
         </span>
       </div>
     </div>

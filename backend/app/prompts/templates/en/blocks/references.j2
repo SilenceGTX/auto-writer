@@ -1,0 +1,6 @@
+[Referenced Settings]
+The following worldbuilding entries are referenced via @ in the text. Stay consistent with them:
+{% for entry in entries %}
+- {{ entry.name }}{% if entry.category %} ({{ entry.category }}){% endif %}{% if entry.description %}: {{ entry.description }}{% endif %}
+{% if entry.prop_text %}  Properties: {{ entry.prop_text }}
+{% endif %}{% endfor %}

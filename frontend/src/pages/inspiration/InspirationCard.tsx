@@ -5,6 +5,7 @@
  * §2.1).
  */
 import type { ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { Chip } from "@heroui/react";
 import { Clock } from "lucide-react";
 import type { Inspiration } from "../../api";
@@ -17,6 +18,7 @@ interface InspirationCardProps {
 
 /** Render a clickable inspiration preview card. */
 export function InspirationCard(props: InspirationCardProps): ReactElement {
+  const { t } = useTranslation("inspiration");
   const { inspiration } = props;
   return (
     <button
@@ -38,7 +40,7 @@ export function InspirationCard(props: InspirationCardProps): ReactElement {
         ))}
       </div>
       <div className="inspiration-card-meta">
-        <span className="inspiration-source-badge">{sourceLabel(inspiration.source_page)}</span>
+        <span className="inspiration-source-badge">{sourceLabel(inspiration.source_page, t)}</span>
         <span className="inspiration-card-time">
           <Clock size={12} />
           {formatTimestamp(inspiration.created_at)}

@@ -1,0 +1,97 @@
+{
+  "page": {
+    "title": "设定",
+    "subtitle": "维护角色、地点、物品与概念，写作时可通过 @ 引用它们。",
+    "fallbackTitle": "设定",
+    "emptyWork": {
+      "body": "请先在作品页选择一个作品，再来管理世界观设定。",
+      "goToWorks": "前往作品页"
+    },
+    "createEntity": "新建条目"
+  },
+  "categories": {
+    "ariaLabel": "设定种类",
+    "add": "添加种类",
+    "modalTitle": "添加设定种类",
+    "nameLabel": "种类名称",
+    "addButton": "添加",
+    "deleteAria": "删除种类 {{name}}",
+    "presets": {
+      "characters": "人物",
+      "locations": "地点",
+      "items": "物品",
+      "concepts": "概念"
+    }
+  },
+  "toolbar": {
+    "searchPlaceholder": "搜索条目名称或描述",
+    "sortAria": "排序方式",
+    "sortDefault": "默认顺序",
+    "sortName": "名称",
+    "sortCreatedAt": "创建时间",
+    "orderAscTooltip": "正序（点击切换倒序）",
+    "orderDescTooltip": "倒序（点击切换正序）",
+    "switchToDesc": "切换为倒序",
+    "switchToAsc": "切换为正序"
+  },
+  "entity": {
+    "emptyNoCategory": "请先选择一个种类。",
+    "emptyInCategory": "「{{category}}」下还没有条目。",
+    "emptyHint": " 点击右上角「新建条目」开始添加。",
+    "copy": "复制",
+    "copyAria": "复制条目",
+    "delete": "删除",
+    "deleteAria": "删除条目",
+    "copySuffix": "副本"
+  },
+  "form": {
+    "createTitle": "新建条目",
+    "editTitle": "编辑条目",
+    "nameLabel": "条目名称",
+    "categoryLabel": "设定种类",
+    "descriptionLabel": "描述",
+    "descriptionPlaceholder": "对该条目的简短描述…",
+    "propertiesTitle": "属性",
+    "addProperty": "添加属性",
+    "propertyNameAria": "属性名称",
+    "propertyNamePlaceholder": "名称",
+    "propertyValueAria": "属性值",
+    "propertyValuePlaceholder": "值",
+    "deletePropertyAria": "删除属性",
+    "commonProperties": "常用属性：",
+    "referencesTitle": "引用情况",
+    "referencesEmpty": "暂无引用（待 @ 引用功能上线后展示）。",
+    "createdAt": "创建于 {{date}}",
+    "updatedAt": "更新于 {{date}}",
+    "timestamps": "创建于 {{created}} · 更新于 {{updated}}",
+    "createSubmit": "创建条目"
+  },
+  "modal": {
+    "createTitle": "新建条目"
+  },
+  "toast": {
+    "loadCategoriesFailed": "无法加载设定种类",
+    "loadEntitiesFailed": "无法加载设定条目",
+    "copied": "已复制条目",
+    "copyFailed": "复制条目失败",
+    "entityDeleted": "条目已删除",
+    "entityDeleteFailed": "删除条目失败",
+    "categoryDeleted": "种类已删除",
+    "categoryDeleteFailed": "删除种类失败",
+    "nameRequired": "请填写条目名称",
+    "entitySaved": "条目已保存",
+    "entityCreated": "条目已创建",
+    "entitySaveFailed": "保存条目失败",
+    "entityCreateFailed": "创建条目失败",
+    "categoryNameRequired": "请填写种类名称",
+    "categoryAdded": "种类已添加",
+    "categoryAddFailed": "添加种类失败（名称可能重复）"
+  },
+  "deleteDialog": {
+    "entityTitle": "删除条目",
+    "entityBody": "确定要删除「{{name}}」吗？此操作不可恢复。",
+    "categoryTitle": "删除种类",
+    "categoryBody": "确定要删除种类「{{name}}」吗？该种类下的所有条目都会被一并删除，且无法恢复。",
+    "confirm": "删除"
+  }
+}

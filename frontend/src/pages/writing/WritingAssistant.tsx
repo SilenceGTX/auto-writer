@@ -1,5 +1,6 @@
 /** Writing assistant panel: AI chat, 前情提要, and 加入灵感 (``WRITING_PAGE_DESSIGN.md`` §3). */
 import { useEffect, useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@heroui/react";
 import { History, Send, Trash2, X } from "lucide-react";
 import {
@@ -14,6 +15,7 @@ import { AddInspirationButton } from "../../components/AddInspirationButton";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { MentionTextarea } from "../../components/MentionTextarea";
 import { useToast } from "../../components/Toast";
+import { translateWritingApiError } from "../../utils/writingApiError";
 
 interface WritingAssistantProps {
   workId: number;
@@ -24,6 +26,7 @@ interface WritingAssistantProps {
 
 /** Render the chat, recap, and inspiration controls for the current chapter. */
 export function WritingAssistant(props: WritingAssistantProps): ReactElement {
+  const { t } = useTranslation(["writing", "common", "errors"]);
   const { notify } = useToast();
   const [messages, setMessages] = useState<AssistantChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -46,7 +49,7 @@ export function WritingAssistant(props: WritingAssistantProps): ReactElement {
       })
       .catch(() => {
         if (active) {
-          notify("无法加载对话历史", "error");
+          notify(t("writing:toast.loadChatFailed"), "error");
         }
       })
       .finally(() => {
@@ -57,7 +60,7 @@ export function WritingAssistant(props: WritingAssistantProps): ReactElement {
     return () => {
       active = false;
     };
-  }, [props.workId, props.chapterId, notify]);
+  }, [props.workId, props.chapterId, notify, t]);
 
   async function handleSend(): Promise<void> {
     const text = input.trim();
@@ -74,8 +77,9 @@ export function WritingAssistant(props: WritingAssistantProps): ReactElement {
       });
       setMessages(updated);
       props.onClearQuote();
-    } catch {
-      notify("AI 回复失败，请检查 LLM 连接", "error");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : null;
+      notify(translateWritingApiError(message, t, "writing:toast.chatFailed"), "error");
     } finally {
       setSending(false);
     }
@@ -87,9 +91,9 @@ export function WritingAssistant(props: WritingAssistantProps): ReactElement {
       await clearWritingChatMemory(props.workId, props.chapterId);
       setMessages([]);
       setConfirmClear(false);
-      notify("对话记忆已清空", "success");
+      notify(t("writing:toast.memoryCleared"), "success");
     } catch {
-      notify("清空对话记忆失败", "error");
+      notify(t("writing:toast.clearMemoryFailed"), "error");
     } finally {
       setClearing(false);
     }
@@ -100,8 +104,12 @@ export function WritingAssistant(props: WritingAssistantProps): ReactElement {
     try {
       const result = await generateRecap(props.chapterId);
       setRecap(result.recap);
-    } catch {
-      notify("生成前情提要失败", "error");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : null;
+      notify(
+        translateWritingApiError(message, t, "writing:toast.generateRecapFailed"),
+        "error",
+      );
     } finally {
       setRecapBusy(false);
     }
@@ -112,7 +120,7 @@ export function WritingAssistant(props: WritingAssistantProps): ReactElement {
     try {
       const result = await getRecap(props.chapterId);
       if (!result.has_previous) {
-        notify("这是第一章，没有前情提要", "info");
+        notify(t("writing:toast.noRecapFirstChapter"), "info");
         return;
       }
       if (result.cached && result.stale) {
@@ -125,8 +133,9 @@ export function WritingAssistant(props: WritingAssistantProps): ReactElement {
         return;
       }
       await runGenerateRecap();
-    } catch {
-      notify("获取前情提要失败", "error");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : null;
+      notify(translateWritingApiError(message, t, "writing:toast.getRecapFailed"), "error");
     } finally {
       setRecapBusy(false);
     }
@@ -135,7 +144,7 @@ export function WritingAssistant(props: WritingAssistantProps): ReactElement {
   return (
     <section className="assistant-section writing-assistant">
       <div className="writing-assistant-head">
-        <h2>写作助手</h2>
+        <h2>{t("writing:assistant.title")}</h2>
         <Button
           size="sm"
           variant="flat"
@@ -143,30 +152,29 @@ export function WritingAssistant(props: WritingAssistantProps): ReactElement {
           isLoading={recapBusy}
           onPress={() => void handleRecap()}
         >
-          前情提要
+          {t("writing:assistant.recap")}
         </Button>
       </div>
 
       {recap && (
         <div className="recap-box">
           <div className="recap-box-head">
-            <strong>前情提要</strong>
-            <button type="button" aria-label="关闭前情提要" onClick={() => setRecap(null)}>
+            <strong>{t("writing:assistant.recap")}</strong>
+            <button
+              type="button"
+              aria-label={t("writing:assistant.closeRecapAria")}
+              onClick={() => setRecap(null)}
+            >
               <X size={14} />
             </button>
           </div>
           <p>{recap}</p>
-          <AddInspirationButton
-            source={{ source_page: "writing", work_id: props.workId, chapter_id: props.chapterId }}
-            getFallbackText={() => recap}
-            label="存为灵感"
-          />
         </div>
       )}
 
       <div className="chat-log">
         {!loadingHistory && messages.length === 0 && (
-          <p className="assistant-hint">向 AI 提问、请求续写或润色建议；可用 @ 引用设定。</p>
+          <p className="assistant-hint">{t("writing:assistant.emptyHint")}</p>
         )}
         {messages.map((message) => (
           <div key={message.id} className={`chat-bubble chat-${message.role}`}>
@@ -177,8 +185,12 @@ export function WritingAssistant(props: WritingAssistantProps): ReactElement {
 
       {props.quoted && (
         <div className="chat-quote">
-          <span>引用：{props.quoted}</span>
-          <button type="button" aria-label="移除引用" onClick={props.onClearQuote}>
+          <span>{t("writing:assistant.quoteLabel", { text: props.quoted })}</span>
+          <button
+            type="button"
+            aria-label={t("writing:assistant.removeQuoteAria")}
+            onClick={props.onClearQuote}
+          >
             <X size={14} />
           </button>
         </div>
@@ -189,7 +201,7 @@ export function WritingAssistant(props: WritingAssistantProps): ReactElement {
         value={input}
         onValueChange={setInput}
         minRows={3}
-        placeholder="输入消息，@ 可引用设定…"
+        placeholder={t("writing:assistant.inputPlaceholder")}
       />
       <div className="form-actions form-actions-stacked">
         <AddInspirationButton
@@ -204,7 +216,7 @@ export function WritingAssistant(props: WritingAssistantProps): ReactElement {
             isLoading={clearing}
             onPress={() => setConfirmClear(true)}
           >
-            清空记忆
+            {t("writing:assistant.clearMemory")}
           </Button>
           <Button
             color="primary"
@@ -212,16 +224,16 @@ export function WritingAssistant(props: WritingAssistantProps): ReactElement {
             isLoading={sending}
             onPress={() => void handleSend()}
           >
-            发送
+            {t("writing:assistant.send")}
           </Button>
         </div>
       </div>
 
       <ConfirmDialog
         isOpen={confirmClear}
-        title="清空对话记忆"
-        body="将删除本章写作助手下的全部对话记录，且无法恢复。"
-        confirmLabel="清空"
+        title={t("writing:clearDialog.title")}
+        body={t("writing:clearDialog.body")}
+        confirmLabel={t("writing:clearDialog.confirm")}
         danger
         onConfirm={() => void handleClearMemory()}
         onCancel={() => setConfirmClear(false)}
@@ -229,10 +241,10 @@ export function WritingAssistant(props: WritingAssistantProps): ReactElement {
 
       <ConfirmDialog
         isOpen={askRestale}
-        title="前一章节有改动"
-        body="前一章节在生成提要后被修改，是否重新总结？"
-        confirmLabel="重新总结"
-        cancelLabel="使用旧提要"
+        title={t("writing:staleRecapDialog.title")}
+        body={t("writing:staleRecapDialog.body")}
+        confirmLabel={t("writing:staleRecapDialog.confirm")}
+        cancelLabel={t("writing:staleRecapDialog.cancel")}
         onConfirm={() => {
           setAskRestale(false);
           void runGenerateRecap();

@@ -14,6 +14,19 @@ async def test_get_settings_returns_defaults(client):
     assert data["writing_style"]["text"] == ""
     assert data["data_save"]["autosave_interval_seconds"] == 30
     assert data["typography"]["reading_theme"] == "sepia"
+    assert data["locale"]["locale"] == "zh"
+
+
+async def test_update_locale(client):
+    """Locale preference is validated and persisted."""
+    assert (await client.put("/api/settings/locale", json={"locale": "en"})).status_code == 200
+    data = (await client.get("/api/settings")).json()
+    assert data["locale"]["locale"] == "en"
+
+
+async def test_locale_validation_rejects_unknown(client):
+    """Unsupported locale codes are rejected."""
+    assert (await client.put("/api/settings/locale", json={"locale": "fr"})).status_code == 422
 
 
 async def test_update_data_save_and_typography(client):

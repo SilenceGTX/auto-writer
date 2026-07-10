@@ -1,0 +1,16 @@
+{
+  "main": "Main navigation",
+  "works": "Works",
+  "worldbuilding": "Worldbuilding",
+  "outline": "Outline",
+  "writing": "Writing",
+  "inspiration": "Inspiration",
+  "review": "Review",
+  "themeLight": "Light theme",
+  "themeDark": "Dark theme",
+  "settings": "Settings",
+  "language": "Interface language",
+  "languageZh": "中文",
+  "languageEn": "English",
+  "languageSaveFailed": "Failed to save language preference"
+}

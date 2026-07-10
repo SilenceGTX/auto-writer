@@ -4,6 +4,7 @@
  * (``designs/STORY_PAGE_DESIGN.md`` §2.4 / §2.4.1).
  */
 import { useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Button,
   Input,
@@ -30,6 +31,7 @@ interface SeriesSelectProps {
 
 /** Render a series selector with a button to create a new series inline. */
 export function SeriesSelect(props: SeriesSelectProps): ReactElement {
+  const { t } = useTranslation(["works", "common"]);
   const { notify } = useToast();
   const [isModalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState("");
@@ -47,9 +49,9 @@ export function SeriesSelect(props: SeriesSelectProps): ReactElement {
       props.onChange(created.id);
       setName("");
       setModalOpen(false);
-      notify("系列已创建", "success");
+      notify(t("works:toast.seriesCreated"), "success");
     } catch {
-      notify("创建系列失败（名称可能重复）", "error");
+      notify(t("works:toast.seriesCreateFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -58,7 +60,7 @@ export function SeriesSelect(props: SeriesSelectProps): ReactElement {
   return (
     <div className="inline-field">
       <Select
-        label="所属系列"
+        label={t("works:series.label")}
         selectedKeys={[props.value === null ? NO_SERIES_KEY : String(props.value)]}
         onChange={(event) => {
           const key = event.target.value;
@@ -66,7 +68,7 @@ export function SeriesSelect(props: SeriesSelectProps): ReactElement {
         }}
       >
         <>
-          <SelectItem key={NO_SERIES_KEY}>不归类</SelectItem>
+          <SelectItem key={NO_SERIES_KEY}>{t("works:series.none")}</SelectItem>
           {props.seriesList.map((series) => (
             <SelectItem key={String(series.id)}>{series.name}</SelectItem>
           ))}
@@ -75,7 +77,7 @@ export function SeriesSelect(props: SeriesSelectProps): ReactElement {
       <Button
         isIconOnly
         variant="flat"
-        aria-label="新建系列"
+        aria-label={t("works:series.createAria")}
         onPress={() => setModalOpen(true)}
       >
         <Plus size={18} />
@@ -83,16 +85,16 @@ export function SeriesSelect(props: SeriesSelectProps): ReactElement {
 
       <Modal isOpen={isModalOpen} onClose={() => setModalOpen(false)}>
         <ModalContent>
-          <ModalHeader>新建系列</ModalHeader>
+          <ModalHeader>{t("works:series.modalTitle")}</ModalHeader>
           <ModalBody>
-            <Input label="系列名称" value={name} onValueChange={setName} autoFocus />
+            <Input label={t("works:series.nameLabel")} value={name} onValueChange={setName} autoFocus />
           </ModalBody>
           <ModalFooter>
             <Button variant="light" onPress={() => setModalOpen(false)}>
-              取消
+              {t("common:cancel")}
             </Button>
             <Button color="primary" isLoading={saving} onPress={() => void handleCreate()}>
-              确认
+              {t("works:actions.confirm")}
             </Button>
           </ModalFooter>
         </ModalContent>

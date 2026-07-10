@@ -7,6 +7,7 @@ import App from "./App";
 import { AppProvider } from "./context/AppContext";
 import { AssistantProvider } from "./context/AssistantContext";
 import { ToastProvider } from "./components/Toast";
+import "./i18n";
 import "./styles.css";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(

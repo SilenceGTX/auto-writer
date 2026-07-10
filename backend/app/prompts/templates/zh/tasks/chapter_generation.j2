@@ -1,0 +1,11 @@
+{{ work_info }}
+
+各阶段概述与章节归属：
+{% for row in stage_rows %}
+- 阶段「{{ row.name }}」（{{ row.numbers_text }}）概述：{{ row.overview }}
+{% endfor %}
+
+请为以下 {{ chapter_count }} 章分别撰写标题与内容概述（每章大致写什么）：{{ chapters_text }}
+必须为每一章各返回一条，`chapter_number` 与上述章节编号一一对应，JSON 数组长度恰好为 {{ chapter_count }}。
+仅返回 JSON 数组，不要包含解释或 Markdown 代码块，格式如下：
+[{"chapter_number": 整数, "title": "章节标题", "summary": "本章内容概述"}]

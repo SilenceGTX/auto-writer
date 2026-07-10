@@ -7,6 +7,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button, Select, SelectItem } from "@heroui/react";
 import {
@@ -26,6 +27,7 @@ import { type SaveState } from "../components/SaveStatus";
 import { WorkTitleSelect } from "../components/WorkTitleSelect";
 import { useHotkeys } from "../hooks/useHotkeys";
 import { countWords } from "../utils/wordCount";
+import { translateWritingApiError } from "../utils/writingApiError";
 import { ChapterEditor, type ScrollMemory } from "./writing/ChapterEditor";
 import { RewriteDialog } from "./writing/RewriteDialog";
 import { WritingAssistant } from "./writing/WritingAssistant";
@@ -34,6 +36,7 @@ const AUTOSAVE_DELAY_MS = 1500;
 
 /** Render the writing workspace for the current work. */
 export function WritingPage(): ReactElement {
+  const { t } = useTranslation(["writing", "common", "errors"]);
   const navigate = useNavigate();
   const { notify } = useToast();
   const { currentWorkId, pendingInsert, setPendingInsert, pendingHighlight, setPendingHighlight } =
@@ -106,9 +109,9 @@ export function WritingPage(): ReactElement {
         requestedExists ? requested : (current ?? data.chapters[0]?.id ?? null),
       );
     } catch {
-      notify("无法加载章节列表", "error");
+      notify(t("writing:toast.loadChaptersFailed"), "error");
     }
-  }, [currentWorkId, notify, searchParams]);
+  }, [currentWorkId, notify, searchParams, t]);
 
   useEffect(() => {
     void loadOutline();
@@ -139,7 +142,7 @@ export function WritingPage(): ReactElement {
         setWordCounts((current) => new Map(current).set(chapter.id, chapter.word_count));
         setContentLoaded(true);
       } catch {
-        if (active) notify("无法加载章节正文", "error");
+        if (active) notify(t("writing:toast.loadContentFailed"), "error");
       }
     })();
     return () => {
@@ -153,7 +156,7 @@ export function WritingPage(): ReactElement {
           .catch(() => undefined);
       }
     };
-  }, [selectedId, notify]);
+  }, [selectedId, notify, t]);
 
   // Consume a queued "一键回插" from the inspiration page: append the snippet to
   // the end of the current chapter's body once its content is loaded, then ask
@@ -166,8 +169,16 @@ export function WritingPage(): ReactElement {
     setContent((current) => (current.trim() ? `${current}\n\n${snippet}` : snippet));
     setPendingInsert(null);
     setPendingHighlight(snippet);
-    notify("已插入到本章正文末尾", "success");
-  }, [pendingInsert, selectedId, contentLoaded, setPendingInsert, setPendingHighlight, notify]);
+    notify(t("writing:toast.inserted"), "success");
+  }, [
+    pendingInsert,
+    selectedId,
+    contentLoaded,
+    setPendingInsert,
+    setPendingHighlight,
+    notify,
+    t,
+  ]);
 
   const persist = useCallback(async (): Promise<void> => {
     if (selectedId == null || content === savedContentRef.current) {
@@ -235,9 +246,13 @@ export function WritingPage(): ReactElement {
       setContent(chapter.content ?? "");
       setWordCounts((current) => new Map(current).set(chapter.id, chapter.word_count));
       setSaveState("saved");
-      notify("本章正文已生成", "success");
+      notify(t("writing:toast.draftGenerated"), "success");
     } catch (error) {
-      notify(error instanceof Error ? error.message : "生成正文失败", "error");
+      const message = error instanceof Error ? error.message : null;
+      notify(
+        translateWritingApiError(message, t, "writing:toast.generateDraftFailed"),
+        "error",
+      );
     } finally {
       setGenerating(false);
     }
@@ -259,10 +274,10 @@ export function WritingPage(): ReactElement {
     return (
       <section className="workspace-page">
         <div className="outline-empty">
-          <h1>写作</h1>
-          <p>请先在作品页选择一个作品，再开始写作。</p>
+          <h1>{t("writing:page.title")}</h1>
+          <p>{t("writing:page.emptyWork.body")}</p>
           <Button color="primary" onPress={() => navigate("/works")}>
-            前往作品页
+            {t("writing:page.emptyWork.goToWorks")}
           </Button>
         </div>
       </section>
@@ -283,8 +298,8 @@ export function WritingPage(): ReactElement {
       />
     ) : (
       <section className="assistant-section">
-        <h2>写作助手</h2>
-        <p className="assistant-hint">选择一个章节后即可与 AI 协作。</p>
+        <h2>{t("writing:page.assistantIdleTitle")}</h2>
+        <p className="assistant-hint">{t("writing:page.assistantIdleHint")}</p>
       </section>
     );
 
@@ -292,15 +307,15 @@ export function WritingPage(): ReactElement {
     <section className="workspace-page writing-page">
       <div className="page-header">
         <div>
-          <WorkTitleSelect fallback={outline?.title ?? "写作"} />
-          <p>选择章节进行正文创作，支持自动保存与 AI 协作。</p>
+          <WorkTitleSelect fallback={outline?.title ?? t("writing:page.fallbackTitle")} />
+          <p>{t("writing:page.subtitle")}</p>
         </div>
         <Select
-          aria-label="选择章节"
+          aria-label={t("writing:page.chapterSelectAria")}
           className="chapter-picker"
           selectedKeys={selectedId != null ? [String(selectedId)] : []}
           isDisabled={chapters.length === 0}
-          placeholder="选择章节"
+          placeholder={t("writing:page.chapterSelectPlaceholder")}
           onSelectionChange={(keys) => {
             const key = Array.from(keys)[0] as string | undefined;
             if (key) setSelectedId(Number(key));
@@ -308,7 +323,9 @@ export function WritingPage(): ReactElement {
         >
           {chapters.map((chapter: Chapter) => (
             <SelectItem key={String(chapter.id)}>
-              {`第 ${chapter.chapter_number} 章${chapter.title ? ` · ${chapter.title}` : ""}`}
+              {`${t("writing:page.chapterOption", { number: chapter.chapter_number })}${
+                chapter.title ? ` · ${chapter.title}` : ""
+              }`}
             </SelectItem>
           ))}
         </Select>
@@ -316,9 +333,9 @@ export function WritingPage(): ReactElement {
 
       {chapters.length === 0 ? (
         <div className="outline-empty">
-          <p>该作品还没有章节。请先在大纲页生成章节后再来写作。</p>
+          <p>{t("writing:page.emptyChapters.body")}</p>
           <Button color="primary" onPress={() => navigate("/outline")}>
-            前往大纲页
+            {t("writing:page.emptyChapters.goToOutline")}
           </Button>
         </div>
       ) : selectedId != null ? (

@@ -1,0 +1,119 @@
+{
+  "page": {
+    "title": "Outline",
+    "fallbackTitle": "Outline",
+    "emptyWork": {
+      "body": "Select a work on the Works page before editing the outline.",
+      "goToWorks": "Go to Works"
+    },
+    "planned": "{{count}} chapters planned",
+    "plannedWithTarget": "{{count}} chapters planned / {{planned}} targeted",
+    "locked": "Outline locked",
+    "generateStages": "Generate stage tree",
+    "regenerateStages": "Regenerate stage tree",
+    "generateChapters": "Generate chapter outlines",
+    "emptyStages": "No stage tree yet. Choose a story structure with stages on the Works page, configure the LLM connection in Settings, then click “Generate stage tree”."
+  },
+  "assistant": {
+    "title": "Outline assistant",
+    "hint": "Select a stage or chapter on the left to edit it here."
+  },
+  "stageTree": {
+    "title": "Stage tree",
+    "ratio": "{{ratio}}% share",
+    "chapterCountAria": "Chapter count for {{name}}",
+    "chapterUnit": "chs"
+  },
+  "chapters": {
+    "filterAria": "Filter by stage",
+    "allStages": "All stages",
+    "unassigned": "Unassigned",
+    "selectAll": "Select all",
+    "deselectAll": "Deselect all",
+    "searchPlaceholder": "Search chapter titles",
+    "add": "Add chapter",
+    "reorderHint": "Drag-and-drop reorder is unavailable while filtering or searching. Clear them to restore it.",
+    "empty": "No chapters match the current filters.",
+    "chapterLabel": "Chapter {{number}}",
+    "wordCount": "{{count}} words",
+    "deleteTooltip": "Delete",
+    "deleteAria": "Delete chapter",
+    "noSummary": "(No chapter summary yet)"
+  },
+  "chapterStatus": {
+    "draft": "Draft",
+    "completed": "Completed"
+  },
+  "stagePanel": {
+    "title": "Stage: {{name}}",
+    "chapterTotal": "Chapters",
+    "chapterTotalValue": "{{count}} chapters",
+    "chapterRatio": "Share",
+    "overviewLabel": "Stage synopsis",
+    "overviewPlaceholder": "Key plot direction for this stage… (type @ to mention worldbuilding)"
+  },
+  "chapterPanel": {
+    "title": "Chapter {{number}}",
+    "titleLabel": "Chapter title",
+    "stageLabel": "Stage",
+    "statusLabel": "Status",
+    "summaryLabel": "Chapter summary",
+    "summaryPlaceholder": "What happens in this chapter… (type @ to mention worldbuilding)",
+    "writeBody": "Write chapter"
+  },
+  "regenerateDialog": {
+    "title": "Regenerate stage tree",
+    "body": "Regenerating replaces the current stage tree, synopses, and chapter outlines. This cannot be undone. Continue?",
+    "confirm": "Regenerate"
+  },
+  "deleteDialog": {
+    "title": "Delete chapter",
+    "body": "Delete chapter {{number}}? This cannot be undone.",
+    "confirm": "Delete"
+  },
+  "toast": {
+    "loadFailed": "Failed to load outline",
+    "stagesGenerated": "Stage tree and synopses generated",
+    "generateStagesFailed": "Failed to generate stage tree",
+    "chaptersGenerated": "Chapter outlines generated",
+    "generateChaptersFailed": "Failed to generate chapter outlines",
+    "adjustCountFailed": "Failed to update chapter count",
+    "reorderFailed": "Failed to reorder chapters",
+    "addChapterFailed": "Failed to add chapter",
+    "chapterDeleted": "Chapter deleted",
+    "deleteChapterFailed": "Failed to delete chapter",
+    "chapterSaved": "Chapter saved",
+    "saveChapterFailed": "Failed to save chapter",
+    "stageSaved": "Stage synopsis saved",
+    "saveStageFailed": "Failed to save stage synopsis"
+  },
+  "errors": {
+    "needStructure": "Choose a story structure with stages for this work first",
+    "needStages": "Generate the stage tree and assign chapters first",
+    "chapterWrongWork": "Chapter does not belong to this work"
+  },
+  "selectionActions": {
+    "addInspiration": {
+      "label": "Add selection to inspirations",
+      "saveFallback": "Save as inspiration",
+      "emptySelection": "Select text to add to inspirations",
+      "saved": "Added to inspirations",
+      "saveFailed": "Failed to add to inspirations"
+    },
+    "addEntity": {
+      "label": "Add selection to worldbuilding",
+      "emptySelection": "Select text to add to worldbuilding",
+      "noCategories": "This work has no worldbuilding categories yet",
+      "loadCategoriesFailed": "Failed to load worldbuilding categories"
+    },
+    "linkEntity": {
+      "label": "Link selection to an existing setting (@)",
+      "emptySelection": "Select text to link as a setting reference",
+      "alreadyLinked": "Selection is already a setting reference",
+      "notFound": "No setting named “{{name}}”. Use + worldbuilding to create one",
+      "duplicateName": "Multiple settings named “{{name}}”. Distinguish them on the Worldbuilding page",
+      "linked": "Setting reference added",
+      "lookupFailed": "Failed to look up setting"
+    }
+  }
+}

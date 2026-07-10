@@ -1,0 +1,49 @@
+{
+  "page": {
+    "title": "灵感",
+    "subtitle": "收集创作中迸发的灵感碎片，随时检索、回插与归类。",
+    "empty": "还没有灵感。在大纲、写作或审阅页选中文字后点击「加入灵感」即可收集到这里。"
+  },
+  "toolbar": {
+    "searchPlaceholder": "搜索灵感内容",
+    "sourceFilterAria": "按来源过滤",
+    "tagFilterAria": "按标签过滤",
+    "allSources": "全部来源",
+    "allTags": "全部标签"
+  },
+  "sources": {
+    "outline": "大纲",
+    "writing": "写作",
+    "review": "审阅",
+    "flash": "灵光一闪"
+  },
+  "modal": {
+    "title": "灵感详情",
+    "tagsLabel": "标签",
+    "noTagsHint": "还没有标签，先在下方创建一个。",
+    "newTagAria": "新建标签",
+    "newTagPlaceholder": "输入标签名并添加",
+    "addTagAria": "添加标签",
+    "copy": "复制",
+    "insertBack": "回插到正文末尾",
+    "insertBackTitle": "将灵感插入当前写作章节的正文末尾",
+    "jumpSource": "来源跳转",
+    "delete": "删除"
+  },
+  "deleteDialog": {
+    "title": "删除灵感",
+    "body": "确定要删除这条灵感吗？此操作不可恢复。",
+    "confirm": "删除"
+  },
+  "toast": {
+    "loadTagsFailed": "无法加载标签",
+    "loadFailed": "无法加载灵感",
+    "copied": "已复制到剪贴板",
+    "copyFailed": "复制失败",
+    "selectWorkForInsert": "请先在作品页选择一个作品再回插",
+    "updateTagsFailed": "更新标签失败",
+    "createTagFailed": "创建标签失败",
+    "deleted": "灵感已删除",
+    "deleteFailed": "删除灵感失败"
+  }
+}

@@ -3,6 +3,7 @@
  * Covers all tabs of ``SYSTEM_SETTINGS_PAGE_DESIGN.md`` (§3–8).
  */
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Button,
   Input,
@@ -39,6 +40,7 @@ import {
   type ReadingTheme,
   type TypographySettings,
 } from "../api";
+import { useApp } from "../context/AppContext";
 import {
   DEFAULT_REVIEW_PREFERENCE,
   DEFAULT_STAGE_PREFERENCE,
@@ -78,11 +80,7 @@ const DEFAULT_TYPOGRAPHY: TypographySettings = {
   reading_theme: "sepia",
 };
 
-const READING_THEMES: { key: ReadingTheme; label: string }[] = [
-  { key: "sepia", label: "护眼（米黄）" },
-  { key: "light", label: "浅色" },
-  { key: "dark", label: "深色" },
-];
+const READING_THEME_KEYS: ReadingTheme[] = ["sepia", "light", "dark"];
 
 function normalizePreferences(preferences: Preferences): Preferences {
   return {
@@ -118,7 +116,9 @@ function normalizeLoadedSettings(
 
 /** Render the system settings modal with editable settings groups. */
 export function SettingsModal(props: SettingsModalProps): ReactElement {
+  const { t } = useTranslation(["settings", "common"]);
   const { notify } = useToast();
+  const { setLocale } = useApp();
   const initialProfile = createEmptyProfile();
   const [llmProfiles, setLlmProfiles] = useState<LLMProfile[]>([initialProfile]);
   const [llmAssignments, setLlmAssignments] = useState<LLMAssignments>(() =>
@@ -145,9 +145,9 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
     try {
       applyLoaded(await getSettings());
     } catch {
-      notify("无法加载系统设置", "error");
+      notify(t("settings:loadFailed"), "error");
     }
-  }, [applyLoaded, notify]);
+  }, [applyLoaded, notify, t]);
 
   useEffect(() => {
     if (props.isOpen) {
@@ -157,7 +157,7 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
 
   function handleAddProfile(): void {
     if (llmProfiles.length >= MAX_LLM_PROFILES) {
-      notify(`最多添加 ${MAX_LLM_PROFILES} 个模型`, "info");
+      notify(t("settings:connection.maxProfiles", { max: MAX_LLM_PROFILES }), "info");
       return;
     }
     setLlmProfiles((current) => [...current, createEmptyProfile()]);
@@ -184,10 +184,10 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
         updateTypography(typography),
       ]);
       applyTypography(typography);
-      notify("设置已保存", "success");
+      notify(t("settings:saved"), "success");
       props.onClose();
     } catch {
-      notify("保存设置失败", "error");
+      notify(t("settings:saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -199,7 +199,7 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
       const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
       triggerDownload(blob, `auto-writer-settings-${Date.now()}.json`);
     } catch {
-      notify("导出配置失败", "error");
+      notify(t("settings:config.exportFailed"), "error");
     }
   }
 
@@ -211,9 +211,10 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
       const applied = await importSettings(parsed);
       applyLoaded(applied);
       applyTypography(applied.typography);
-      notify("配置导入成功", "success");
+      setLocale(applied.locale.locale);
+      notify(t("settings:config.importSuccess"), "success");
     } catch {
-      notify("配置文件无效或导入失败", "error");
+      notify(t("settings:config.importFailed"), "error");
     }
   }
 
@@ -226,10 +227,10 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
       classNames={{ base: "settings-modal" }}
     >
       <ModalContent>
-        <ModalHeader>系统设置</ModalHeader>
+        <ModalHeader>{t("settings:title")}</ModalHeader>
         <ModalBody>
-          <Tabs aria-label="系统设置标签" className="settings-modal-tabs">
-            <Tab key="connection" title="连接配置">
+          <Tabs aria-label={t("settings:title")} className="settings-modal-tabs">
+            <Tab key="connection" title={t("settings:tabs.connection")}>
               <div className="settings-section">
                 <Accordion
                   selectionMode="multiple"
@@ -260,7 +261,7 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
                                 startContent={<Trash2 size={15} />}
                                 onPress={() => handleDeleteProfile(profile.id)}
                               >
-                                删除
+                                {t("settings:connection.delete")}
                               </Button>
                             </div>
                           )}
@@ -284,12 +285,12 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
                   isDisabled={llmProfiles.length >= MAX_LLM_PROFILES}
                   onPress={handleAddProfile}
                 >
-                  新增模型
+                  {t("settings:connection.addProfile")}
                 </Button>
               </div>
             </Tab>
 
-            <Tab key="llm_assignments" title="LLM 分工">
+            <Tab key="llm_assignments" title={t("settings:tabs.llm_assignments")}>
               <LLMAssignmentPanel
                 profiles={llmProfiles}
                 assignments={llmAssignments}
@@ -297,31 +298,31 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
               />
             </Tab>
 
-            <Tab key="preferences" title="全局偏好">
+            <Tab key="preferences" title={t("settings:tabs.preferences")}>
               <div className="settings-section">
                 <StagePreferenceEditor
-                  title="大纲"
+                  title={t("settings:preferences.stages.outline")}
                   value={preferences.outline}
                   onChange={(outline) => setPreferences((p) => ({ ...p, outline }))}
                 />
                 <StagePreferenceEditor
-                  title="写作"
+                  title={t("settings:preferences.stages.writing")}
                   value={preferences.writing}
                   onChange={(writing) => setPreferences((p) => ({ ...p, writing }))}
                 />
                 <StagePreferenceEditor
-                  title="审阅"
+                  title={t("settings:preferences.stages.review")}
                   value={preferences.review}
                   onChange={(review) => setPreferences((p) => ({ ...p, review }))}
                 />
               </div>
             </Tab>
 
-            <Tab key="writing_style" title="写作风格">
+            <Tab key="writing_style" title={t("settings:tabs.writing_style")}>
               <div className="settings-section">
                 <Textarea
-                  label="写作风格"
-                  description="将作为默认值注入 system prompt，用于统一行文风格。"
+                  label={t("settings:writingStyle.label")}
+                  description={t("settings:writingStyle.description")}
                   minRows={6}
                   value={writingStyle}
                   onValueChange={setWritingStyle}
@@ -329,11 +330,11 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
               </div>
             </Tab>
 
-            <Tab key="data_save" title="数据保存">
+            <Tab key="data_save" title={t("settings:tabs.data_save")}>
               <div className="settings-section">
                 <Input
                   type="number"
-                  label="停止输入后保存延迟（秒）"
+                  label={t("settings:dataSave.inputDebounce")}
                   min={1}
                   max={10}
                   value={String(dataSave.input_debounce_seconds)}
@@ -343,7 +344,7 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
                 />
                 <Input
                   type="number"
-                  label="定时自动保存间隔（秒）"
+                  label={t("settings:dataSave.autosaveInterval")}
                   min={10}
                   max={120}
                   value={String(dataSave.autosave_interval_seconds)}
@@ -352,14 +353,14 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
                   }
                 />
                 <Input
-                  label="持久化文件存储路径"
-                  description="后端 snapshot 持久化位置，相对路径基于数据目录。"
+                  label={t("settings:dataSave.snapshotPath")}
+                  description={t("settings:dataSave.snapshotPathDescription")}
                   value={dataSave.snapshot_path}
                   onValueChange={(snapshot_path) => setDataSave((d) => ({ ...d, snapshot_path }))}
                 />
                 <Input
                   type="number"
-                  label="历史版本数量"
+                  label={t("settings:dataSave.historyVersions")}
                   min={0}
                   max={10}
                   value={String(dataSave.history_versions)}
@@ -370,17 +371,17 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
               </div>
             </Tab>
 
-            <Tab key="typography" title="字体与排版">
+            <Tab key="typography" title={t("settings:tabs.typography")}>
               <div className="settings-section">
                 <Input
-                  label="字体"
-                  placeholder="留空使用系统默认，如 Noto Serif SC"
+                  label={t("settings:typography.fontFamily")}
+                  placeholder={t("settings:typography.fontFamilyPlaceholder")}
                   value={typography.font_family}
                   onValueChange={(font_family) => setTypography((t) => ({ ...t, font_family }))}
                 />
                 <Input
                   type="number"
-                  label="行间距"
+                  label={t("settings:typography.lineHeight")}
                   min={1}
                   max={3}
                   step={0.1}
@@ -390,7 +391,7 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
                   }
                 />
                 <Select
-                  label="正文护眼色"
+                  label={t("settings:typography.readingTheme")}
                   selectedKeys={[typography.reading_theme]}
                   onSelectionChange={(keys) => {
                     const value = Array.from(keys)[0] as ReadingTheme;
@@ -399,32 +400,30 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
                     }
                   }}
                 >
-                  {READING_THEMES.map((theme) => (
-                    <SelectItem key={theme.key}>{theme.label}</SelectItem>
+                  {READING_THEME_KEYS.map((theme) => (
+                    <SelectItem key={theme}>{t(`settings:typography.themes.${theme}`)}</SelectItem>
                   ))}
                 </Select>
               </div>
             </Tab>
 
-            <Tab key="config" title="配置导入/导出">
+            <Tab key="config" title={t("settings:tabs.config")}>
               <div className="settings-section">
-                <p className="settings-hint">
-                  将全部系统设置导出为配置文件用于备份或迁移；导入时会校验并覆盖对应分组。
-                </p>
+                <p className="settings-hint">{t("settings:config.hint")}</p>
                 <div className="test-row">
                   <Button
                     variant="flat"
                     startContent={<Download size={16} />}
                     onPress={() => void handleExportConfig()}
                   >
-                    导出配置
+                    {t("settings:config.export")}
                   </Button>
                   <Button
                     variant="flat"
                     startContent={<Upload size={16} />}
                     onPress={() => importInputRef.current?.click()}
                   >
-                    导入配置
+                    {t("settings:config.import")}
                   </Button>
                   <input
                     ref={importInputRef}
@@ -446,10 +445,10 @@ export function SettingsModal(props: SettingsModalProps): ReactElement {
         </ModalBody>
         <ModalFooter>
           <Button variant="light" onPress={props.onClose}>
-            取消
+            {t("common:cancel")}
           </Button>
           <Button color="primary" isLoading={saving} onPress={() => void handleSave()}>
-            保存
+            {t("common:save")}
           </Button>
         </ModalFooter>
       </ModalContent>

@@ -1,5 +1,6 @@
 /** Editor for one generation stage's preferences: friendly sliders + advanced. */
 import type { ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { Accordion, AccordionItem, Input, Slider } from "@heroui/react";
 import type { StagePreference } from "../../api";
 import {
@@ -20,12 +21,18 @@ interface StagePreferenceEditorProps {
 /** A 3-step slider bound to a set of preset preference levels. */
 function LevelSlider(props: {
   label: string;
+  levelGroup: "creativity" | "focus" | "length";
   levels: PreferenceLevel[];
   value: StagePreference;
   onChange: (next: StagePreference) => void;
 }): ReactElement {
+  const { t } = useTranslation("settings");
   const detected = detectLevel(props.levels, props.value);
-  const current = detected === -1 ? "自定义" : props.levels[detected].label;
+  const current =
+    detected === -1
+      ? t("preferences.custom")
+      : t(`preferences.levels.${props.levelGroup}.${props.levels[detected].key}`);
+
   return (
     <div className="level-slider">
       <div className="level-slider-head">
@@ -47,7 +54,7 @@ function LevelSlider(props: {
       />
       <div className="level-ticks">
         {props.levels.map((level) => (
-          <span key={level.label}>{level.label}</span>
+          <span key={level.key}>{t(`preferences.levels.${props.levelGroup}.${level.key}`)}</span>
         ))}
       </div>
     </div>
@@ -56,6 +63,7 @@ function LevelSlider(props: {
 
 /** Render sliders for the three preset dimensions plus raw advanced inputs. */
 export function StagePreferenceEditor(props: StagePreferenceEditorProps): ReactElement {
+  const { t } = useTranslation("settings");
   const { value, onChange } = props;
 
   function setField(key: keyof StagePreference, raw: string): void {
@@ -69,12 +77,34 @@ export function StagePreferenceEditor(props: StagePreferenceEditorProps): ReactE
   return (
     <section className="stage-pref">
       <h3>{props.title}</h3>
-      <LevelSlider label="创造力" levels={CREATIVITY_LEVELS} value={value} onChange={onChange} />
-      <LevelSlider label="聚焦度" levels={FOCUS_LEVELS} value={value} onChange={onChange} />
-      <LevelSlider label="篇幅" levels={LENGTH_LEVELS} value={value} onChange={onChange} />
+      <LevelSlider
+        label={t("preferences.sliders.creativity")}
+        levelGroup="creativity"
+        levels={CREATIVITY_LEVELS}
+        value={value}
+        onChange={onChange}
+      />
+      <LevelSlider
+        label={t("preferences.sliders.focus")}
+        levelGroup="focus"
+        levels={FOCUS_LEVELS}
+        value={value}
+        onChange={onChange}
+      />
+      <LevelSlider
+        label={t("preferences.sliders.length")}
+        levelGroup="length"
+        levels={LENGTH_LEVELS}
+        value={value}
+        onChange={onChange}
+      />
 
       <Accordion isCompact>
-        <AccordionItem key="advanced" aria-label="高级设置" title="高级设置">
+        <AccordionItem
+          key="advanced"
+          aria-label={t("preferences.advanced")}
+          title={t("preferences.advanced")}
+        >
           <div className="form-grid">
             <Input
               label="temperature"

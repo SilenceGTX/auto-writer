@@ -8,50 +8,56 @@
  * focus does not move away from the source field before it is captured.
  */
 import { useRef, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { Lightbulb } from "lucide-react";
 import { createInspiration, type InspirationSource } from "../api";
+import { SelectionActionPlus } from "./SelectionActionPlus";
 import { useToast } from "./Toast";
 import { getActiveSelectionText } from "../utils/selection";
 
 interface AddInspirationButtonProps {
   source: InspirationSource;
   getFallbackText?: () => string;
-  label?: string;
+  /** Tooltip / aria label key; defaults to selection, use ``saveFallback`` when saving fallback text. */
+  labelKey?: "selectionActions.addInspiration.label" | "selectionActions.addInspiration.saveFallback";
 }
 
-/** Render a small button that saves the current selection as an inspiration. */
+/** Render a compact button that saves the current selection as an inspiration. */
 export function AddInspirationButton(props: AddInspirationButtonProps): ReactElement {
+  const { t } = useTranslation("outline");
   const { notify } = useToast();
   const captured = useRef("");
+  const label = t(props.labelKey ?? "selectionActions.addInspiration.label");
 
   async function save(): Promise<void> {
     const text = (captured.current || props.getFallbackText?.() || "").trim();
     captured.current = "";
     if (!text) {
-      notify("请先选择要加入灵感的文字", "info");
+      notify(t("selectionActions.addInspiration.emptySelection"), "info");
       return;
     }
     try {
       await createInspiration({ content: text, ...props.source });
-      notify("已加入灵感", "success");
+      notify(t("selectionActions.addInspiration.saved"), "success");
     } catch {
-      notify("加入灵感失败", "error");
+      notify(t("selectionActions.addInspiration.saveFailed"), "error");
     }
   }
 
   return (
     <button
       type="button"
-      className="add-inspiration-btn"
-      title="将选中的文字加入灵感"
+      className="selection-action-btn selection-action-inspiration"
+      title={label}
+      aria-label={label}
       onMouseDown={(event) => {
         event.preventDefault();
         captured.current = getActiveSelectionText();
       }}
       onClick={() => void save()}
     >
-      <Lightbulb size={15} />
-      <span>{props.label ?? "加入灵感"}</span>
+      <SelectionActionPlus />
+      <Lightbulb aria-hidden />
     </button>
   );
 }

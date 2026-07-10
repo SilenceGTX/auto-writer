@@ -1,10 +1,13 @@
 /** Integration test for the worldbuilding page (tabs, cards, create form). */
+import "../i18n";
+import i18n from "../i18n";
 import { useState, type ReactElement } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { EntityCategory, WorldEntity } from "../api";
+import { LOCALE_STORAGE_KEY } from "../utils/locale";
 import { AppProvider } from "../context/AppContext";
 import { AssistantProvider } from "../context/AssistantContext";
 import { AssistantPanel } from "../components/AssistantPanel";
@@ -75,15 +78,21 @@ function renderPage() {
 }
 
 describe("ConceptPage", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     localStorage.clear();
+    localStorage.setItem(LOCALE_STORAGE_KEY, "zh");
+    await i18n.changeLanguage("zh");
   });
 
   it("renders category tabs and entity cards", async () => {
     renderPage();
     expect(await screen.findByText("张三")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /人物/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", {
+        name: new RegExp(i18n.t("concept:categories.presets.characters")),
+      }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /组织/ })).toBeInTheDocument();
     expect(screen.getByText("主角")).toBeInTheDocument();
   });
@@ -92,17 +101,31 @@ describe("ConceptPage", () => {
     renderPage();
     await waitFor(() => expect(screen.getByText("张三")).toBeInTheDocument());
 
-    await userEvent.click(screen.getByRole("button", { name: "新建条目" }));
+    await userEvent.click(screen.getByRole("button", { name: i18n.t("concept:page.createEntity") }));
 
-    expect(await screen.findByRole("heading", { name: "新建条目" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "创建条目" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: i18n.t("concept:form.createTitle") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: i18n.t("concept:form.createSubmit") }),
+    ).toBeInTheDocument();
   });
 
   it("exposes a delete control only for custom categories", async () => {
     renderPage();
     await screen.findByText("张三");
 
-    expect(screen.queryByRole("button", { name: "删除种类 人物" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "删除种类 组织" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: i18n.t("concept:categories.deleteAria", {
+          name: i18n.t("concept:categories.presets.characters"),
+        }),
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: i18n.t("concept:categories.deleteAria", { name: "组织" }),
+      }),
+    ).toBeInTheDocument();
   });
 });

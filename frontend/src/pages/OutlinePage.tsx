@@ -7,6 +7,7 @@
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Button, Chip } from "@heroui/react";
 import { Sparkles, Wand2 } from "lucide-react";
@@ -28,6 +29,8 @@ import { useToast } from "../components/Toast";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { WorkTitleSelect } from "../components/WorkTitleSelect";
 import { stageColorMap } from "../utils/outline";
+import { translateOutlineApiError } from "../utils/outlineApiError";
+import { translatePresetStructureName } from "../utils/storyStructureI18n";
 import { ChapterOutline } from "./outline/ChapterOutline";
 import { ChapterPanel } from "./outline/ChapterPanel";
 import { StagePanel } from "./outline/StagePanel";
@@ -37,6 +40,7 @@ type Selection = { type: "stage"; id: number } | { type: "chapter"; id: number }
 
 /** Render the outline workspace for the current work. */
 export function OutlinePage(): ReactElement {
+  const { t } = useTranslation(["outline", "works", "common", "errors"]);
   const navigate = useNavigate();
   const { notify } = useToast();
   const { currentWorkId } = useApp();
@@ -60,9 +64,9 @@ export function OutlinePage(): ReactElement {
     try {
       setOutline(await getOutline(currentWorkId));
     } catch {
-      notify("无法加载大纲", "error");
+      notify(t("outline:toast.loadFailed"), "error");
     }
-  }, [currentWorkId, notify]);
+  }, [currentWorkId, notify, t]);
 
   useEffect(() => {
     void loadOutline();
@@ -85,9 +89,13 @@ export function OutlinePage(): ReactElement {
     setSelection(null);
     try {
       setOutline(await generateStages(currentWorkId));
-      notify("阶段树与总纲已生成", "success");
+      notify(t("outline:toast.stagesGenerated"), "success");
     } catch (error) {
-      notify(error instanceof Error ? error.message : "生成阶段树失败", "error");
+      const message = error instanceof Error ? error.message : null;
+      notify(
+        translateOutlineApiError(message, t, "outline:toast.generateStagesFailed"),
+        "error",
+      );
     } finally {
       setGenerating(null);
     }
@@ -98,9 +106,13 @@ export function OutlinePage(): ReactElement {
     setGenerating("chapters");
     try {
       setOutline(await generateChapterOutlines(currentWorkId));
-      notify("章节大纲已生成", "success");
+      notify(t("outline:toast.chaptersGenerated"), "success");
     } catch (error) {
-      notify(error instanceof Error ? error.message : "生成章节大纲失败", "error");
+      const message = error instanceof Error ? error.message : null;
+      notify(
+        translateOutlineApiError(message, t, "outline:toast.generateChaptersFailed"),
+        "error",
+      );
     } finally {
       setGenerating(null);
     }
@@ -111,7 +123,7 @@ export function OutlinePage(): ReactElement {
     try {
       setOutline(await setStageChapterCount(stageId, count));
     } catch {
-      notify("调整章节数失败", "error");
+      notify(t("outline:toast.adjustCountFailed"), "error");
     }
   }
 
@@ -120,7 +132,7 @@ export function OutlinePage(): ReactElement {
     try {
       setOutline(await reorderChapters(currentWorkId, items));
     } catch {
-      notify("章节排序失败", "error");
+      notify(t("outline:toast.reorderFailed"), "error");
     }
   }
 
@@ -131,7 +143,7 @@ export function OutlinePage(): ReactElement {
       await loadOutline();
       select({ type: "chapter", id: created.id });
     } catch {
-      notify("添加章节失败", "error");
+      notify(t("outline:toast.addChapterFailed"), "error");
     }
   }
 
@@ -143,9 +155,9 @@ export function OutlinePage(): ReactElement {
         setSelection(null);
       }
       await loadOutline();
-      notify("章节已删除", "success");
+      notify(t("outline:toast.chapterDeleted"), "success");
     } catch {
-      notify("删除章节失败", "error");
+      notify(t("outline:toast.deleteChapterFailed"), "error");
     } finally {
       setPendingDelete(null);
     }
@@ -155,10 +167,10 @@ export function OutlinePage(): ReactElement {
     return (
       <section className="workspace-page">
         <div className="outline-empty">
-          <h1>大纲</h1>
-          <p>请先在作品页选择一个作品，再来编排大纲。</p>
+          <h1>{t("outline:page.title")}</h1>
+          <p>{t("outline:page.emptyWork.body")}</p>
           <Button color="primary" onPress={() => navigate("/works")}>
-            前往作品页
+            {t("outline:page.emptyWork.goToWorks")}
           </Button>
         </div>
       </section>
@@ -176,6 +188,7 @@ export function OutlinePage(): ReactElement {
     <StagePanel
       key={`stage-${selectedStage.id}`}
       stage={selectedStage}
+      structureName={outline?.structure_name}
       totalChapters={outline?.chapters.length ?? 0}
       onSaved={() => void loadOutline()}
       onCancel={() => setSelection(null)}
@@ -185,36 +198,44 @@ export function OutlinePage(): ReactElement {
       key={`chapter-${selectedChapter.id}`}
       chapter={selectedChapter}
       stages={outline?.stages ?? []}
+      structureName={outline?.structure_name}
       onSaved={() => void loadOutline()}
       onGenerate={(chapter) => navigate(`/writing?chapter=${chapter.id}`)}
       onCancel={() => setSelection(null)}
     />
   ) : (
     <section className="assistant-section">
-      <h2>大纲助手</h2>
-      <p className="assistant-hint">在左侧选择一个阶段或章节即可在此编辑。</p>
+      <h2>{t("outline:assistant.title")}</h2>
+      <p className="assistant-hint">{t("outline:assistant.hint")}</p>
     </section>
   );
 
   const hasStages = (outline?.stages.length ?? 0) > 0;
+  const chapterCount = outline?.chapters.length ?? 0;
+  const plannedSummary =
+    outline?.planned_chapter_count != null
+      ? t("outline:page.plannedWithTarget", {
+          count: chapterCount,
+          planned: outline.planned_chapter_count,
+        })
+      : t("outline:page.planned", { count: chapterCount });
 
   return (
     <section className="workspace-page outline-page">
       <div className="page-header">
         <div>
-          <WorkTitleSelect fallback={outline?.title ?? "大纲"} />
+          <WorkTitleSelect fallback={outline?.title ?? t("outline:page.fallbackTitle")} />
           <p>
-            {outline?.structure_name ? `结构：${outline.structure_name} · ` : ""}
-            已规划 {outline?.chapters.length ?? 0} 章
-            {outline?.planned_chapter_count != null
-              ? ` / 计划 ${outline.planned_chapter_count} 章`
+            {outline?.structure_name
+              ? `${t("works:structures.outlinePrefix")}${translatePresetStructureName(outline.structure_name, t)} · `
               : ""}
+            {plannedSummary}
           </p>
         </div>
         <div className="outline-actions">
           {outline?.locked && (
             <Chip color="warning" variant="flat">
-              大纲已锁定
+              {t("outline:page.locked")}
             </Chip>
           )}
           <Button
@@ -223,32 +244,30 @@ export function OutlinePage(): ReactElement {
             isLoading={generating === "stages"}
             onPress={() => (hasStages ? setAskRegenerate(true) : void runGenerateStages())}
           >
-            {hasStages ? "重新生成阶段树" : "生成阶段树"}
+            {hasStages ? t("outline:page.regenerateStages") : t("outline:page.generateStages")}
           </Button>
           <Button
             color="primary"
             startContent={<Wand2 size={16} />}
-            isDisabled={!hasStages || (outline?.chapters.length ?? 0) === 0}
+            isDisabled={!hasStages || chapterCount === 0}
             isLoading={generating === "chapters"}
             onPress={() => void runGenerateChapters()}
           >
-            生成章节大纲
+            {t("outline:page.generateChapters")}
           </Button>
         </div>
       </div>
 
       {!hasStages ? (
         <div className="outline-empty">
-          <p>
-            还没有阶段树。请确认已在作品页选择含阶段的故事结构，并在系统设置中配置好 LLM
-            连接，然后点击「生成阶段树」。
-          </p>
+          <p>{t("outline:page.emptyStages")}</p>
         </div>
       ) : (
         <div className="outline-grid">
           <StageTree
             stages={outline?.stages ?? []}
-            totalChapters={outline?.chapters.length ?? 0}
+            structureName={outline?.structure_name}
+            totalChapters={chapterCount}
             selectedStageId={selection?.type === "stage" ? selection.id : null}
             locked={outline?.locked ?? false}
             onSelect={(id) => select({ type: "stage", id })}
@@ -257,6 +276,7 @@ export function OutlinePage(): ReactElement {
           <ChapterOutline
             chapters={outline?.chapters ?? []}
             stages={outline?.stages ?? []}
+            structureName={outline?.structure_name}
             colorMap={colorMap}
             selectedChapterId={selection?.type === "chapter" ? selection.id : null}
             onSelectChapter={(id) => select({ type: "chapter", id })}
@@ -271,9 +291,9 @@ export function OutlinePage(): ReactElement {
 
       <ConfirmDialog
         isOpen={askRegenerate}
-        title="重新生成阶段树"
-        body="重新生成将替换现有阶段树、总纲与章节大纲，且无法恢复。确定继续吗？"
-        confirmLabel="重新生成"
+        title={t("outline:regenerateDialog.title")}
+        body={t("outline:regenerateDialog.body")}
+        confirmLabel={t("outline:regenerateDialog.confirm")}
         danger
         onConfirm={() => {
           setAskRegenerate(false);
@@ -284,9 +304,11 @@ export function OutlinePage(): ReactElement {
 
       <ConfirmDialog
         isOpen={pendingDelete !== null}
-        title="删除章节"
-        body={`确定要删除第 ${pendingDelete?.chapter_number ?? ""} 章吗？此操作不可恢复。`}
-        confirmLabel="删除"
+        title={t("outline:deleteDialog.title")}
+        body={t("outline:deleteDialog.body", {
+          number: pendingDelete?.chapter_number ?? "",
+        })}
+        confirmLabel={t("outline:deleteDialog.confirm")}
         danger
         onConfirm={() => void handleConfirmDelete()}
         onCancel={() => setPendingDelete(null)}

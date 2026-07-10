@@ -1,0 +1,6 @@
+【引用设定】
+以下是正文中通过 @ 引用的设定条目，请在创作时保持与其设定一致：
+{% for entry in entries %}
+- {{ entry.name }}{% if entry.category %}（{{ entry.category }}）{% endif %}{% if entry.description %}：{{ entry.description }}{% endif %}
+{% if entry.prop_text %}  属性：{{ entry.prop_text }}
+{% endif %}{% endfor %}

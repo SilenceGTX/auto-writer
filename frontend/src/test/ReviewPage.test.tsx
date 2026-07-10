@@ -1,4 +1,6 @@
 /** Integration test for the review page (reader, TOC, assistant). */
+import "../i18n";
+import i18n from "../i18n";
 import { useState, type ReactElement } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -10,6 +12,7 @@ import { AssistantProvider } from "../context/AssistantContext";
 import { AssistantPanel } from "../components/AssistantPanel";
 import { ToastProvider } from "../components/Toast";
 import { ReviewPage } from "../pages/ReviewPage";
+import { LOCALE_STORAGE_KEY } from "../utils/locale";
 
 const sampleOutline = vi.hoisted(
   () =>
@@ -96,28 +99,36 @@ function renderPage() {
 }
 
 describe("ReviewPage", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     localStorage.clear();
+    localStorage.setItem(LOCALE_STORAGE_KEY, "zh");
+    await i18n.changeLanguage("zh");
   });
 
   it("renders the table of contents and the first chapter's text", async () => {
     renderPage();
     expect(await screen.findByText("这是第一章的正文段落。")).toBeInTheDocument();
-    expect(screen.getByText(/第 1 \/ 2 章/)).toBeInTheDocument();
+    expect(
+      screen.getByText(i18n.t("review:reader.progress", { current: 1, total: 2 })),
+    ).toBeInTheDocument();
   });
 
   it("renders the review assistant in the panel", async () => {
     renderPage();
     await screen.findByText("这是第一章的正文段落。");
-    expect(screen.getByRole("heading", { name: "审阅助手" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: i18n.t("review:assistant.title") }),
+    ).toBeInTheDocument();
   });
 
   it("loads another chapter when selected from the TOC", async () => {
     renderPage();
     await screen.findByText("这是第一章的正文段落。");
     const { getChapter } = await import("../api");
-    const second = screen.getAllByText(/第 2 章/)[0];
+    const second = screen.getAllByText(
+      i18n.t("review:reader.chapterLabel", { number: 2 }),
+    )[0];
     await userEvent.click(second);
     await waitFor(() => expect(getChapter).toHaveBeenCalledWith(12));
   });
@@ -126,7 +137,27 @@ describe("ReviewPage", () => {
     renderPage();
     await screen.findByText("这是第一章的正文段落。");
     const { downloadWorkChapterExport } = await import("../api");
-    await userEvent.click(screen.getByRole("button", { name: "导出作品" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("review:page.export") }),
+    );
     await waitFor(() => expect(downloadWorkChapterExport).toHaveBeenCalledWith(1));
+  });
+
+  it("quotes a reader selection into the assistant panel", async () => {
+    renderPage();
+    const paragraph = await screen.findByText("这是第一章的正文段落。");
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(paragraph);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("review:reader.quoteToReview") }),
+    );
+
+    expect(
+      await screen.findByText(i18n.t("review:assistant.quoteLabel", { text: "这是第一章的正文段落。" })),
+    ).toBeInTheDocument();
   });
 });
