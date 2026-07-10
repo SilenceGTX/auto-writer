@@ -8,9 +8,12 @@ import { AddInspirationButton } from "../../components/AddInspirationButton";
 import { LinkEntityButton } from "../../components/LinkEntityButton";
 import { MentionTextarea } from "../../components/MentionTextarea";
 import { useToast } from "../../components/Toast";
+import {
+  CHAPTER_STATUS_VALUES,
+  chapterStatusLabelKey,
+} from "../../utils/chapterStatus";
 import { translatePresetStageName } from "../../utils/storyStructureI18n";
 
-const CHAPTER_STATUSES = ["草稿", "已完成"];
 const UNASSIGNED_KEY = "none";
 
 interface ChapterPanelProps {
@@ -25,7 +28,7 @@ interface ChapterPanelProps {
 /** Edit a chapter's outline (title, summary, status, stage) and generate body. */
 export function ChapterPanel(props: ChapterPanelProps): ReactElement {
   const { chapter } = props;
-  const { t } = useTranslation("works");
+  const { t } = useTranslation(["outline", "works", "common"]);
   const { notify } = useToast();
   const [title, setTitle] = useState(chapter.title ?? "");
   const [summary, setSummary] = useState(chapter.summary ?? "");
@@ -45,7 +48,7 @@ export function ChapterPanel(props: ChapterPanelProps): ReactElement {
       props.onSaved(saved);
       return saved;
     } catch {
-      notify("保存章节失败", "error");
+      notify(t("outline:toast.saveChapterFailed"), "error");
       return null;
     } finally {
       setSaving(false);
@@ -54,7 +57,7 @@ export function ChapterPanel(props: ChapterPanelProps): ReactElement {
 
   async function handleSave(): Promise<void> {
     if (await persist()) {
-      notify("章节已保存", "success");
+      notify(t("outline:toast.chapterSaved"), "success");
     }
   }
 
@@ -67,10 +70,14 @@ export function ChapterPanel(props: ChapterPanelProps): ReactElement {
 
   return (
     <section className="assistant-section work-form">
-      <h2>第 {chapter.chapter_number} 章</h2>
-      <Input label="章节标题" value={title} onValueChange={setTitle} />
+      <h2>{t("outline:chapterPanel.title", { number: chapter.chapter_number })}</h2>
+      <Input
+        label={t("outline:chapterPanel.titleLabel")}
+        value={title}
+        onValueChange={setTitle}
+      />
       <Select
-        label="所属阶段"
+        label={t("outline:chapterPanel.stageLabel")}
         selectedKeys={[stageId == null ? UNASSIGNED_KEY : String(stageId)]}
         onSelectionChange={(keys) => {
           const key = Array.from(keys)[0] as string | undefined;
@@ -78,7 +85,7 @@ export function ChapterPanel(props: ChapterPanelProps): ReactElement {
         }}
       >
         {[
-          <SelectItem key={UNASSIGNED_KEY}>未分配</SelectItem>,
+          <SelectItem key={UNASSIGNED_KEY}>{t("outline:chapters.unassigned")}</SelectItem>,
           ...props.stages.map((stage) => (
             <SelectItem key={String(stage.id)}>
               {translatePresetStageName(props.structureName, stage.name, t)}
@@ -87,24 +94,24 @@ export function ChapterPanel(props: ChapterPanelProps): ReactElement {
         ]}
       </Select>
       <Select
-        label="状态"
+        label={t("outline:chapterPanel.statusLabel")}
         selectedKeys={[status]}
         onSelectionChange={(keys) => {
           const key = Array.from(keys)[0] as string | undefined;
           if (key) setStatus(key);
         }}
       >
-        {CHAPTER_STATUSES.map((value) => (
-          <SelectItem key={value}>{value}</SelectItem>
+        {CHAPTER_STATUS_VALUES.map((value) => (
+          <SelectItem key={value}>{t(chapterStatusLabelKey(value))}</SelectItem>
         ))}
       </Select>
       <MentionTextarea
         workId={chapter.work_id}
-        label="章节概述"
+        label={t("outline:chapterPanel.summaryLabel")}
         minRows={6}
         value={summary}
         onValueChange={setSummary}
-        placeholder="本章大致写什么...（输入 @ 可引用设定条目）"
+        placeholder={t("outline:chapterPanel.summaryPlaceholder")}
       />
       <div className="form-actions form-actions-stacked">
         <div className="form-actions-inline-tools">
@@ -116,14 +123,19 @@ export function ChapterPanel(props: ChapterPanelProps): ReactElement {
           <LinkEntityButton workId={chapter.work_id} text={summary} onTextChange={setSummary} />
         </div>
         <div className="form-actions-row">
-          <Button variant="light" onPress={props.onCancel}>
-            取消
+          <Button size="sm" variant="light" onPress={props.onCancel}>
+            {t("common:cancel")}
           </Button>
-          <Button variant="flat" isLoading={saving} onPress={() => void handleSave()}>
-            保存
+          <Button size="sm" variant="flat" isLoading={saving} onPress={() => void handleSave()}>
+            {t("common:save")}
           </Button>
-          <Button color="primary" isLoading={saving} onPress={() => void handleGenerate()}>
-            撰写正文
+          <Button
+            size="sm"
+            color="primary"
+            isLoading={saving}
+            onPress={() => void handleGenerate()}
+          >
+            {t("outline:chapterPanel.writeBody")}
           </Button>
         </div>
       </div>

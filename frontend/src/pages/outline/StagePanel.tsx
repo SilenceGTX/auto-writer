@@ -21,7 +21,7 @@ interface StagePanelProps {
 /** Edit a stage's synopsis (总纲) and show its chapter share. */
 export function StagePanel(props: StagePanelProps): ReactElement {
   const { stage } = props;
-  const { t } = useTranslation("works");
+  const { t } = useTranslation(["outline", "works", "common"]);
   const { notify } = useToast();
   const [overview, setOverview] = useState(stage.overview ?? "");
   const [saving, setSaving] = useState(false);
@@ -30,14 +30,15 @@ export function StagePanel(props: StagePanelProps): ReactElement {
     props.totalChapters > 0
       ? Math.round((stage.chapter_count / props.totalChapters) * 100)
       : 0;
+  const stageName = translatePresetStageName(props.structureName, stage.name, t);
 
   async function handleSave(): Promise<void> {
     setSaving(true);
     try {
       props.onSaved(await updateStage(stage.id, { overview }));
-      notify("阶段总纲已保存", "success");
+      notify(t("outline:toast.stageSaved"), "success");
     } catch {
-      notify("保存阶段总纲失败", "error");
+      notify(t("outline:toast.saveStageFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -45,24 +46,26 @@ export function StagePanel(props: StagePanelProps): ReactElement {
 
   return (
     <section className="assistant-section work-form">
-      <h2>阶段：{translatePresetStageName(props.structureName, stage.name, t)}</h2>
+      <h2>{t("outline:stagePanel.title", { name: stageName })}</h2>
       <div className="detail-stats">
         <div className="detail-stat">
-          <span>章节总数</span>
-          <strong>{stage.chapter_count} 章</strong>
+          <span>{t("outline:stagePanel.chapterTotal")}</span>
+          <strong>
+            {t("outline:stagePanel.chapterTotalValue", { count: stage.chapter_count })}
+          </strong>
         </div>
         <div className="detail-stat">
-          <span>章节占比</span>
+          <span>{t("outline:stagePanel.chapterRatio")}</span>
           <strong>{ratio}%</strong>
         </div>
       </div>
       <MentionTextarea
         workId={stage.work_id}
-        label="阶段总纲"
+        label={t("outline:stagePanel.overviewLabel")}
         minRows={8}
         value={overview}
         onValueChange={setOverview}
-        placeholder="该阶段的关键剧情走向...（输入 @ 可引用设定条目）"
+        placeholder={t("outline:stagePanel.overviewPlaceholder")}
       />
       <div className="form-actions form-actions-stacked">
         <div className="form-actions-inline-tools">
@@ -74,11 +77,11 @@ export function StagePanel(props: StagePanelProps): ReactElement {
           <LinkEntityButton workId={stage.work_id} text={overview} onTextChange={setOverview} />
         </div>
         <div className="form-actions-row">
-          <Button variant="light" onPress={props.onCancel}>
-            取消
+          <Button size="sm" variant="light" onPress={props.onCancel}>
+            {t("common:cancel")}
           </Button>
-          <Button color="primary" isLoading={saving} onPress={() => void handleSave()}>
-            保存
+          <Button size="sm" color="primary" isLoading={saving} onPress={() => void handleSave()}>
+            {t("common:save")}
           </Button>
         </div>
       </div>

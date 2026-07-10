@@ -65,19 +65,19 @@ export function isPresetStructureName(name: string): name is PresetStructureName
 }
 
 /** Translate a preset structure name for display; custom names pass through. */
-export function translatePresetStructureName(name: string, t: TFunction<"works">): string {
+export function translatePresetStructureName(name: string, t: TFunction): string {
   const key = STRUCTURE_KEYS[name as PresetStructureName];
   if (!key) {
     return name;
   }
-  return t(`structures.presets.${key}.name`);
+  return t(`works:structures.presets.${key}.name`);
 }
 
 /** Translate a preset stage label when *structureName* is a known preset. */
 export function translatePresetStageName(
   structureName: string | null | undefined,
   stageName: string,
-  t: TFunction<"works">,
+  t: TFunction,
 ): string {
   if (!structureName) {
     return stageName;
@@ -91,7 +91,7 @@ export function translatePresetStageName(
   if (index === -1) {
     return stageName;
   }
-  const stages = t(`structures.presets.${structKey}.stages`, { returnObjects: true });
+  const stages = t(`works:structures.presets.${structKey}.stages`, { returnObjects: true });
   if (Array.isArray(stages) && typeof stages[index] === "string") {
     return stages[index];
   }
@@ -99,7 +99,7 @@ export function translatePresetStageName(
 }
 
 /** Translate a structure row when it is a preset; otherwise return its stored name. */
-export function translateStructureName(structure: StoryStructure, t: TFunction<"works">): string {
+export function translateStructureName(structure: StoryStructure, t: TFunction): string {
   if (structure.is_preset) {
     return translatePresetStructureName(structure.name, t);
   }

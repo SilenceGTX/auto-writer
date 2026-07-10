@@ -28,6 +28,7 @@ function StageBlock(props: {
   onSelect: () => void;
   onCountChange: (count: number) => void;
 }): ReactElement {
+  const { t } = useTranslation("outline");
   const { stage } = props;
   const [draft, setDraft] = useState(String(stage.chapter_count));
 
@@ -41,10 +42,12 @@ function StageBlock(props: {
       <span className="stage-bar" style={{ background: props.color }} />
       <span className="stage-block-body">
         <strong>{props.displayName}</strong>
-        <span className="stage-count">占比 {props.ratio}%</span>
+        <span className="stage-count">
+          {t("stageTree.ratio", { ratio: props.ratio })}
+        </span>
         <span className="stage-count-field" onClick={(event) => event.stopPropagation()}>
           <Input
-            aria-label={`${props.displayName} 章节数`}
+            aria-label={t("stageTree.chapterCountAria", { name: props.displayName })}
             size="sm"
             type="number"
             min={0}
@@ -65,7 +68,7 @@ function StageBlock(props: {
               }
             }}
           />
-          <span className="stage-count-unit">章</span>
+          <span className="stage-count-unit">{t("stageTree.chapterUnit")}</span>
         </span>
       </span>
     </button>
@@ -74,12 +77,12 @@ function StageBlock(props: {
 
 /** Render the vertical stage tree for the outline workspace. */
 export function StageTree(props: StageTreeProps): ReactElement {
-  const { t } = useTranslation("works");
+  const { t } = useTranslation(["outline", "works"]);
   const maxCount = Math.max(1, ...props.stages.map((stage) => stage.chapter_count));
 
   return (
     <div className="stage-tree">
-      <h2>阶段树</h2>
+      <h2>{t("outline:stageTree.title")}</h2>
       {props.stages.map((stage, index) => (
         <StageBlock
           key={stage.id}

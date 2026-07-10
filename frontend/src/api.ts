@@ -1,6 +1,7 @@
 /** API client and shared types for communicating with the Auto-Writer backend. */
 
 import { getApiLocale } from "./apiLocale";
+import { extractApiErrorMessage } from "./utils/apiError";
 import type { AppLocale } from "./utils/locale";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "/api";
@@ -98,8 +99,8 @@ export async function requestJson<T>(path: string, init?: RequestInit): Promise<
   });
 
   if (!response.ok) {
-    const message = await response.text();
-    throw new ApiError(response.status, message || `请求失败（${response.status}）`);
+    const raw = await response.text();
+    throw new ApiError(response.status, extractApiErrorMessage(raw, response.status));
   }
 
   if (response.status === 204) {
@@ -442,8 +443,8 @@ export async function testConnection(profile: LLMProfile): Promise<ConnectionTes
 export async function downloadWorkExport(workId: number, format: "json" | "md"): Promise<void> {
   const response = await fetch(`${API_BASE}/works/${workId}/export?format=${format}`);
   if (!response.ok) {
-    const message = await response.text();
-    throw new ApiError(response.status, message || `导出失败（${response.status}）`);
+    const raw = await response.text();
+    throw new ApiError(response.status, extractApiErrorMessage(raw, response.status));
   }
   const blob = await response.blob();
   const disposition = response.headers.get("Content-Disposition") ?? "";
@@ -456,8 +457,8 @@ export async function downloadWorkExport(workId: number, format: "json" | "md"):
 export async function downloadWorkChapterExport(workId: number): Promise<void> {
   const response = await fetch(`${API_BASE}/works/${workId}/export?format=chapters`);
   if (!response.ok) {
-    const message = await response.text();
-    throw new ApiError(response.status, message || `导出失败（${response.status}）`);
+    const raw = await response.text();
+    throw new ApiError(response.status, extractApiErrorMessage(raw, response.status));
   }
   const blob = await response.blob();
   const disposition = response.headers.get("Content-Disposition") ?? "";

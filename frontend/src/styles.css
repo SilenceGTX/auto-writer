@@ -583,8 +583,17 @@ textarea {
 .form-actions-row {
   display: flex;
   justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Keep Cancel / Save / Write Chapter on one row in the narrow assistant panel. */
+.form-actions-row > button {
+  flex: 0 1 auto;
+  min-width: 0 !important;
+  padding-inline: 0.65rem;
 }
 
 .detail-stats {
