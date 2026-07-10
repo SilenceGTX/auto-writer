@@ -1,0 +1,7 @@
+[Work Info]
+- Title: {{ title }}
+- Story structure: {{ structure_name }} (stages: {{ stages_text }})
+{% if structure_description %}- Structure notes: {{ structure_description }}
+{% endif %}{% if planned_chapter_count is not none %}- Planned chapters: {{ planned_chapter_count }}
+{% endif %}{% if actual_chapter_count is not none %}- Actual chapters: {{ actual_chapter_count }}
+{% endif %}- Synopsis: {{ summary }}

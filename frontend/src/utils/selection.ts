@@ -14,7 +14,11 @@ export interface TextSelectionRange {
 
 /** Return the currently selected text from the active input or page selection. */
 export function getActiveSelectionText(): string {
-  return getActiveSelectionRange()?.text ?? "";
+  const range = getActiveSelectionRange();
+  if (range) {
+    return range.text;
+  }
+  return window.getSelection()?.toString() ?? "";
 }
 
 /** Return the active textarea/input selection with offsets, if any. */

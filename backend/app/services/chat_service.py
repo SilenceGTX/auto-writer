@@ -9,6 +9,7 @@ last user turn.
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.deps.locale import PromptLocale
 from app.models import Chapter, Work
 from app.schemas import ChatMessage, ChatRequest
 from app.services.generation_context import work_info_block
@@ -16,12 +17,13 @@ from app.services.prompts import (
     build_chat_context_block,
     build_review_context_block,
     log_chat_messages,
+    wrap_quoted_user_message,
 )
 from app.services.references import reference_block_for_texts, with_references
 
 
 def _conversation_with_quote(
-    messages: list[ChatMessage], quoted: str | None
+    messages: list[ChatMessage], quoted: str | None, *, locale: PromptLocale
 ) -> list[dict[str, str]]:
     """Convert chat history to API messages, attaching a quote to the last user turn."""
     last_user_index = next(
@@ -31,12 +33,8 @@ def _conversation_with_quote(
     result: list[dict[str, str]] = []
     for index, message in enumerate(messages):
         content = message.content
-        if (
-            index == last_user_index
-            and quoted
-            and quoted.strip()
-        ):
-            content = f"【用户引用的片段】\n{quoted.strip()}\n\n【问题】\n{message.content}"
+        if index == last_user_index:
+            content = wrap_quoted_user_message(message.content, quoted, locale=locale)
         result.append({"role": message.role, "content": content})
     return result
 
@@ -63,12 +61,10 @@ async def build_chat_messages(
     payload: ChatRequest,
     system_prompt: str,
     *,
+    locale: PromptLocale = "zh",
     extra_system: str | None = None,
 ) -> list[dict]:
-    """Build the chat message list with work/chapter context and @ references.
-
-    ``extra_system`` is inserted as a second system message before the context block.
-    """
+    """Build the chat message list with work/chapter context and @ references."""
     last_user = next(
         (message.content for message in reversed(payload.messages) if message.role == "user"),
         "",
@@ -77,10 +73,12 @@ async def build_chat_messages(
         db,
         work.id,
         [last_user, payload.quoted or "", chapter.summary if chapter else ""],
+        locale=locale,
     )
     context = with_references(
         build_chat_context_block(
-            work_info=work_info_block(work),
+            locale=locale,
+            work_info=work_info_block(work, locale=locale),
             chapter_number=chapter.chapter_number if chapter else None,
             chapter_title=chapter.title if chapter else None,
             chapter_summary=chapter.summary if chapter else None,
@@ -105,6 +103,8 @@ async def build_review_chat_messages(
     payload: ChatRequest,
     system_prompt: str,
     review_instruction: str,
+    *,
+    locale: PromptLocale = "zh",
 ) -> list[dict]:
     """Build review chat messages with summary, outline, body, and @ references in system."""
     last_user = next(
@@ -115,9 +115,11 @@ async def build_review_chat_messages(
         db,
         work.id,
         _review_reference_texts(work, chapter, last_user=last_user, quoted=payload.quoted),
+        locale=locale,
     )
     context = with_references(
         build_review_context_block(
+            locale=locale,
             summary=work.summary,
             chapter_number=chapter.chapter_number if chapter else None,
             chapter_title=chapter.title if chapter else None,
@@ -131,5 +133,5 @@ async def build_review_chat_messages(
         {"role": "system", "content": review_instruction},
         {"role": "system", "content": context},
     ]
-    messages.extend(_conversation_with_quote(payload.messages, payload.quoted))
+    messages.extend(_conversation_with_quote(payload.messages, payload.quoted, locale=locale))
     return log_chat_messages("build_review_chat_messages", messages)

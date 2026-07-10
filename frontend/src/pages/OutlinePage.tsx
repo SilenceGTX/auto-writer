@@ -40,7 +40,7 @@ type Selection = { type: "stage"; id: number } | { type: "chapter"; id: number }
 
 /** Render the outline workspace for the current work. */
 export function OutlinePage(): ReactElement {
-  const { t } = useTranslation(["outline", "works", "common"]);
+  const { t } = useTranslation(["outline", "works", "common", "errors"]);
   const navigate = useNavigate();
   const { notify } = useToast();
   const { currentWorkId } = useApp();

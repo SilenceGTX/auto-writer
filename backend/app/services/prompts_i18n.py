@@ -1,7 +1,8 @@
 """Locale helpers for bilingual LLM prompt templates (``designs/I18N.md`` §6).
 
-Phase P3 will branch ``prompts.py`` builders on the locale returned here.
-Generation routers should depend on ``app.deps.locale.get_request_locale``.
+Templates live under ``app/prompts/templates/{zh,en}/`` and are rendered via
+``app.prompts.loader.render_template``. Generation routers should depend on
+``app.deps.locale.get_request_locale``.
 """
 
 from app.deps.locale import PromptLocale, normalize_locale

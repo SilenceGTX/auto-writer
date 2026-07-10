@@ -1,0 +1,15 @@
+{% if context %}[Context (reference only—do not rewrite)]
+{{ context }}
+
+{% endif %}{% if preceding %}[Preceding text (keep continuity—do not rewrite)]
+{{ preceding }}
+
+{% endif %}{% if following %}[Following text (keep continuity—do not rewrite)]
+{{ following }}
+
+{% endif %}Rewrite the passage below according to this instruction: {{ requirement }}
+{% if has_neighbors %}Ensure the rewritten passage flows naturally with the preceding and following text.
+{% endif %}Output only the rewritten passage—no explanation, title, quotation marks, and do not repeat the surrounding text.
+
+[Passage to rewrite]
+{{ selection }}

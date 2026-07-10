@@ -36,7 +36,7 @@ describe("translateOutlineApiError", () => {
         t,
         "outline:toast.generateChaptersFailed",
       ),
-    ).toBe("AI generation failed: LLM endpoint URL is not configured");
+    ).toBe("AI request failed: LLM endpoint URL is not configured");
   });
 
   it("translates connection failures nested under AI generation errors", () => {
@@ -47,6 +47,6 @@ describe("translateOutlineApiError", () => {
         t,
         "outline:toast.generateChaptersFailed",
       ),
-    ).toBe("AI generation failed: Could not reach LLM service: timeout");
+    ).toBe("AI request failed: Could not reach LLM service: timeout");
   });
 });

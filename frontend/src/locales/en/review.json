@@ -1,1 +1,53 @@
-{}
+{
+  "page": {
+    "title": "Review",
+    "fallbackTitle": "Review",
+    "subtitle": "Read through the manuscript and get AI revision suggestions.",
+    "emptyWork": {
+      "body": "Select a work on the Works page before reviewing.",
+      "goToWorks": "Go to Works"
+    },
+    "emptyChapters": {
+      "body": "This work has no chapters yet. Generate chapters on the Outline page and finish writing before reviewing.",
+      "goToOutline": "Go to Outline"
+    },
+    "export": "Export work"
+  },
+  "reader": {
+    "tocAria": "Chapter table of contents",
+    "tocTitle": "Contents",
+    "chapterLabel": "Chapter {{number}}",
+    "progress": "Chapter {{current}} / {{total}}",
+    "noChapters": "No chapters",
+    "progressAria": "Reading progress",
+    "prevChapter": "Previous chapter",
+    "nextChapter": "Next chapter",
+    "quoteToReview": "Quote to review",
+    "loading": "Loading chapter…",
+    "emptyContent": "This chapter has no body text yet. Finish it on the Writing page, then come back to review."
+  },
+  "assistant": {
+    "title": "Review assistant",
+    "emptyHint": "Select a passage and click “Quote to review” to ask AI about plot, worldbuilding, or prose issues.",
+    "quoteLabel": "Quote: {{text}}",
+    "removeQuoteAria": "Remove quote",
+    "inputPlaceholder": "Ask AI for review feedback; @ mentions settings…",
+    "clearMemory": "Clear memory",
+    "send": "Send"
+  },
+  "clearDialog": {
+    "title": "Clear chat memory",
+    "body": "This deletes all review-assistant messages for this chapter. It cannot be undone.",
+    "confirm": "Clear"
+  },
+  "toast": {
+    "loadChaptersFailed": "Failed to load chapters",
+    "loadContentFailed": "Failed to load chapter content",
+    "exportStarted": "Work export download started",
+    "exportFailed": "Export failed",
+    "loadChatFailed": "Failed to load chat history",
+    "chatFailed": "AI reply failed; check the LLM connection",
+    "memoryCleared": "Chat memory cleared",
+    "clearMemoryFailed": "Failed to clear chat memory"
+  }
+}

@@ -3,17 +3,16 @@
  * Implements ``designs/REVIEW_PAGE_DESIGN.md`` §2: a side table of contents to
  * jump between chapters, a reading-progress indicator, previous/next chapter
  * controls, and a read-only rendering of the current chapter's body. Selecting
- * text exposes "引用到审阅" (quote to the AI) and the global "加入灵感" action.
+ * text exposes "引用到审阅" (quote to the AI); "加入灵感" lives in the assistant panel.
  */
 import { useEffect, useMemo, useRef, type ReactElement, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Button, Progress } from "@heroui/react";
 import { ChevronLeft, ChevronRight, MessageSquareQuote } from "lucide-react";
 import type { Chapter } from "../../api";
-import { AddInspirationButton } from "../../components/AddInspirationButton";
 import { getActiveSelectionText } from "../../utils/selection";
 
 interface ReviewReaderProps {
-  workId: number;
   chapters: Chapter[];
   selectedId: number | null;
   onSelect: (chapterId: number) => void;
@@ -44,12 +43,14 @@ function renderParagraph(text: string, highlight: string | null | undefined): Re
 
 /** Render the chapter table of contents alongside the reading view. */
 export function ReviewReader(props: ReviewReaderProps): ReactElement {
+  const { t } = useTranslation("review");
   const index = props.chapters.findIndex((chapter) => chapter.id === props.selectedId);
   const current = index >= 0 ? props.chapters[index] : undefined;
   const total = props.chapters.length;
   const progress = total > 0 ? ((index + 1) / total) * 100 : 0;
 
   const contentRef = useRef<HTMLElement | null>(null);
+  const capturedQuote = useRef<string | null>(null);
 
   const paragraphs = useMemo(
     () => (props.content ?? "").split(/\n+/).filter((line) => line.trim().length > 0),
@@ -73,25 +74,36 @@ export function ReviewReader(props: ReviewReaderProps): ReactElement {
   }
 
   function quoteSelection(): void {
-    const text = getActiveSelectionText().trim();
+    const text = (capturedQuote.current ?? getActiveSelectionText()).trim();
+    capturedQuote.current = null;
     if (text) {
       props.onQuote(text);
     }
   }
 
+  const chapterHeading = current
+    ? `${t("reader.chapterLabel", { number: current.chapter_number })}${
+        current.title ? ` · ${current.title}` : ""
+      }`
+    : props.title;
+
   return (
     <div className="review-reader">
-      <aside className="review-toc" aria-label="章节目录">
-        <h2>目录</h2>
+      <aside className="review-toc" aria-label={t("reader.tocAria")}>
+        <h2>{t("reader.tocTitle")}</h2>
         <ul>
           {props.chapters.map((chapter) => (
             <li key={chapter.id}>
               <button
                 type="button"
-                className={chapter.id === props.selectedId ? "review-toc-item active" : "review-toc-item"}
+                className={
+                  chapter.id === props.selectedId ? "review-toc-item active" : "review-toc-item"
+                }
                 onClick={() => props.onSelect(chapter.id)}
               >
-                <span className="review-toc-number">第 {chapter.chapter_number} 章</span>
+                <span className="review-toc-number">
+                  {t("reader.chapterLabel", { number: chapter.chapter_number })}
+                </span>
                 {chapter.title && <span className="review-toc-title">{chapter.title}</span>}
               </button>
             </li>
@@ -102,10 +114,12 @@ export function ReviewReader(props: ReviewReaderProps): ReactElement {
       <div className="review-main">
         <div className="review-progress">
           <span>
-            {total > 0 ? `第 ${index + 1} / ${total} 章` : "暂无章节"}
+            {total > 0
+              ? t("reader.progress", { current: index + 1, total })
+              : t("reader.noChapters")}
           </span>
           <Progress
-            aria-label="阅读进度"
+            aria-label={t("reader.progressAria")}
             size="sm"
             value={progress}
             className="review-progress-bar"
@@ -115,7 +129,7 @@ export function ReviewReader(props: ReviewReaderProps): ReactElement {
               size="sm"
               variant="flat"
               isIconOnly
-              aria-label="上一章"
+              aria-label={t("reader.prevChapter")}
               isDisabled={index <= 0}
               onPress={() => go(-1)}
             >
@@ -125,7 +139,7 @@ export function ReviewReader(props: ReviewReaderProps): ReactElement {
               size="sm"
               variant="flat"
               isIconOnly
-              aria-label="下一章"
+              aria-label={t("reader.nextChapter")}
               isDisabled={index < 0 || index >= total - 1}
               onPress={() => go(1)}
             >
@@ -139,27 +153,22 @@ export function ReviewReader(props: ReviewReaderProps): ReactElement {
             size="sm"
             variant="flat"
             startContent={<MessageSquareQuote size={15} />}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              capturedQuote.current = getActiveSelectionText();
+            }}
             onPress={quoteSelection}
           >
-            引用到审阅
+            {t("reader.quoteToReview")}
           </Button>
-          <AddInspirationButton
-            source={{
-              source_page: "review",
-              work_id: props.workId,
-              chapter_id: props.selectedId,
-            }}
-          />
         </div>
 
         <article className="review-content" ref={contentRef}>
-          <h3 className="review-content-title">
-            {current ? `第 ${current.chapter_number} 章${current.title ? ` · ${current.title}` : ""}` : props.title}
-          </h3>
+          <h3 className="review-content-title">{chapterHeading}</h3>
           {props.loading ? (
-            <p className="assistant-hint">正在加载正文…</p>
+            <p className="assistant-hint">{t("reader.loading")}</p>
           ) : paragraphs.length === 0 ? (
-            <p className="assistant-hint">本章还没有正文。可前往写作页完成本章后再来审阅。</p>
+            <p className="assistant-hint">{t("reader.emptyContent")}</p>
           ) : (
             paragraphs.map((paragraph, idx) => (
               <p key={idx}>{renderParagraph(paragraph, props.highlight)}</p>

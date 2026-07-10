@@ -13,5 +13,19 @@
     "inspirationDraftTitle": "Inspiration scratchpad",
     "inspirationDraftPlaceholder": "Jot down a line of dialogue, a plot turn, or a worldbuilding note…",
     "saveToInspiration": "Save to inspirations"
+  },
+  "saveStatus": {
+    "idle": "Unchanged",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "error": "Save failed"
+  },
+  "breadcrumb": {
+    "ariaLabel": "Current work context"
+  },
+  "mention": {
+    "title": "Link setting entry",
+    "searching": "Searching…",
+    "notFound": "No setting entries found"
   }
 }

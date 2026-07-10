@@ -1,4 +1,6 @@
 /** Integration test for the writing page (chapter load, editor, assistant). */
+import "../i18n";
+import i18n from "../i18n";
 import { useState, type ReactElement } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -9,6 +11,7 @@ import { AssistantProvider } from "../context/AssistantContext";
 import { AssistantPanel } from "../components/AssistantPanel";
 import { ToastProvider } from "../components/Toast";
 import { WritingPage } from "../pages/WritingPage";
+import { LOCALE_STORAGE_KEY } from "../utils/locale";
 
 const sampleOutline = vi.hoisted(
   () =>
@@ -103,9 +106,11 @@ function renderPage() {
 }
 
 describe("WritingPage", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     localStorage.clear();
+    localStorage.setItem(LOCALE_STORAGE_KEY, "zh");
+    await i18n.changeLanguage("zh");
   });
 
   it("loads the first chapter's content and shows the live word count", async () => {
@@ -113,14 +118,20 @@ describe("WritingPage", () => {
     // Wait for the async chapter content to populate the editor rather than
     // asserting at the moment the (initially empty) textarea first renders.
     expect(await screen.findByDisplayValue("你好世界")).toBeInTheDocument();
-    expect(screen.getByText(/本章 4 字/)).toBeInTheDocument();
+    expect(
+      screen.getByText(i18n.t("writing:editor.wordCount", { chapter: 4, total: 4 })),
+    ).toBeInTheDocument();
   });
 
   it("renders the writing assistant in the panel", async () => {
     renderPage();
-    await screen.findByPlaceholderText(/撰写本章正文/);
-    expect(screen.getByRole("button", { name: "前情提要" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /发送/ })).toBeInTheDocument();
+    await screen.findByPlaceholderText(i18n.t("writing:editor.placeholder"));
+    expect(
+      screen.getByRole("button", { name: i18n.t("writing:assistant.recap") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: i18n.t("writing:assistant.send") }),
+    ).toBeInTheDocument();
   });
 
   it("can switch chapters via the selector", async () => {

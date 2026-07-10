@@ -6,6 +6,7 @@
  * The original is only replaced once the user confirms.
  */
 import { useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Button,
   Checkbox,
@@ -20,6 +21,7 @@ import {
 import { rewritePassage } from "../../api";
 import { useToast } from "../../components/Toast";
 import { surroundingParagraphs } from "../../utils/paragraphs";
+import { translateWritingApiError } from "../../utils/writingApiError";
 
 interface RewriteDialogProps {
   isOpen: boolean;
@@ -36,6 +38,7 @@ interface RewriteDialogProps {
 
 /** Render the rewrite instruction form and the original/rewritten diff preview. */
 export function RewriteDialog(props: RewriteDialogProps): ReactElement {
+  const { t } = useTranslation(["writing", "common", "errors"]);
   const { notify } = useToast();
   const [instruction, setInstruction] = useState("");
   const [strengthen, setStrengthen] = useState(false);
@@ -56,8 +59,9 @@ export function RewriteDialog(props: RewriteDialogProps): ReactElement {
         following: neighbors.following || undefined,
       });
       setRewritten(result.rewritten);
-    } catch {
-      notify("重写失败，请检查 LLM 连接", "error");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : null;
+      notify(translateWritingApiError(message, t, "writing:toast.rewriteFailed"), "error");
     } finally {
       setLoading(false);
     }
@@ -80,28 +84,28 @@ export function RewriteDialog(props: RewriteDialogProps): ReactElement {
       classNames={{ base: "rewrite-drawer" }}
     >
       <DrawerContent>
-        <DrawerHeader>局部重写</DrawerHeader>
+        <DrawerHeader>{t("writing:rewrite.title")}</DrawerHeader>
         <DrawerBody>
           <Textarea
-            label="重写要求（可选）"
+            label={t("writing:rewrite.instructionLabel")}
             minRows={2}
             value={instruction}
             onValueChange={setInstruction}
-            placeholder="例如：更紧张、精简对话、改为第一人称…"
+            placeholder={t("writing:rewrite.instructionPlaceholder")}
           />
-          <Tooltip content="将选区前后各 2 个自然段作为上下文，让重写与前后文更连贯（仍只替换选区）">
+          <Tooltip content={t("writing:rewrite.strengthenTooltip")}>
             <Checkbox size="sm" isSelected={strengthen} onValueChange={setStrengthen}>
-              强化衔接
+              {t("writing:rewrite.strengthen")}
             </Checkbox>
           </Tooltip>
           {rewritten !== null && (
             <div className="rewrite-diff">
               <div className="rewrite-pane">
-                <h4>原文</h4>
+                <h4>{t("writing:rewrite.original")}</h4>
                 <p>{props.selection}</p>
               </div>
               <div className="rewrite-pane rewrite-pane-new">
-                <h4>重写</h4>
+                <h4>{t("writing:rewrite.rewritten")}</h4>
                 <p>{rewritten}</p>
               </div>
             </div>
@@ -109,10 +113,10 @@ export function RewriteDialog(props: RewriteDialogProps): ReactElement {
         </DrawerBody>
         <DrawerFooter>
           <Button variant="light" onPress={handleClose}>
-            取消
+            {t("common:cancel")}
           </Button>
           <Button variant="flat" isLoading={loading} onPress={() => void runRewrite()}>
-            {rewritten === null ? "生成重写" : "重新生成"}
+            {rewritten === null ? t("writing:rewrite.generate") : t("writing:rewrite.regenerate")}
           </Button>
           <Button
             color="primary"
@@ -124,7 +128,7 @@ export function RewriteDialog(props: RewriteDialogProps): ReactElement {
               }
             }}
           >
-            应用替换
+            {t("writing:rewrite.apply")}
           </Button>
         </DrawerFooter>
       </DrawerContent>

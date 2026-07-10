@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
+from app.deps.locale import PromptLocale, get_request_locale
 from app.models import Chapter, Work, WorkStage
 from app.schemas import (
     ChapterCreate,
@@ -34,6 +35,7 @@ from app.services.prompts import (
     build_stage_generation_prompt,
 )
 from app.services.references import reference_block_for_texts, with_references
+from app.services.story_structure_i18n import index_stage_generation_results
 
 router = APIRouter(tags=["outline"])
 
@@ -131,7 +133,11 @@ async def get_outline(work_id: int, db: AsyncSession = Depends(get_db)) -> Outli
 
 
 @router.post("/works/{work_id}/outline/stages:generate", response_model=OutlineRead)
-async def generate_stages(work_id: int, db: AsyncSession = Depends(get_db)) -> OutlineRead:
+async def generate_stages(
+    work_id: int,
+    db: AsyncSession = Depends(get_db),
+    locale: PromptLocale = Depends(get_request_locale),
+) -> OutlineRead:
     """Generate the stage tree and synopses, replacing any existing outline."""
     work = await _get_work(db, work_id)
     structure = work.structure
@@ -140,11 +146,19 @@ async def generate_stages(work_id: int, db: AsyncSession = Depends(get_db)) -> O
         raise HTTPException(status_code=400, detail="请先为作品选择包含阶段的故事结构")
 
     try:
-        connection, system_prompt, params = await resolve_llm_context(db, "outline_stages")
-        reference_block = await reference_block_for_texts(db, work_id, [work.summary or ""])
+        connection, system_prompt, params = await resolve_llm_context(
+            db, "outline_stages", locale=locale
+        )
+        reference_block = await reference_block_for_texts(
+            db, work_id, [work.summary or ""], locale=locale
+        )
         user_prompt = with_references(
             build_stage_generation_prompt(
-                work_info_block(work), stage_names, work.planned_chapter_count
+                work_info_block(work, locale=locale),
+                stage_names,
+                work.planned_chapter_count,
+                structure_name=structure.name if structure else None,
+                locale=locale,
             ),
             reference_block,
         )
@@ -159,7 +173,7 @@ async def generate_stages(work_id: int, db: AsyncSession = Depends(get_db)) -> O
     except (LLMRequestError, ValueError) as exc:
         raise HTTPException(status_code=502, detail=f"AI 生成失败：{exc}") from exc
 
-    by_name = {str(item.get("name")): item for item in parsed if isinstance(item, dict)}
+    by_name = index_stage_generation_results(parsed, structure.name if structure else None)
     fallback = allocate_chapter_counts(
         len(stage_names), work.planned_chapter_count or len(stage_names)
     )
@@ -194,7 +208,9 @@ async def generate_stages(work_id: int, db: AsyncSession = Depends(get_db)) -> O
 
 @router.post("/works/{work_id}/outline/chapters:generate", response_model=OutlineRead)
 async def generate_chapter_outlines(
-    work_id: int, db: AsyncSession = Depends(get_db)
+    work_id: int,
+    db: AsyncSession = Depends(get_db),
+    locale: PromptLocale = Depends(get_request_locale),
 ) -> OutlineRead:
     """Generate per-chapter titles and summaries, then lock the outline."""
     work = await _get_work(db, work_id)
@@ -211,12 +227,18 @@ async def generate_chapter_outlines(
         )
 
     try:
-        connection, system_prompt, params = await resolve_llm_context(db, "outline_chapters")
+        connection, system_prompt, params = await resolve_llm_context(
+            db, "outline_chapters", locale=locale
+        )
         texts = [work.summary or ""] + [stage.overview or "" for stage in stages]
-        reference_block = await reference_block_for_texts(db, work_id, texts)
+        reference_block = await reference_block_for_texts(db, work_id, texts, locale=locale)
         user_prompt = with_references(
             build_chapter_generation_prompt(
-                work_info_block(work), stage_payload, [c.chapter_number for c in chapters]
+                work_info_block(work, locale=locale),
+                stage_payload,
+                [c.chapter_number for c in chapters],
+                structure_name=work.structure.name if work.structure else None,
+                locale=locale,
             ),
             reference_block,
         )

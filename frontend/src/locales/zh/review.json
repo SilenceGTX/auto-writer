@@ -1,1 +1,53 @@
-{}
+{
+  "page": {
+    "title": "审阅",
+    "fallbackTitle": "审阅",
+    "subtitle": "通读全文，并借助 AI 提出修改建议。",
+    "emptyWork": {
+      "body": "请先在作品页选择一个作品，再进入审阅。",
+      "goToWorks": "前往作品页"
+    },
+    "emptyChapters": {
+      "body": "该作品还没有章节。请先在大纲页生成章节并完成写作后再来审阅。",
+      "goToOutline": "前往大纲页"
+    },
+    "export": "导出作品"
+  },
+  "reader": {
+    "tocAria": "章节目录",
+    "tocTitle": "目录",
+    "chapterLabel": "第 {{number}} 章",
+    "progress": "第 {{current}} / {{total}} 章",
+    "noChapters": "暂无章节",
+    "progressAria": "阅读进度",
+    "prevChapter": "上一章",
+    "nextChapter": "下一章",
+    "quoteToReview": "引用到审阅",
+    "loading": "正在加载正文…",
+    "emptyContent": "本章还没有正文。可前往写作页完成本章后再来审阅。"
+  },
+  "assistant": {
+    "title": "审阅助手",
+    "emptyHint": "选中正文片段后点击「引用到审阅」，请 AI 检查情节、设定与文字问题。",
+    "quoteLabel": "引用：{{text}}",
+    "removeQuoteAria": "移除引用",
+    "inputPlaceholder": "向 AI 提问或请求审阅意见，@ 可引用设定…",
+    "clearMemory": "清空记忆",
+    "send": "发送"
+  },
+  "clearDialog": {
+    "title": "清空对话记忆",
+    "body": "将删除本章节审阅助手下的全部对话记录，且无法恢复。",
+    "confirm": "清空"
+  },
+  "toast": {
+    "loadChaptersFailed": "无法加载章节列表",
+    "loadContentFailed": "无法加载章节正文",
+    "exportStarted": "作品导出已开始下载",
+    "exportFailed": "导出失败",
+    "loadChatFailed": "无法加载对话历史",
+    "chatFailed": "AI 回复失败，请检查 LLM 连接",
+    "memoryCleared": "对话记忆已清空",
+    "clearMemoryFailed": "清空对话记忆失败"
+  }
+}

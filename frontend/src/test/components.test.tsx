@@ -1,8 +1,11 @@
 /** Tests for presentational components: Breadcrumb and SaveStatus. */
+import "../i18n";
+import i18n from "../i18n";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { Breadcrumb } from "../components/Breadcrumb";
 import { SaveStatus } from "../components/SaveStatus";
+import { LOCALE_STORAGE_KEY } from "../utils/locale";
 
 describe("Breadcrumb", () => {
   it("renders all items with separators between them", () => {
@@ -15,13 +18,18 @@ describe("Breadcrumb", () => {
 });
 
 describe("SaveStatus", () => {
+  beforeEach(async () => {
+    localStorage.setItem(LOCALE_STORAGE_KEY, "zh");
+    await i18n.changeLanguage("zh");
+  });
+
   it("shows the saved label for the saved state", () => {
     render(<SaveStatus state="saved" />);
-    expect(screen.getByText("已保存")).toBeInTheDocument();
+    expect(screen.getByText(i18n.t("common:saveStatus.saved"))).toBeInTheDocument();
   });
 
   it("shows the error label for the error state", () => {
     render(<SaveStatus state="error" />);
-    expect(screen.getByText("保存失败")).toBeInTheDocument();
+    expect(screen.getByText(i18n.t("common:saveStatus.error"))).toBeInTheDocument();
   });
 });

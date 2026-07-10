@@ -1,0 +1,7 @@
+【作品信息】
+- 作品名称：{{ title }}
+- 故事结构：{{ structure_name }}（阶段：{{ stages_text }}）
+{% if structure_description %}- 结构说明：{{ structure_description }}
+{% endif %}{% if planned_chapter_count is not none %}- 预计章节数：{{ planned_chapter_count }}
+{% endif %}{% if actual_chapter_count is not none %}- 实际章节数：{{ actual_chapter_count }}
+{% endif %}- 作品简介：{{ summary }}

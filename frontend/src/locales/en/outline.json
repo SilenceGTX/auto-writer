@@ -90,16 +90,7 @@
   "errors": {
     "needStructure": "Choose a story structure with stages for this work first",
     "needStages": "Generate the stage tree and assign chapters first",
-    "aiFailed": "AI generation failed: {{detail}}",
-    "workNotFound": "Work not found",
-    "stageNotFound": "Stage not found",
-    "chapterNotFound": "Chapter not found",
-    "chapterWrongWork": "Chapter does not belong to this work",
-    "missingUrl": "LLM endpoint URL is not configured",
-    "parseError": "Could not parse LLM response",
-    "jsonParseFailed": "Could not parse JSON from the LLM response",
-    "connectionFailed": "Could not reach LLM service: {{detail}}",
-    "httpError": "LLM returned an error ({{status}}): {{detail}}"
+    "chapterWrongWork": "Chapter does not belong to this work"
   },
   "selectionActions": {
     "addInspiration": {
