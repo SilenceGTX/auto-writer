@@ -1,0 +1,10 @@
+{{ work_info }}
+{% if chapter_number is not none %}
+
+当前章节：{{ chapter_heading }}
+{% if chapter_summary %}本章概述：{{ chapter_summary }}
+{% endif %}{% endif %}{% if quoted %}
+
+用户引用的正文片段：
+{{ quoted }}
+{% endif %}

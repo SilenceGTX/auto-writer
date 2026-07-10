@@ -1,0 +1,9 @@
+{{ work_info }}
+
+Story structure stages (in order, {{ stage_count }} total): {{ stage_list }}
+{{ chapter_target }}
+
+For each stage, assign a chapter count and write a synopsis (stage overview) that captures its key plot direction.
+Return exactly one object per stage; each `name` must match the stage names above, and the JSON array length must be exactly {{ stage_count }}.
+Return only a JSON array with no explanation or Markdown code fences, in this shape:
+[{"name": "stage name", "chapter_count": integer, "overview": "stage synopsis"}]

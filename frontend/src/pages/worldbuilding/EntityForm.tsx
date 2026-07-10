@@ -5,6 +5,7 @@
  * reuse / template mechanism (candidate names derived per category).
  */
 import { useEffect, useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { Button, Chip, Input, Select, SelectItem, Textarea } from "@heroui/react";
 import { Plus, Trash2 } from "lucide-react";
 import {
@@ -16,6 +17,7 @@ import {
   type WorldEntity,
 } from "../../api";
 import { useToast } from "../../components/Toast";
+import { translateCategoryName } from "../../utils/entityCategoryI18n";
 
 const TEMPLATE_LIMIT = 5;
 
@@ -34,6 +36,7 @@ interface EntityFormProps {
 export function EntityForm(props: EntityFormProps): ReactElement {
   const { entity } = props;
   const isEdit = entity !== null;
+  const { t } = useTranslation(["concept", "common"]);
   const { notify } = useToast();
 
   const [name, setName] = useState(entity?.name ?? props.initialName ?? "");
@@ -50,7 +53,6 @@ export function EntityForm(props: EntityFormProps): ReactElement {
         const names = await listPropertyNames(categoryId);
         if (!active) return;
         setCandidates(names);
-        // Property template: prefill empty rows for a new entry only.
         if (!isEdit) {
           setProperties((current) =>
             current.length > 0
@@ -86,7 +88,7 @@ export function EntityForm(props: EntityFormProps): ReactElement {
 
   async function handleSave(): Promise<void> {
     if (!name.trim()) {
-      notify("请填写条目名称", "error");
+      notify(t("concept:toast.nameRequired"), "error");
       return;
     }
     const cleaned = properties
@@ -109,9 +111,12 @@ export function EntityForm(props: EntityFormProps): ReactElement {
             properties: cleaned,
           });
       props.onSaved(saved);
-      notify(isEdit ? "条目已保存" : "条目已创建", "success");
+      notify(isEdit ? t("concept:toast.entitySaved") : t("concept:toast.entityCreated"), "success");
     } catch {
-      notify(isEdit ? "保存条目失败" : "创建条目失败", "error");
+      notify(
+        isEdit ? t("concept:toast.entitySaveFailed") : t("concept:toast.entityCreateFailed"),
+        "error",
+      );
     } finally {
       setSaving(false);
     }
@@ -119,10 +124,18 @@ export function EntityForm(props: EntityFormProps): ReactElement {
 
   return (
     <section className={props.embedded ? "entity-form-embedded" : "assistant-section work-form"}>
-      {!props.embedded && <h2>{isEdit ? "编辑条目" : "新建条目"}</h2>}
-      <Input label="条目名称" value={name} onValueChange={setName} autoFocus isRequired />
+      {!props.embedded && (
+        <h2>{isEdit ? t("concept:form.editTitle") : t("concept:form.createTitle")}</h2>
+      )}
+      <Input
+        label={t("concept:form.nameLabel")}
+        value={name}
+        onValueChange={setName}
+        autoFocus
+        isRequired
+      />
       <Select
-        label="设定种类"
+        label={t("concept:form.categoryLabel")}
         selectedKeys={[String(categoryId)]}
         onSelectionChange={(keys) => {
           const key = Array.from(keys)[0] as string | undefined;
@@ -130,38 +143,43 @@ export function EntityForm(props: EntityFormProps): ReactElement {
         }}
       >
         {props.categories.map((category) => (
-          <SelectItem key={String(category.id)}>{category.name}</SelectItem>
+          <SelectItem key={String(category.id)}>{translateCategoryName(category, t)}</SelectItem>
         ))}
       </Select>
       <Textarea
-        label="描述"
+        label={t("concept:form.descriptionLabel")}
         minRows={3}
         value={description}
         onValueChange={setDescription}
-        placeholder="对该条目的简短描述..."
+        placeholder={t("concept:form.descriptionPlaceholder")}
       />
 
       <div className="entity-properties">
         <div className="entity-properties-head">
-          <span>属性</span>
-          <Button size="sm" variant="flat" startContent={<Plus size={14} />} onPress={() => addProperty()}>
-            添加属性
+          <span>{t("concept:form.propertiesTitle")}</span>
+          <Button
+            size="sm"
+            variant="flat"
+            startContent={<Plus size={14} />}
+            onPress={() => addProperty()}
+          >
+            {t("concept:form.addProperty")}
           </Button>
         </div>
         {properties.map((prop, index) => (
           <div className="entity-property-row" key={index}>
             <Input
-              aria-label="属性名称"
+              aria-label={t("concept:form.propertyNameAria")}
               size="sm"
-              placeholder="名称"
+              placeholder={t("concept:form.propertyNamePlaceholder")}
               list="entity-property-names"
               value={prop.name}
               onValueChange={(value) => updateProperty(index, { name: value })}
             />
             <Input
-              aria-label="属性值"
+              aria-label={t("concept:form.propertyValueAria")}
               size="sm"
-              placeholder="值"
+              placeholder={t("concept:form.propertyValuePlaceholder")}
               value={prop.value}
               onValueChange={(value) => updateProperty(index, { value })}
             />
@@ -170,7 +188,7 @@ export function EntityForm(props: EntityFormProps): ReactElement {
               size="sm"
               variant="light"
               color="danger"
-              aria-label="删除属性"
+              aria-label={t("concept:form.deletePropertyAria")}
               onPress={() => removeProperty(index)}
             >
               <Trash2 size={15} />
@@ -184,7 +202,7 @@ export function EntityForm(props: EntityFormProps): ReactElement {
         </datalist>
         {unusedCandidates.length > 0 && (
           <div className="entity-property-suggest">
-            <span>常用属性：</span>
+            <span>{t("concept:form.commonProperties")}</span>
             {unusedCandidates.map((propName) => (
               <Chip
                 key={propName}
@@ -203,21 +221,24 @@ export function EntityForm(props: EntityFormProps): ReactElement {
       {isEdit && (
         <div className="entity-meta">
           <div className="entity-reference">
-            <span>引用情况</span>
-            <p>暂无引用（待 @ 引用功能上线后展示）。</p>
+            <span>{t("concept:form.referencesTitle")}</span>
+            <p>{t("concept:form.referencesEmpty")}</p>
           </div>
           <p className="entity-timestamps">
-            创建于 {entity.created_at} · 更新于 {entity.updated_at}
+            {t("concept:form.timestamps", {
+              created: entity.created_at,
+              updated: entity.updated_at,
+            })}
           </p>
         </div>
       )}
 
       <div className="form-actions">
         <Button variant="light" onPress={props.onCancel}>
-          取消
+          {t("common:cancel")}
         </Button>
         <Button color="primary" isLoading={saving} onPress={() => void handleSave()}>
-          {isEdit ? "保存" : "创建条目"}
+          {isEdit ? t("common:save") : t("concept:form.createSubmit")}
         </Button>
       </div>
     </section>

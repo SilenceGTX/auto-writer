@@ -14,7 +14,7 @@ export interface WorkProgress {
   total: number;
   /** Completion percentage in the range [0, 100]. */
   percent: number;
-  /** Human-readable progress label, e.g. "3/20" or "前期筹备". */
+  /** Human-readable progress label, e.g. "3/20". Empty when ``isPrep`` is true. */
   label: string;
 }
 
@@ -29,7 +29,7 @@ export function computeProgress(work: Work): WorkProgress {
   const total = progressTotalChapters(work);
 
   if (written <= 0) {
-    return { isPrep: true, written: 0, total, percent: 0, label: "前期筹备" };
+    return { isPrep: true, written: 0, total, percent: 0, label: "" };
   }
 
   const percent = total > 0 ? Math.min(100, Math.round((written / total) * 100)) : 0;

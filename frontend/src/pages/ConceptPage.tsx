@@ -6,6 +6,7 @@
  */
 import { useCallback, useEffect, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Button, Input, Pagination, Select, SelectItem, Tooltip } from "@heroui/react";
 import { ArrowDownNarrowWide, ArrowUpNarrowWide, Plus, Search } from "lucide-react";
@@ -23,22 +24,24 @@ import { useAssistant } from "../context/AssistantContext";
 import { useToast } from "../components/Toast";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { WorkTitleSelect } from "../components/WorkTitleSelect";
+import { translateCategoryName } from "../utils/entityCategoryI18n";
 import { CategoryTabs } from "./worldbuilding/CategoryTabs";
 import { EntityCard } from "./worldbuilding/EntityCard";
 import { EntityForm } from "./worldbuilding/EntityForm";
 
 const PAGE_SIZE = 12;
 
-const SORT_OPTIONS = [
-  { key: "sort_order", label: "默认顺序" },
-  { key: "name", label: "名称" },
-  { key: "created_at", label: "创建时间" },
-];
+const SORT_OPTION_KEYS = [
+  { key: "sort_order", labelKey: "toolbar.sortDefault" },
+  { key: "name", labelKey: "toolbar.sortName" },
+  { key: "created_at", labelKey: "toolbar.sortCreatedAt" },
+] as const;
 
 type PanelState = { mode: "none" } | { mode: "create" } | { mode: "edit"; entity: WorldEntity };
 
 /** Render the worldbuilding management page for the current work. */
 export function ConceptPage(): ReactElement {
+  const { t } = useTranslation(["concept", "common"]);
   const navigate = useNavigate();
   const { notify } = useToast();
   const { currentWorkId } = useApp();
@@ -89,9 +92,9 @@ export function ConceptPage(): ReactElement {
           : (data[0]?.id ?? null),
       );
     } catch {
-      notify("无法加载设定种类", "error");
+      notify(t("concept:toast.loadCategoriesFailed"), "error");
     }
-  }, [currentWorkId, notify]);
+  }, [currentWorkId, notify, t]);
 
   useEffect(() => {
     void loadCategories();
@@ -122,9 +125,9 @@ export function ConceptPage(): ReactElement {
       setEntities(data.items);
       setTotal(data.total);
     } catch {
-      notify("无法加载设定条目", "error");
+      notify(t("concept:toast.loadEntitiesFailed"), "error");
     }
-  }, [currentWorkId, activeId, search, sortBy, order, page, notify]);
+  }, [currentWorkId, activeId, search, sortBy, order, page, notify, t]);
 
   useEffect(() => {
     void loadEntities();
@@ -146,15 +149,15 @@ export function ConceptPage(): ReactElement {
     try {
       const created = await createEntity(currentWorkId, {
         category_id: entity.category_id,
-        name: `${entity.name} 副本`,
+        name: `${entity.name} ${t("concept:entity.copySuffix")}`,
         description: entity.description,
         properties: entity.properties,
       });
       await Promise.all([loadEntities(), loadCategories()]);
       openPanel({ mode: "edit", entity: created });
-      notify("已复制条目", "success");
+      notify(t("concept:toast.copied"), "success");
     } catch {
-      notify("复制条目失败", "error");
+      notify(t("concept:toast.copyFailed"), "error");
     }
   }
 
@@ -166,9 +169,9 @@ export function ConceptPage(): ReactElement {
         setPanel({ mode: "none" });
       }
       await Promise.all([loadEntities(), loadCategories()]);
-      notify("条目已删除", "success");
+      notify(t("concept:toast.entityDeleted"), "success");
     } catch {
-      notify("删除条目失败", "error");
+      notify(t("concept:toast.entityDeleteFailed"), "error");
     } finally {
       setPendingDeleteEntity(null);
     }
@@ -183,9 +186,9 @@ export function ConceptPage(): ReactElement {
       }
       setPanel({ mode: "none" });
       await loadCategories();
-      notify("种类已删除", "success");
+      notify(t("concept:toast.categoryDeleted"), "success");
     } catch {
-      notify("删除种类失败", "error");
+      notify(t("concept:toast.categoryDeleteFailed"), "error");
     } finally {
       setPendingDeleteCategory(null);
     }
@@ -195,10 +198,10 @@ export function ConceptPage(): ReactElement {
     return (
       <section className="workspace-page">
         <div className="outline-empty">
-          <h1>设定</h1>
-          <p>请先在作品页选择一个作品，再来管理世界观设定。</p>
+          <h1>{t("concept:page.title")}</h1>
+          <p>{t("concept:page.emptyWork.body")}</p>
           <Button color="primary" onPress={() => navigate("/works")}>
-            前往作品页
+            {t("concept:page.emptyWork.goToWorks")}
           </Button>
         </div>
       </section>
@@ -207,6 +210,7 @@ export function ConceptPage(): ReactElement {
 
   const activeCategory = categories.find((category) => category.id === activeId) ?? null;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const activeCategoryLabel = activeCategory ? translateCategoryName(activeCategory, t) : "";
 
   const assistantContent =
     panel.mode === "create" && activeId != null ? (
@@ -235,8 +239,8 @@ export function ConceptPage(): ReactElement {
     <section className="workspace-page">
       <div className="page-header">
         <div>
-          <WorkTitleSelect fallback="设定" />
-          <p>维护角色、地点、物品与概念，写作时可通过 @ 引用它们。</p>
+          <WorkTitleSelect fallback={t("concept:page.fallbackTitle")} />
+          <p>{t("concept:page.subtitle")}</p>
         </div>
         <Button
           color="primary"
@@ -244,7 +248,7 @@ export function ConceptPage(): ReactElement {
           isDisabled={activeId == null}
           onPress={() => openPanel({ mode: "create" })}
         >
-          新建条目
+          {t("concept:page.createEntity")}
         </Button>
       </div>
 
@@ -263,7 +267,7 @@ export function ConceptPage(): ReactElement {
       <div className="entity-toolbar">
         <Input
           className="entity-search"
-          placeholder="搜索条目名称或描述"
+          placeholder={t("concept:toolbar.searchPlaceholder")}
           startContent={<Search size={16} />}
           value={searchInput}
           onValueChange={setSearchInput}
@@ -271,7 +275,7 @@ export function ConceptPage(): ReactElement {
           onClear={() => setSearchInput("")}
         />
         <Select
-          aria-label="排序方式"
+          aria-label={t("concept:toolbar.sortAria")}
           className="entity-sort"
           selectedKeys={[sortBy]}
           onSelectionChange={(keys) => {
@@ -282,15 +286,25 @@ export function ConceptPage(): ReactElement {
             }
           }}
         >
-          {SORT_OPTIONS.map((option) => (
-            <SelectItem key={option.key}>{option.label}</SelectItem>
+          {SORT_OPTION_KEYS.map((option) => (
+            <SelectItem key={option.key}>{t(`concept:${option.labelKey}`)}</SelectItem>
           ))}
         </Select>
-        <Tooltip content={order === "asc" ? "正序（点击切换倒序）" : "倒序（点击切换正序）"}>
+        <Tooltip
+          content={
+            order === "asc"
+              ? t("concept:toolbar.orderAscTooltip")
+              : t("concept:toolbar.orderDescTooltip")
+          }
+        >
           <Button
             isIconOnly
             variant="flat"
-            aria-label={order === "asc" ? "切换为倒序" : "切换为正序"}
+            aria-label={
+              order === "asc"
+                ? t("concept:toolbar.switchToDesc")
+                : t("concept:toolbar.switchToAsc")
+            }
             onPress={() => {
               setOrder((current) => (current === "asc" ? "desc" : "asc"));
               setPage(1);
@@ -307,8 +321,10 @@ export function ConceptPage(): ReactElement {
 
       {entities.length === 0 ? (
         <p className="entity-empty">
-          {activeCategory ? `「${activeCategory.name}」下还没有条目。` : "请先选择一个种类。"}
-          {activeId != null && " 点击右上角「新建条目」开始添加。"}
+          {activeCategory
+            ? t("concept:entity.emptyInCategory", { category: activeCategoryLabel })
+            : t("concept:entity.emptyNoCategory")}
+          {activeId != null && t("concept:entity.emptyHint")}
         </p>
       ) : (
         <div className="entity-grid">
@@ -335,9 +351,10 @@ export function ConceptPage(): ReactElement {
 
       <ConfirmDialog
         isOpen={pendingDeleteEntity !== null}
-        title="删除条目"
-        body={`确定要删除「${pendingDeleteEntity?.name ?? ""}」吗？此操作不可恢复。`}
-        confirmLabel="删除"
+        title={t("concept:deleteDialog.entityTitle")}
+        body={t("concept:deleteDialog.entityBody", { name: pendingDeleteEntity?.name ?? "" })}
+        confirmLabel={t("concept:deleteDialog.confirm")}
+        cancelLabel={t("common:cancel")}
         danger
         onConfirm={() => void handleConfirmDeleteEntity()}
         onCancel={() => setPendingDeleteEntity(null)}
@@ -345,9 +362,12 @@ export function ConceptPage(): ReactElement {
 
       <ConfirmDialog
         isOpen={pendingDeleteCategory !== null}
-        title="删除种类"
-        body={`确定要删除种类「${pendingDeleteCategory?.name ?? ""}」吗？该种类下的所有条目都会被一并删除，且无法恢复。`}
-        confirmLabel="删除"
+        title={t("concept:deleteDialog.categoryTitle")}
+        body={t("concept:deleteDialog.categoryBody", {
+          name: pendingDeleteCategory ? translateCategoryName(pendingDeleteCategory, t) : "",
+        })}
+        confirmLabel={t("concept:deleteDialog.confirm")}
+        cancelLabel={t("common:cancel")}
         danger
         onConfirm={() => void handleConfirmDeleteCategory()}
         onCancel={() => setPendingDeleteCategory(null)}

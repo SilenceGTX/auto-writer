@@ -1,0 +1,166 @@
+{
+  "page": {
+    "title": "Works",
+    "subtitle": "Manage series and works, then jump into outline, writing, or review.",
+    "searchPlaceholder": "Search works or series",
+    "tableLabel": "Works list",
+    "empty": "No works yet. Click “New work” in the top right to get started."
+  },
+  "columns": {
+    "series": "Series",
+    "title": "Work",
+    "structure": "Structure",
+    "status": "Status",
+    "progress": "Progress",
+    "wordCount": "Words",
+    "createdAt": "Created",
+    "updatedAt": "Updated",
+    "actions": "Actions"
+  },
+  "status": {
+    "drafting": "In progress",
+    "completed": "Completed",
+    "onHold": "On hold",
+    "changeLabel": "Change status"
+  },
+  "progress": {
+    "prep": "Pre-writing",
+    "ariaLabel": "Writing progress"
+  },
+  "actions": {
+    "createWork": "New work",
+    "export": "Export",
+    "exportJson": "Export JSON",
+    "exportMarkdown": "Export Markdown",
+    "exportFormatLabel": "Export format",
+    "delete": "Delete",
+    "confirm": "Confirm"
+  },
+  "toast": {
+    "loadWorksFailed": "Failed to load works",
+    "loadMetaFailed": "Failed to load series or story structures",
+    "statusUpdateFailed": "Failed to update status",
+    "exportStarted": "Download started",
+    "exportFailed": "Export failed",
+    "deleted": "Work deleted",
+    "deleteFailed": "Failed to delete work",
+    "created": "Work created",
+    "updated": "Work updated",
+    "updateFailed": "Failed to update work",
+    "titleRequired": "Enter a work title",
+    "createFailed": "Failed to create work",
+    "seriesCreated": "Series created",
+    "seriesCreateFailed": "Failed to create series (name may already exist)",
+    "structureCreated": "Custom structure created",
+    "structureCreateFailed": "Failed to create structure",
+    "structureFieldsRequired": "Enter a structure name and stages separated by -",
+    "regenerateHint": "Regenerate from the Outline page using the new structure"
+  },
+  "deleteDialog": {
+    "title": "Delete work",
+    "body": "Delete work “{{title}}”? This cannot be undone."
+  },
+  "createForm": {
+    "title": "New work",
+    "titleLabel": "Title",
+    "plannedChapters": "Approx. chapter count",
+    "summary": "Summary",
+    "submit": "Create work"
+  },
+  "detail": {
+    "title": "Work details",
+    "totalChapters": "Total chapters",
+    "chaptersLockedHint": "Outline is locked; chapter count follows the outline",
+    "stats": {
+      "status": "Status",
+      "progress": "Progress",
+      "wordCount": "Words",
+      "avgWordsPerChapter": "Avg. words per chapter",
+      "createdAt": "Created",
+      "updatedAt": "Updated",
+      "wordCountUnit": "{{count}} words"
+    },
+    "save": "Save changes",
+    "regenerateDialog": {
+      "title": "Regenerate stage tree and overview",
+      "body": "The story structure changed. Regenerate the stage tree and overview on the Outline page?",
+      "confirm": "Yes",
+      "cancel": "No"
+    }
+  },
+  "series": {
+    "label": "Series",
+    "none": "None",
+    "createAria": "New series",
+    "modalTitle": "New series",
+    "nameLabel": "Series name"
+  },
+  "structure": {
+    "label": "Story structure",
+    "stagesAria": "Stages",
+    "createAria": "Custom structure",
+    "modalTitle": "Custom story structure",
+    "nameLabel": "Structure name",
+    "stagesLabel": "Stages",
+    "stagesDescription": "Separate with -, e.g. Setup-Confrontation-Resolution",
+    "descriptionLabel": "Description"
+  },
+  "structures": {
+    "outlinePrefix": "Structure: ",
+    "presets": {
+      "none": {
+        "name": "None",
+        "stages": []
+      },
+      "three_act": {
+        "name": "Three-act structure",
+        "stages": ["Setup", "Confrontation", "Resolution"]
+      },
+      "kishotenketsu": {
+        "name": "Kishōtenketsu",
+        "stages": ["Introduction", "Development", "Twist", "Conclusion"]
+      },
+      "hero_journey": {
+        "name": "The Hero's Journey",
+        "stages": [
+          "Ordinary World",
+          "Call to Adventure",
+          "Refusal of the Call",
+          "Meeting with the Mentor",
+          "Crossing the First Threshold",
+          "Tests, Allies, and Enemies",
+          "Approach to the Inmost Cave",
+          "The Ordeal",
+          "Reward",
+          "The Road Back",
+          "The Resurrection",
+          "Return with the Elixir"
+        ]
+      },
+      "save_the_cat": {
+        "name": "Save the Cat! Beat Sheet",
+        "stages": [
+          "Opening Image",
+          "Theme Stated",
+          "Set-Up",
+          "Catalyst",
+          "Debate",
+          "Break into Two",
+          "B Story",
+          "Fun and Games",
+          "Midpoint",
+          "Bad Guys Close In",
+          "All Is Lost",
+          "Dark Night of the Soul",
+          "Break into Three",
+          "Finale",
+          "Final Image"
+        ]
+      }
+    }
+  },
+  "titleSelect": {
+    "ariaLabel": "Select work",
+    "placeholder": "Select work"
+  }
+}

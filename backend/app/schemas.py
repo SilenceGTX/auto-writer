@@ -284,6 +284,12 @@ class TypographySettings(BaseModel):
     reading_theme: str = Field(default="sepia", pattern="^(sepia|light|dark)$")
 
 
+class LocaleSettings(BaseModel):
+    """UI and AI prompt language (``designs/I18N.md``)."""
+
+    locale: str = Field(default="zh", pattern="^(zh|en)$")
+
+
 class SettingsResponse(BaseModel):
     """All known settings groups returned to the client."""
 
@@ -293,6 +299,7 @@ class SettingsResponse(BaseModel):
     writing_style: WritingStyle
     data_save: DataSaveSettings
     typography: TypographySettings
+    locale: LocaleSettings
 
 
 class SettingsImport(BaseModel):
@@ -305,13 +312,15 @@ class SettingsImport(BaseModel):
     writing_style: WritingStyle | None = None
     data_save: DataSaveSettings | None = None
     typography: TypographySettings | None = None
+    locale: LocaleSettings | None = None
 
 
 class ConnectionTestResult(BaseModel):
     """Result of a lightweight LLM connection test."""
 
     ok: bool
-    message: str
+    code: str
+    detail: str | None = None
     sample: str | None = None
 
 

@@ -1,9 +1,11 @@
 /** Tests the outline "@" link-to-existing-entry button. */
+import "../i18n";
 import { useState, type ReactElement } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HeroUIProvider } from "@heroui/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import i18n from "../i18n";
 import { listEntities } from "../api";
 import { LinkEntityButton } from "../components/LinkEntityButton";
 import { ToastProvider } from "../components/Toast";
@@ -38,6 +40,12 @@ function Harness(): ReactElement {
 describe("LinkEntityButton", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  function linkButton(): HTMLElement {
+    return screen.getByRole("button", {
+      name: i18n.t("outline:selectionActions.linkEntity.label"),
+    });
+  }
+
   it("replaces the selection with an @ mention when exactly one entry matches", async () => {
     vi.mocked(listEntities).mockResolvedValue({
       items: [{ ...baseEntity, id: 1, name: "机械神器" }],
@@ -48,7 +56,7 @@ describe("LinkEntityButton", () => {
     textarea.focus();
     textarea.setSelectionRange(4, 8);
 
-    const button = screen.getByRole("button", { name: "@" });
+    const button = linkButton();
     fireEvent.mouseDown(button);
     await userEvent.click(button);
 
@@ -65,12 +73,12 @@ describe("LinkEntityButton", () => {
     textarea.focus();
     textarea.setSelectionRange(4, 8);
 
-    const button = screen.getByRole("button", { name: "@" });
+    const button = linkButton();
     fireEvent.mouseDown(button);
     await userEvent.click(button);
 
     expect(
-      await screen.findByText("未找到名为「机械神器」的设定条目，可使用「加入设定」新建"),
+      await screen.findByText("未找到名为「机械神器」的设定条目，可使用「+ 设定」新建"),
     ).toBeInTheDocument();
   });
 
@@ -87,7 +95,7 @@ describe("LinkEntityButton", () => {
     textarea.focus();
     textarea.setSelectionRange(4, 8);
 
-    const button = screen.getByRole("button", { name: "@" });
+    const button = linkButton();
     fireEvent.mouseDown(button);
     await userEvent.click(button);
 
@@ -113,7 +121,7 @@ describe("LinkEntityButton", () => {
     textarea.focus();
     textarea.setSelectionRange(4, 9);
 
-    const button = screen.getByRole("button", { name: "@" });
+    const button = linkButton();
     fireEvent.mouseDown(button);
     await userEvent.click(button);
 

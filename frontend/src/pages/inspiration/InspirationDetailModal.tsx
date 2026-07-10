@@ -5,6 +5,7 @@
  * classify it with reusable colored tags.
  */
 import { useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Button,
   Chip,
@@ -33,6 +34,7 @@ interface InspirationDetailModalProps {
 
 /** Render the full-detail modal for a single inspiration. */
 export function InspirationDetailModal(props: InspirationDetailModalProps): ReactElement {
+  const { t } = useTranslation("inspiration");
   const { inspiration } = props;
   const [newTag, setNewTag] = useState("");
   const selectedIds = new Set(inspiration.tags.map((tag) => tag.id));
@@ -62,19 +64,19 @@ export function InspirationDetailModal(props: InspirationDetailModalProps): Reac
     <Modal isOpen onClose={props.onClose} size="2xl" scrollBehavior="inside">
       <ModalContent>
         <ModalHeader className="inspiration-modal-head">
-          <span>灵感详情</span>
+          <span>{t("modal.title")}</span>
           <span className="inspiration-modal-meta">
-            {sourceLabel(inspiration.source_page)} · {formatTimestamp(inspiration.created_at)}
+            {sourceLabel(inspiration.source_page, t)} · {formatTimestamp(inspiration.created_at)}
           </span>
         </ModalHeader>
         <ModalBody>
           <p className="inspiration-detail-content">{inspiration.content}</p>
 
           <div className="inspiration-tag-editor">
-            <span className="inspiration-tag-editor-label">标签</span>
+            <span className="inspiration-tag-editor-label">{t("modal.tagsLabel")}</span>
             <div className="inspiration-tag-chips">
               {props.allTags.length === 0 && (
-                <span className="assistant-hint">还没有标签，先在下方创建一个。</span>
+                <span className="assistant-hint">{t("modal.noTagsHint")}</span>
               )}
               {props.allTags.map((tag) => {
                 const active = selectedIds.has(tag.id);
@@ -99,8 +101,8 @@ export function InspirationDetailModal(props: InspirationDetailModalProps): Reac
             <div className="inspiration-tag-create">
               <Input
                 size="sm"
-                aria-label="新建标签"
-                placeholder="输入标签名并添加"
+                aria-label={t("modal.newTagAria")}
+                placeholder={t("modal.newTagPlaceholder")}
                 value={newTag}
                 onValueChange={setNewTag}
                 onKeyDown={(event) => {
@@ -114,7 +116,7 @@ export function InspirationDetailModal(props: InspirationDetailModalProps): Reac
                 size="sm"
                 variant="flat"
                 isIconOnly
-                aria-label="添加标签"
+                aria-label={t("modal.addTagAria")}
                 onPress={handleCreateTag}
               >
                 <Plus size={16} />
@@ -128,15 +130,15 @@ export function InspirationDetailModal(props: InspirationDetailModalProps): Reac
             startContent={<Copy size={15} />}
             onPress={() => props.onCopy(inspiration.content)}
           >
-            复制
+            {t("modal.copy")}
           </Button>
           <Button
             variant="flat"
             startContent={<CornerDownLeft size={15} />}
-            title="将灵感插入当前写作章节的正文末尾"
+            title={t("modal.insertBackTitle")}
             onPress={() => props.onInsertBack(inspiration)}
           >
-            回插到正文末尾
+            {t("modal.insertBack")}
           </Button>
           <Button
             variant="flat"
@@ -144,7 +146,7 @@ export function InspirationDetailModal(props: InspirationDetailModalProps): Reac
             isDisabled={!canJump}
             onPress={() => props.onJumpSource(inspiration)}
           >
-            来源跳转
+            {t("modal.jumpSource")}
           </Button>
           <Button
             color="danger"
@@ -152,7 +154,7 @@ export function InspirationDetailModal(props: InspirationDetailModalProps): Reac
             startContent={<Trash2 size={15} />}
             onPress={() => props.onDelete(inspiration)}
           >
-            删除
+            {t("modal.delete")}
           </Button>
         </ModalFooter>
       </ModalContent>

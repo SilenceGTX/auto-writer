@@ -6,6 +6,7 @@
  * jumping, and colored-tag classification. This page has no assistant panel.
  */
 import { useCallback, useEffect, useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Input, Select, SelectItem } from "@heroui/react";
 import { Search } from "lucide-react";
@@ -26,17 +27,13 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { InspirationCard } from "./inspiration/InspirationCard";
 import { InspirationDetailModal } from "./inspiration/InspirationDetailModal";
 
-const SOURCE_OPTIONS: { key: string; label: string }[] = [
-  { key: "all", label: "全部来源" },
-  { key: "outline", label: "大纲" },
-  { key: "writing", label: "写作" },
-  { key: "review", label: "审阅" },
-];
+const SOURCE_FILTER_KEYS = ["all", "outline", "writing", "review"] as const;
 
 const DEFAULT_TAG_COLOR = "#4f46e5";
 
 /** Render the inspiration management page. */
 export function InspirationPage(): ReactElement {
+  const { t } = useTranslation("inspiration");
   const navigate = useNavigate();
   const { notify } = useToast();
   const { currentWorkId, setCurrentWorkId, setPendingInsert, setPendingHighlight } = useApp();
@@ -59,9 +56,9 @@ export function InspirationPage(): ReactElement {
     try {
       setTags(await listTags());
     } catch {
-      notify("无法加载标签", "error");
+      notify(t("toast.loadTagsFailed"), "error");
     }
-  }, [notify]);
+  }, [notify, t]);
 
   const loadInspirations = useCallback(async () => {
     try {
@@ -76,9 +73,9 @@ export function InspirationPage(): ReactElement {
         current ? (data.find((item) => item.id === current.id) ?? null) : null,
       );
     } catch {
-      notify("无法加载灵感", "error");
+      notify(t("toast.loadFailed"), "error");
     }
-  }, [search, sourceFilter, tagFilter, notify]);
+  }, [search, sourceFilter, tagFilter, notify, t]);
 
   useEffect(() => {
     void loadTags();
@@ -97,15 +94,15 @@ export function InspirationPage(): ReactElement {
   async function handleCopy(content: string): Promise<void> {
     try {
       await navigator.clipboard.writeText(content);
-      notify("已复制到剪贴板", "success");
+      notify(t("toast.copied"), "success");
     } catch {
-      notify("复制失败", "error");
+      notify(t("toast.copyFailed"), "error");
     }
   }
 
   function handleInsertBack(inspiration: Inspiration): void {
     if (inspiration.work_id == null && currentWorkId == null) {
-      notify("请先在作品页选择一个作品再回插", "info");
+      notify(t("toast.selectWorkForInsert"), "info");
       return;
     }
     // "一键回插" always appends to the end of the current chapter's body so the
@@ -149,7 +146,7 @@ export function InspirationPage(): ReactElement {
       );
       setSelected((current) => (current && current.id === updated.id ? updated : current));
     } catch {
-      notify("更新标签失败", "error");
+      notify(t("toast.updateTagsFailed"), "error");
     }
   }
 
@@ -160,7 +157,7 @@ export function InspirationPage(): ReactElement {
       const nextIds = Array.from(new Set([...inspiration.tags.map((t) => t.id), tag.id]));
       await handleSetTags(inspiration, nextIds);
     } catch {
-      notify("创建标签失败", "error");
+      notify(t("toast.createTagFailed"), "error");
     }
   }
 
@@ -174,9 +171,9 @@ export function InspirationPage(): ReactElement {
         setSelected(null);
       }
       await loadInspirations();
-      notify("灵感已删除", "success");
+      notify(t("toast.deleted"), "success");
     } catch {
-      notify("删除灵感失败", "error");
+      notify(t("toast.deleteFailed"), "error");
     } finally {
       setPendingDelete(null);
     }
@@ -186,15 +183,15 @@ export function InspirationPage(): ReactElement {
     <section className="workspace-page inspiration-page">
       <div className="page-header">
         <div>
-          <h1>灵感</h1>
-          <p>收集创作中迸发的灵感碎片，随时检索、回插与归类。</p>
+          <h1>{t("page.title")}</h1>
+          <p>{t("page.subtitle")}</p>
         </div>
       </div>
 
       <div className="inspiration-toolbar">
         <Input
           className="inspiration-search"
-          placeholder="搜索灵感内容"
+          placeholder={t("toolbar.searchPlaceholder")}
           startContent={<Search size={16} />}
           value={searchInput}
           onValueChange={setSearchInput}
@@ -202,7 +199,7 @@ export function InspirationPage(): ReactElement {
           onClear={() => setSearchInput("")}
         />
         <Select
-          aria-label="按来源过滤"
+          aria-label={t("toolbar.sourceFilterAria")}
           className="inspiration-filter"
           selectedKeys={[sourceFilter]}
           onSelectionChange={(keys) => {
@@ -210,12 +207,14 @@ export function InspirationPage(): ReactElement {
             if (key) setSourceFilter(key);
           }}
         >
-          {SOURCE_OPTIONS.map((option) => (
-            <SelectItem key={option.key}>{option.label}</SelectItem>
+          {SOURCE_FILTER_KEYS.map((key) => (
+            <SelectItem key={key}>
+              {key === "all" ? t("toolbar.allSources") : t(`sources.${key}`)}
+            </SelectItem>
           ))}
         </Select>
         <Select
-          aria-label="按标签过滤"
+          aria-label={t("toolbar.tagFilterAria")}
           className="inspiration-filter"
           selectedKeys={[tagFilter]}
           onSelectionChange={(keys) => {
@@ -224,16 +223,14 @@ export function InspirationPage(): ReactElement {
           }}
         >
           {[
-            <SelectItem key="all">全部标签</SelectItem>,
+            <SelectItem key="all">{t("toolbar.allTags")}</SelectItem>,
             ...tags.map((tag) => <SelectItem key={String(tag.id)}>{tag.name}</SelectItem>),
           ]}
         </Select>
       </div>
 
       {inspirations.length === 0 ? (
-        <p className="entity-empty">
-          还没有灵感。在大纲、写作或审阅页选中文字后点击「加入灵感」即可收集到这里。
-        </p>
+        <p className="entity-empty">{t("page.empty")}</p>
       ) : (
         <div className="inspiration-grid">
           {inspirations.map((inspiration) => (
@@ -262,9 +259,9 @@ export function InspirationPage(): ReactElement {
 
       <ConfirmDialog
         isOpen={pendingDelete !== null}
-        title="删除灵感"
-        body="确定要删除这条灵感吗？此操作不可恢复。"
-        confirmLabel="删除"
+        title={t("deleteDialog.title")}
+        body={t("deleteDialog.body")}
+        confirmLabel={t("deleteDialog.confirm")}
         danger
         onConfirm={() => void handleConfirmDelete()}
         onCancel={() => setPendingDelete(null)}

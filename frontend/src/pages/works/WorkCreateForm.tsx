@@ -1,5 +1,6 @@
 /** "New work" form rendered in the assistant panel (``STORY_PAGE_DESIGN.md`` §2.4). */
 import { useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { Button, Input, Textarea } from "@heroui/react";
 import {
   createWork,
@@ -22,6 +23,7 @@ interface WorkCreateFormProps {
 
 /** Render the contextual new-work form with structure/series pickers. */
 export function WorkCreateForm(props: WorkCreateFormProps): ReactElement {
+  const { t } = useTranslation(["works", "common"]);
   const { notify } = useToast();
   const [title, setTitle] = useState("");
   const [seriesId, setSeriesId] = useState<number | null>(null);
@@ -32,7 +34,7 @@ export function WorkCreateForm(props: WorkCreateFormProps): ReactElement {
 
   async function handleCreate(): Promise<void> {
     if (!title.trim()) {
-      notify("请填写作品名称", "error");
+      notify(t("works:toast.titleRequired"), "error");
       return;
     }
     setSaving(true);
@@ -47,7 +49,7 @@ export function WorkCreateForm(props: WorkCreateFormProps): ReactElement {
       });
       props.onCreated(created);
     } catch {
-      notify("创建作品失败", "error");
+      notify(t("works:toast.createFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -55,8 +57,14 @@ export function WorkCreateForm(props: WorkCreateFormProps): ReactElement {
 
   return (
     <section className="assistant-section work-form">
-      <h2>新建作品</h2>
-      <Input label="作品名称" value={title} onValueChange={setTitle} autoFocus isRequired />
+      <h2>{t("works:createForm.title")}</h2>
+      <Input
+        label={t("works:createForm.titleLabel")}
+        value={title}
+        onValueChange={setTitle}
+        autoFocus
+        isRequired
+      />
       <SeriesSelect
         seriesList={props.seriesList}
         value={seriesId}
@@ -70,19 +78,24 @@ export function WorkCreateForm(props: WorkCreateFormProps): ReactElement {
         onStructureCreated={props.onStructureCreated}
       />
       <Input
-        label="大致章节数量"
+        label={t("works:createForm.plannedChapters")}
         type="number"
         min={0}
         value={plannedChapters}
         onValueChange={setPlannedChapters}
       />
-      <Textarea label="作品简介" minRows={4} value={summary} onValueChange={setSummary} />
+      <Textarea
+        label={t("works:createForm.summary")}
+        minRows={4}
+        value={summary}
+        onValueChange={setSummary}
+      />
       <div className="form-actions">
         <Button variant="light" onPress={props.onCancel}>
-          取消
+          {t("common:cancel")}
         </Button>
         <Button color="primary" isLoading={saving} onPress={() => void handleCreate()}>
-          创建作品
+          {t("works:createForm.submit")}
         </Button>
       </div>
     </section>

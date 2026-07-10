@@ -1,5 +1,9 @@
 /** API client and shared types for communicating with the Auto-Writer backend. */
 
+import { getApiLocale } from "./apiLocale";
+import { extractApiErrorMessage } from "./utils/apiError";
+import type { AppLocale } from "./utils/locale";
+
 const API_BASE = import.meta.env.VITE_API_BASE ?? "/api";
 
 export interface Series {
@@ -86,13 +90,17 @@ export class ApiError extends Error {
 /** Fetch JSON from the backend and raise ApiError for non-OK responses. */
 export async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    headers: {
+      "Content-Type": "application/json",
+      "Accept-Language": getApiLocale(),
+      ...(init?.headers ?? {}),
+    },
     ...init,
   });
 
   if (!response.ok) {
-    const message = await response.text();
-    throw new ApiError(response.status, message || `请求失败（${response.status}）`);
+    const raw = await response.text();
+    throw new ApiError(response.status, extractApiErrorMessage(raw, response.status));
   }
 
   if (response.status === 204) {
@@ -328,6 +336,10 @@ export interface TypographySettings {
   reading_theme: ReadingTheme;
 }
 
+export interface LocaleSettings {
+  locale: AppLocale;
+}
+
 export interface AppSettings {
   llm_profiles: LLMProfile[];
   llm_assignments: LLMAssignments;
@@ -335,11 +347,13 @@ export interface AppSettings {
   writing_style: WritingStyle;
   data_save: DataSaveSettings;
   typography: TypographySettings;
+  locale: LocaleSettings;
 }
 
 export interface ConnectionTestResult {
   ok: boolean;
-  message: string;
+  code: string;
+  detail: string | null;
   sample: string | null;
 }
 
@@ -396,6 +410,14 @@ export async function updateTypography(input: TypographySettings): Promise<Typog
   });
 }
 
+/** Persist the UI and AI prompt language preference. */
+export async function updateLocale(input: LocaleSettings): Promise<LocaleSettings> {
+  return requestJson<LocaleSettings>("/settings/locale", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
 /** Export all settings groups as a single configuration document. */
 export async function exportSettings(): Promise<AppSettings> {
   return requestJson<AppSettings>("/settings/export");
@@ -421,8 +443,8 @@ export async function testConnection(profile: LLMProfile): Promise<ConnectionTes
 export async function downloadWorkExport(workId: number, format: "json" | "md"): Promise<void> {
   const response = await fetch(`${API_BASE}/works/${workId}/export?format=${format}`);
   if (!response.ok) {
-    const message = await response.text();
-    throw new ApiError(response.status, message || `导出失败（${response.status}）`);
+    const raw = await response.text();
+    throw new ApiError(response.status, extractApiErrorMessage(raw, response.status));
   }
   const blob = await response.blob();
   const disposition = response.headers.get("Content-Disposition") ?? "";
@@ -435,8 +457,8 @@ export async function downloadWorkExport(workId: number, format: "json" | "md"):
 export async function downloadWorkChapterExport(workId: number): Promise<void> {
   const response = await fetch(`${API_BASE}/works/${workId}/export?format=chapters`);
   if (!response.ok) {
-    const message = await response.text();
-    throw new ApiError(response.status, message || `导出失败（${response.status}）`);
+    const raw = await response.text();
+    throw new ApiError(response.status, extractApiErrorMessage(raw, response.status));
   }
   const blob = await response.blob();
   const disposition = response.headers.get("Content-Disposition") ?? "";

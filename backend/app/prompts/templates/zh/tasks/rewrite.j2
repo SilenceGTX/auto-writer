@@ -1,0 +1,15 @@
+{% if context %}【上下文（仅供参考，不要改写）】
+{{ context }}
+
+{% endif %}{% if preceding %}【上文（重写内容的前文，保持衔接，不要改写）】
+{{ preceding }}
+
+{% endif %}{% if following %}【下文（重写内容的后文，保持衔接，不要改写）】
+{{ following }}
+
+{% endif %}请按照以下要求重写下面这段文字：{{ requirement }}
+{% if has_neighbors %}并在重写段落的基础上，确保与上文、下文自然衔接、语气连贯。
+{% endif %}仅输出重写后的文字，不要包含解释、标题、引号，也不要重复上文或下文的内容。
+
+【待重写文字】
+{{ selection }}

@@ -12,18 +12,24 @@ import { OutlinePage } from "./pages/OutlinePage";
 import { ReviewPage } from "./pages/ReviewPage";
 import { WorksPage } from "./pages/WorksPage";
 import { WritingPage } from "./pages/WritingPage";
+import { isAppLocale } from "./utils/locale";
 import { applyTypography } from "./utils/typography";
 
 /** Render the persistent three-pane layout with a routed central workspace. */
 function Layout(): ReactElement {
-  const { isDark } = useApp();
+  const { isDark, setLocale } = useApp();
   const { collapsed, setCollapsed, focusMode } = useAssistant();
 
   useEffect(() => {
     void getSettings()
-      .then((settings) => applyTypography(settings.typography))
+      .then((settings) => {
+        applyTypography(settings.typography);
+        if (isAppLocale(settings.locale.locale)) {
+          setLocale(settings.locale.locale);
+        }
+      })
       .catch(() => undefined);
-  }, []);
+  }, [setLocale]);
 
   // Mirror the theme onto <html> so HeroUI's portaled overlays (dropdowns,
   // menus, modals) also pick up the dark palette instead of rendering light.

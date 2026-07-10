@@ -1,0 +1,9 @@
+{{ work_info }}
+
+故事结构阶段（按顺序，共 {{ stage_count }} 个）：{{ stage_list }}
+{{ chapter_target }}
+
+请为每个阶段分配章节数量，并撰写一段该阶段的内容概述（总纲），概述需体现该阶段的关键剧情走向。
+必须为每个阶段各返回一条，`name` 与上述阶段名一一对应，JSON 数组长度恰好为 {{ stage_count }}。
+仅返回 JSON 数组，不要包含解释或 Markdown 代码块，格式如下：
+[{"name": "阶段名", "chapter_count": 整数, "overview": "该阶段内容概述"}]

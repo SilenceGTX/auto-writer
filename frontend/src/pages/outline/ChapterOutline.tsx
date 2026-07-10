@@ -1,5 +1,6 @@
 /** Chapter outline: filterable, searchable, draggable chapter cards (§2.2). */
 import { useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Button,
   Chip,
@@ -10,12 +11,18 @@ import {
 } from "@heroui/react";
 import { GripVertical, Plus, Search, Trash2 } from "lucide-react";
 import type { Chapter, ChapterOrderItem, WorkStage } from "../../api";
+import {
+  chapterStatusLabelKey,
+  isChapterCompleted,
+} from "../../utils/chapterStatus";
+import { translatePresetStageName } from "../../utils/storyStructureI18n";
 
 const UNASSIGNED_KEY = "none";
 
 interface ChapterOutlineProps {
   chapters: Chapter[];
   stages: WorkStage[];
+  structureName: string | null | undefined;
   colorMap: Map<number, string>;
   selectedChapterId: number | null;
   onSelectChapter: (id: number) => void;
@@ -26,6 +33,7 @@ interface ChapterOutlineProps {
 
 /** Render the chapter outline column with its toolbar and cards. */
 export function ChapterOutline(props: ChapterOutlineProps): ReactElement {
+  const { t } = useTranslation(["outline", "works"]);
   const [stageFilter, setStageFilter] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [draggingId, setDraggingId] = useState<number | null>(null);
@@ -71,26 +79,28 @@ export function ChapterOutline(props: ChapterOutlineProps): ReactElement {
     <div className="chapter-outline">
       <div className="chapter-toolbar">
         <Select
-          aria-label="按阶段筛选"
+          aria-label={t("outline:chapters.filterAria")}
           className="stage-filter"
           selectionMode="multiple"
-          placeholder="全部阶段"
+          placeholder={t("outline:chapters.allStages")}
           selectedKeys={stageFilter}
           onSelectionChange={(keys) => setStageFilter(new Set(keys as Set<string>))}
         >
           {[
-            <SelectItem key={UNASSIGNED_KEY}>未分配</SelectItem>,
+            <SelectItem key={UNASSIGNED_KEY}>{t("outline:chapters.unassigned")}</SelectItem>,
             ...props.stages.map((stage) => (
-              <SelectItem key={String(stage.id)}>{stage.name}</SelectItem>
+              <SelectItem key={String(stage.id)}>
+                {translatePresetStageName(props.structureName, stage.name, t)}
+              </SelectItem>
             )),
           ]}
         </Select>
         <Button variant="flat" onPress={toggleSelectAll}>
-          {allSelected ? "全不选" : "全选"}
+          {allSelected ? t("outline:chapters.deselectAll") : t("outline:chapters.selectAll")}
         </Button>
         <Input
           className="chapter-search"
-          placeholder="搜索章节标题"
+          placeholder={t("outline:chapters.searchPlaceholder")}
           startContent={<Search size={16} />}
           value={search}
           onValueChange={setSearch}
@@ -98,18 +108,20 @@ export function ChapterOutline(props: ChapterOutlineProps): ReactElement {
           onClear={() => setSearch("")}
         />
         <Button color="primary" startContent={<Plus size={16} />} onPress={props.onAddChapter}>
-          添加章节
+          {t("outline:chapters.add")}
         </Button>
       </div>
 
-      {!canReorder && (
-        <p className="chapter-hint">筛选或搜索时不可拖拽排序，清除后可恢复。</p>
-      )}
+      {!canReorder && <p className="chapter-hint">{t("outline:chapters.reorderHint")}</p>}
 
       <div className="chapter-list">
-        {visible.length === 0 && <p className="chapter-empty">没有符合条件的章节。</p>}
+        {visible.length === 0 && <p className="chapter-empty">{t("outline:chapters.empty")}</p>}
         {visible.map((chapter) => {
           const color = chapter.stage_id != null ? props.colorMap.get(chapter.stage_id) : undefined;
+          const statusKey = chapterStatusLabelKey(chapter.status);
+          const statusLabel = statusKey.startsWith("outline:")
+            ? t(statusKey)
+            : chapter.status;
           return (
             <div
               key={chapter.id}
@@ -149,23 +161,27 @@ export function ChapterOutline(props: ChapterOutlineProps): ReactElement {
               <div className="chapter-body">
                 <div className="chapter-head">
                   <strong>
-                    第 {chapter.chapter_number} 章
+                    {t("outline:chapters.chapterLabel", { number: chapter.chapter_number })}
                     {chapter.title ? ` · ${chapter.title}` : ""}
                   </strong>
                   <div className="chapter-badges">
-                    <Chip size="sm" variant="flat" color={chapter.status === "已完成" ? "success" : "default"}>
-                      {chapter.status}
+                    <Chip
+                      size="sm"
+                      variant="flat"
+                      color={isChapterCompleted(chapter.status) ? "success" : "default"}
+                    >
+                      {statusLabel}
                     </Chip>
                     <Chip size="sm" variant="flat">
-                      {chapter.word_count} 字
+                      {t("outline:chapters.wordCount", { count: chapter.word_count })}
                     </Chip>
-                    <Tooltip content="删除" color="danger">
+                    <Tooltip content={t("outline:chapters.deleteTooltip")} color="danger">
                       <Button
                         isIconOnly
                         size="sm"
                         variant="light"
                         color="danger"
-                        aria-label="删除章节"
+                        aria-label={t("outline:chapters.deleteAria")}
                         onPress={() => props.onDeleteChapter(chapter)}
                       >
                         <Trash2 size={15} />
@@ -173,7 +189,9 @@ export function ChapterOutline(props: ChapterOutlineProps): ReactElement {
                     </Tooltip>
                   </div>
                 </div>
-                <p className="chapter-summary">{chapter.summary || "（尚无章节概述）"}</p>
+                <p className="chapter-summary">
+                  {chapter.summary || t("outline:chapters.noSummary")}
+                </p>
               </div>
             </div>
           );

@@ -1,0 +1,31 @@
+{
+  "appName": "Auto-Writer",
+  "appTagline": "AI-assisted novel writing",
+  "save": "Save",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "loading": "Loading…",
+  "assistant": {
+    "title": "Assistant",
+    "subtitle": "Context & AI",
+    "expand": "Expand assistant panel",
+    "collapse": "Collapse assistant panel",
+    "inspirationDraftTitle": "Inspiration scratchpad",
+    "inspirationDraftPlaceholder": "Jot down a line of dialogue, a plot turn, or a worldbuilding note…",
+    "saveToInspiration": "Save to inspirations"
+  },
+  "saveStatus": {
+    "idle": "Unchanged",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "error": "Save failed"
+  },
+  "breadcrumb": {
+    "ariaLabel": "Current work context"
+  },
+  "mention": {
+    "title": "Link setting entry",
+    "searching": "Searching…",
+    "notFound": "No setting entries found"
+  }
+}

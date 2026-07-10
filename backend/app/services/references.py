@@ -3,8 +3,8 @@
 Implements ``GENERAL_UI_DESIGN.md`` G4 / ``OUTLINE_PAGE_DESIGN.md`` §4: text
 written in the outline (stage synopses, chapter summaries) may reference setting
 entries via ``@名称`` markers. This module extracts those references and
-assembles a ``【引用设定】`` prompt block so the referenced entries' content is
-sent to the LLM.
+assembles a localized reference prompt block so the referenced entries' content
+is sent to the LLM.
 """
 
 import json
@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.deps.locale import normalize_locale
+from app.prompts.loader import render_template
 from app.services.prompts import log_assembled_prompt
 
 
@@ -53,41 +55,37 @@ def find_referenced_names(texts: list[str], candidate_names: list[str]) -> list[
     return [name for name in candidate_names if name in found]
 
 
-def build_reference_block(entries: list[ReferencedEntry]) -> str:
-    """Build the ``【引用设定】`` prompt block from the referenced entries."""
+def build_reference_block(
+    entries: list[ReferencedEntry], *, locale: str | None = None
+) -> str:
+    """Build the referenced-settings prompt block from the resolved entries."""
     if not entries:
         return ""
-    lines = [
-        "【引用设定】",
-        "以下是正文中通过 @ 引用的设定条目，请在创作时保持与其设定一致：",
-    ]
+    loc = normalize_locale(locale)
+    prop_sep = "；" if loc == "zh" else "; "
+    prepared = []
     for entry in entries:
-        header = f"- {entry.name}"
-        if entry.category:
-            header += f"（{entry.category}）"
-        description = (entry.description or "").strip()
-        if description:
-            header += f"：{description}"
-        lines.append(header)
-        prop_text = "；".join(
+        prop_text = prop_sep.join(
             f"{prop.get('name')}={prop.get('value')}"
             for prop in (entry.properties or [])
             if prop.get("name")
         )
-        if prop_text:
-            lines.append(f"  属性：{prop_text}")
-    return "\n".join(lines)
+        description = (entry.description or "").strip()
+        prepared.append(
+            {
+                "name": entry.name,
+                "category": entry.category,
+                "description": description or None,
+                "prop_text": prop_text or None,
+            }
+        )
+    return render_template(loc, "blocks/references.j2", entries=prepared)
 
 
 async def reference_block_for_texts(
-    db: AsyncSession, work_id: int, texts: list[str]
+    db: AsyncSession, work_id: int, texts: list[str], *, locale: str | None = None
 ) -> str:
-    """Resolve ``@``-referenced entries in the texts into a prompt block.
-
-    Loads the work's entries (with their category name), determines which are
-    referenced via ``@名称`` in the given texts, and assembles the
-    ``【引用设定】`` block. Shared by the outline and writing generation flows.
-    """
+    """Resolve ``@``-referenced entries in the texts into a prompt block."""
     # Imported here to avoid a models -> services import cycle at module load.
     from app.models import EntityCategory, WorldEntity
 
@@ -110,7 +108,7 @@ async def reference_block_for_texts(
         for entity, category_name in rows
         if entity.name in referenced
     ]
-    return build_reference_block(entries)
+    return build_reference_block(entries, locale=locale)
 
 
 def with_references(user_prompt: str, reference_block: str) -> str:

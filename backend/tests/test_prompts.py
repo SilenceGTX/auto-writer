@@ -98,3 +98,20 @@ def test_build_review_context_block_orders_summary_outline_and_body():
     assert "第2章《龙醒》" in block
     assert "概述：巨龙苏醒" in block
     assert "火光映红了天空。" in block
+
+
+def test_english_review_context_block_uses_english_labels():
+    """English review context uses localized section headings."""
+    with patch("app.services.prompts.logger.debug"):
+        block = build_review_context_block(
+            locale="en",
+            summary="A dragon story",
+            chapter_number=1,
+            chapter_title="Awakening",
+            chapter_summary="The dragon wakes",
+            chapter_content="Fire lit the sky.",
+        )
+    assert "[Work Synopsis]" in block
+    assert '[Current Chapter Outline]' in block
+    assert 'Chapter 1: "Awakening"' in block
+

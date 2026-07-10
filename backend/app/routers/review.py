@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.deps.locale import PromptLocale, get_request_locale
 from app.models import Chapter
 from app.schemas import ChatHistoryResponse, ChatSendRequest, ChatSendResponse
 from app.services.assistant_conversation_service import (
@@ -68,7 +69,10 @@ async def clear_review_chat_messages(
 
 @router.post("/works/{work_id}/review/chat", response_model=ChatSendResponse)
 async def review_chat(
-    work_id: int, payload: ChatSendRequest, db: AsyncSession = Depends(get_db)
+    work_id: int,
+    payload: ChatSendRequest,
+    db: AsyncSession = Depends(get_db),
+    locale: PromptLocale = Depends(get_request_locale),
 ) -> ChatSendResponse:
     """Send a review-assistant turn, persist it, and return the model reply."""
     work = await load_work_with_structure(db, work_id)
@@ -92,9 +96,17 @@ async def review_chat(
             chapter_id=payload.chapter_id,
             quoted=payload.quoted,
         )
-        connection, system_prompt, params = await resolve_llm_context(db, "review_chat")
+        connection, system_prompt, params = await resolve_llm_context(
+            db, "review_chat", locale=locale
+        )
         messages = await build_review_chat_messages(
-            db, work, chapter, chat_payload, system_prompt, build_review_instruction()
+            db,
+            work,
+            chapter,
+            chat_payload,
+            system_prompt,
+            build_review_instruction(locale=locale),
+            locale=locale,
         )
         reply = await chat_completion(connection, messages, params, task="review_chat")
         persisted = await append_exchange(

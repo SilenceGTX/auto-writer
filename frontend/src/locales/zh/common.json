@@ -1,0 +1,31 @@
+{
+  "appName": "Auto-Writer",
+  "appTagline": "小说辅助创作工具",
+  "save": "保存",
+  "cancel": "取消",
+  "confirm": "确认",
+  "loading": "加载中…",
+  "assistant": {
+    "title": "辅助区",
+    "subtitle": "当前上下文与 AI 操作",
+    "expand": "展开辅助区",
+    "collapse": "折叠辅助区",
+    "inspirationDraftTitle": "灵感暂存",
+    "inspirationDraftPlaceholder": "记录一句对白、一个转折或一个设定碎片…",
+    "saveToInspiration": "保存到灵感"
+  },
+  "saveStatus": {
+    "idle": "未更改",
+    "saving": "保存中…",
+    "saved": "已保存",
+    "error": "保存失败"
+  },
+  "breadcrumb": {
+    "ariaLabel": "当前作品上下文"
+  },
+  "mention": {
+    "title": "引用设定条目",
+    "searching": "搜索中…",
+    "notFound": "未找到设定条目"
+  }
+}

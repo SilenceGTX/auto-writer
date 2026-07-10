@@ -7,26 +7,26 @@
 import type { StagePreference } from "../api";
 
 export interface PreferenceLevel {
-  label: string;
+  key: string;
   values: Partial<StagePreference>;
 }
 
 export const CREATIVITY_LEVELS: PreferenceLevel[] = [
-  { label: "保守", values: { temperature: 0.3, top_p: 0.8 } },
-  { label: "平衡", values: { temperature: 0.7, top_p: 0.9 } },
-  { label: "大胆", values: { temperature: 1.0, top_p: 0.95 } },
+  { key: "conservative", values: { temperature: 0.3, top_p: 0.8 } },
+  { key: "balanced", values: { temperature: 0.7, top_p: 0.9 } },
+  { key: "bold", values: { temperature: 1.0, top_p: 0.95 } },
 ];
 
 export const FOCUS_LEVELS: PreferenceLevel[] = [
-  { label: "发散", values: { presence_penalty: 0.0, frequency_penalty: 0.0 } },
-  { label: "适度", values: { presence_penalty: 0.3, frequency_penalty: 0.3 } },
-  { label: "严谨", values: { presence_penalty: 0.6, frequency_penalty: 0.6 } },
+  { key: "open", values: { presence_penalty: 0.0, frequency_penalty: 0.0 } },
+  { key: "moderate", values: { presence_penalty: 0.3, frequency_penalty: 0.3 } },
+  { key: "strict", values: { presence_penalty: 0.6, frequency_penalty: 0.6 } },
 ];
 
 export const LENGTH_LEVELS: PreferenceLevel[] = [
-  { label: "精炼", values: { max_tokens: 512 } },
-  { label: "标准", values: { max_tokens: 2048 } },
-  { label: "详尽", values: { max_tokens: 4096 } },
+  { key: "concise", values: { max_tokens: 512 } },
+  { key: "standard", values: { max_tokens: 2048 } },
+  { key: "detailed", values: { max_tokens: 4096 } },
 ];
 
 /** Default stage preference matching the backend defaults. */

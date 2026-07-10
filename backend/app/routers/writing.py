@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.deps.locale import PromptLocale, get_request_locale
 from app.models import Chapter, Work, utcnow_iso
 from app.schemas import (
     ChapterContentRead,
@@ -84,7 +85,13 @@ async def _previous_chapter(db: AsyncSession, chapter: Chapter) -> Chapter | Non
 
 
 async def _summarize_and_cache_recap(
-    db: AsyncSession, previous: Chapter, connection, system_prompt: str, params
+    db: AsyncSession,
+    previous: Chapter,
+    connection,
+    system_prompt: str,
+    params,
+    *,
+    locale: PromptLocale,
 ) -> str:
     """Summarize a chapter's content, cache the recap on it, and return the text.
 
@@ -92,6 +99,7 @@ async def _summarize_and_cache_recap(
     for committing. Shared by the recap endpoint and the draft generator.
     """
     user_prompt = build_recap_prompt(
+        locale=locale,
         chapter_number=previous.chapter_number,
         title=previous.title,
         content=previous.content or "",
@@ -159,14 +167,19 @@ async def save_chapter_content(
 
 @router.post("/chapters/{chapter_id}/draft:generate", response_model=ChapterContentRead)
 async def generate_draft(
-    chapter_id: int, payload: DraftGenerateRequest, db: AsyncSession = Depends(get_db)
+    chapter_id: int,
+    payload: DraftGenerateRequest,
+    db: AsyncSession = Depends(get_db),
+    locale: PromptLocale = Depends(get_request_locale),
 ) -> ChapterContentRead:
     """Generate the chapter body from its outline (and optionally the recap)."""
     chapter = await _get_chapter(db, chapter_id)
     work = await _get_work(db, chapter.work_id)
 
     try:
-        connection, system_prompt, params = await resolve_llm_context(db, "writing_draft")
+        connection, system_prompt, params = await resolve_llm_context(
+            db, "writing_draft", locale=locale
+        )
 
         # When requested, include the previous chapter's recap. Reuse the cached
         # recap if present; otherwise generate one now (and cache it) as long as
@@ -179,16 +192,17 @@ async def generate_draft(
                     recap_text = previous.recap
                 elif (previous.content or "").strip():
                     recap_text = await _summarize_and_cache_recap(
-                        db, previous, connection, system_prompt, params
+                        db, previous, connection, system_prompt, params, locale=locale
                     )
 
         reference_block = await reference_block_for_texts(
-            db, chapter.work_id, [chapter.summary or ""]
+            db, chapter.work_id, [chapter.summary or ""], locale=locale
         )
         user_prompt = assemble_draft_prompt(
-            work_info_block(work),
+            work_info_block(work, locale=locale),
             reference_block,
             build_draft_requirements(
+                locale=locale,
                 chapter_number=chapter.chapter_number,
                 title=chapter.title,
                 summary=chapter.summary,
@@ -241,7 +255,11 @@ async def get_recap(chapter_id: int, db: AsyncSession = Depends(get_db)) -> Reca
 
 
 @router.post("/chapters/{chapter_id}/recap:generate", response_model=RecapRead)
-async def generate_recap(chapter_id: int, db: AsyncSession = Depends(get_db)) -> RecapRead:
+async def generate_recap(
+    chapter_id: int,
+    db: AsyncSession = Depends(get_db),
+    locale: PromptLocale = Depends(get_request_locale),
+) -> RecapRead:
     """Summarize the previous chapter and cache the recap on it."""
     chapter = await _get_chapter(db, chapter_id)
     previous = await _previous_chapter(db, chapter)
@@ -251,9 +269,11 @@ async def generate_recap(chapter_id: int, db: AsyncSession = Depends(get_db)) ->
         raise HTTPException(status_code=400, detail="前一章节尚无正文，无法生成前情提要")
 
     try:
-        connection, system_prompt, params = await resolve_llm_context(db, "writing_draft")
+        connection, system_prompt, params = await resolve_llm_context(
+            db, "writing_draft", locale=locale
+        )
         recap_text = await _summarize_and_cache_recap(
-            db, previous, connection, system_prompt, params
+            db, previous, connection, system_prompt, params, locale=locale
         )
     except LLMConfigError as exc:
         raise _config_error(exc) from exc
@@ -273,12 +293,17 @@ async def generate_recap(chapter_id: int, db: AsyncSession = Depends(get_db)) ->
 
 @router.post("/chapters/{chapter_id}/rewrite", response_model=RewriteResult)
 async def rewrite_passage(
-    chapter_id: int, payload: RewriteRequest, db: AsyncSession = Depends(get_db)
+    chapter_id: int,
+    payload: RewriteRequest,
+    db: AsyncSession = Depends(get_db),
+    locale: PromptLocale = Depends(get_request_locale),
 ) -> RewriteResult:
     """Rewrite a selected passage and return original + new for a diff preview."""
     chapter = await _get_chapter(db, chapter_id)
     try:
-        connection, system_prompt, params = await resolve_llm_context(db, "writing_rewrite")
+        connection, system_prompt, params = await resolve_llm_context(
+            db, "writing_rewrite", locale=locale
+        )
         reference_block = await reference_block_for_texts(
             db,
             chapter.work_id,
@@ -289,9 +314,11 @@ async def rewrite_passage(
                 payload.following or "",
                 chapter.summary or "",
             ],
+            locale=locale,
         )
         user_prompt = with_references(
             build_rewrite_prompt(
+                locale=locale,
                 selection=payload.selection,
                 instruction=payload.instruction,
                 context=payload.context,
@@ -349,7 +376,10 @@ async def clear_writing_chat_messages(
 
 @router.post("/works/{work_id}/chat", response_model=ChatSendResponse)
 async def writing_chat(
-    work_id: int, payload: ChatSendRequest, db: AsyncSession = Depends(get_db)
+    work_id: int,
+    payload: ChatSendRequest,
+    db: AsyncSession = Depends(get_db),
+    locale: PromptLocale = Depends(get_request_locale),
 ) -> ChatSendResponse:
     """Send a writing-assistant turn, persist it, and return the model reply."""
     if payload.chapter_id is None:
@@ -371,8 +401,12 @@ async def writing_chat(
             chapter_id=payload.chapter_id,
             quoted=payload.quoted,
         )
-        connection, system_prompt, params = await resolve_llm_context(db, "writing_chat")
-        messages = await build_chat_messages(db, work, chapter, chat_payload, system_prompt)
+        connection, system_prompt, params = await resolve_llm_context(
+            db, "writing_chat", locale=locale
+        )
+        messages = await build_chat_messages(
+            db, work, chapter, chat_payload, system_prompt, locale=locale
+        )
         reply = await chat_completion(connection, messages, params, task="writing_chat")
         persisted = await append_exchange(
             db,

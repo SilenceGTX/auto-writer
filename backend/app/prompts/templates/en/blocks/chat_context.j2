@@ -1,0 +1,10 @@
+{{ work_info }}
+{% if chapter_number is not none %}
+
+Current chapter: {{ chapter_heading }}
+{% if chapter_summary %}Chapter summary: {{ chapter_summary }}
+{% endif %}{% endif %}{% if quoted %}
+
+Quoted passage from the manuscript:
+{{ quoted }}
+{% endif %}

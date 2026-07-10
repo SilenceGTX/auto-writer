@@ -4,6 +4,7 @@
  * (``designs/STORY_PAGE_DESIGN.md`` §2.4 / §2.4.2 / §2.4.3).
  */
 import { useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Button,
   Chip,
@@ -20,6 +21,7 @@ import {
 import { Plus } from "lucide-react";
 import { createStructure, type StoryStructure } from "../../api";
 import { useToast } from "../../components/Toast";
+import { translatePresetStageName, translateStructureName } from "../../utils/storyStructureI18n";
 
 interface StructureSelectProps {
   structures: StoryStructure[];
@@ -30,6 +32,7 @@ interface StructureSelectProps {
 
 /** Render a structure selector, its stage tags, and a custom-structure creator. */
 export function StructureSelect(props: StructureSelectProps): ReactElement {
+  const { t } = useTranslation(["works", "common"]);
   const { notify } = useToast();
   const [isModalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState("");
@@ -45,7 +48,7 @@ export function StructureSelect(props: StructureSelectProps): ReactElement {
       .map((part) => part.trim())
       .filter(Boolean);
     if (!name.trim() || stages.length === 0) {
-      notify("请填写结构名称并以 - 分隔阶段", "error");
+      notify(t("works:toast.structureFieldsRequired"), "error");
       return;
     }
     setSaving(true);
@@ -61,9 +64,9 @@ export function StructureSelect(props: StructureSelectProps): ReactElement {
       setStagesText("");
       setDescription("");
       setModalOpen(false);
-      notify("自定义结构已创建", "success");
+      notify(t("works:toast.structureCreated"), "success");
     } catch {
-      notify("创建结构失败", "error");
+      notify(t("works:toast.structureCreateFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -73,7 +76,7 @@ export function StructureSelect(props: StructureSelectProps): ReactElement {
     <div className="structure-field">
       <div className="inline-field">
         <Select
-          label="故事结构"
+          label={t("works:structure.label")}
           selectedKeys={props.value === null ? [] : [String(props.value)]}
           onChange={(event) => {
             const key = event.target.value;
@@ -81,13 +84,13 @@ export function StructureSelect(props: StructureSelectProps): ReactElement {
           }}
         >
           {props.structures.map((structure) => (
-            <SelectItem key={String(structure.id)}>{structure.name}</SelectItem>
+            <SelectItem key={String(structure.id)}>{translateStructureName(structure, t)}</SelectItem>
           ))}
         </Select>
         <Button
           isIconOnly
           variant="flat"
-          aria-label="自定义结构"
+          aria-label={t("works:structure.createAria")}
           onPress={() => setModalOpen(true)}
         >
           <Plus size={18} />
@@ -95,10 +98,10 @@ export function StructureSelect(props: StructureSelectProps): ReactElement {
       </div>
 
       {selected && selected.stages.length > 0 && (
-        <div className="stage-tags" aria-label="阶段">
+        <div className="stage-tags" aria-label={t("works:structure.stagesAria")}>
           {selected.stages.map((stage, index) => (
             <Chip key={`${stage}-${index}`} size="sm" variant="flat">
-              {stage}
+              {translatePresetStageName(selected.name, stage, t)}
             </Chip>
           ))}
         </div>
@@ -106,23 +109,28 @@ export function StructureSelect(props: StructureSelectProps): ReactElement {
 
       <Modal isOpen={isModalOpen} onClose={() => setModalOpen(false)}>
         <ModalContent>
-          <ModalHeader>自定义故事结构</ModalHeader>
+          <ModalHeader>{t("works:structure.modalTitle")}</ModalHeader>
           <ModalBody className="modal-form">
-            <Input label="结构名称" value={name} onValueChange={setName} autoFocus />
+            <Input label={t("works:structure.nameLabel")} value={name} onValueChange={setName} autoFocus />
             <Input
-              label="故事结构"
-              description="以 - 分隔，如 起因-经过-结果"
+              label={t("works:structure.stagesLabel")}
+              description={t("works:structure.stagesDescription")}
               value={stagesText}
               onValueChange={setStagesText}
             />
-            <Textarea label="描述" minRows={3} value={description} onValueChange={setDescription} />
+            <Textarea
+              label={t("works:structure.descriptionLabel")}
+              minRows={3}
+              value={description}
+              onValueChange={setDescription}
+            />
           </ModalBody>
           <ModalFooter>
             <Button variant="light" onPress={() => setModalOpen(false)}>
-              取消
+              {t("common:cancel")}
             </Button>
             <Button color="primary" isLoading={saving} onPress={() => void handleCreate()}>
-              保存
+              {t("common:save")}
             </Button>
           </ModalFooter>
         </ModalContent>

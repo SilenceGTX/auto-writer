@@ -25,7 +25,7 @@ async def test_llm_connection(payload: LLMProfile) -> ConnectionTestResult:
         connection = LLMConnection.from_profile(payload.model_dump())
         sample = await test_connection(connection)
         logger.info("连接 LLM 成功 profile_id={} model={}", payload.id, payload.model)
-        return ConnectionTestResult(ok=True, message="连接成功", sample=sample[:200])
+        return ConnectionTestResult(ok=True, code="success", sample=sample[:200])
     except (LLMConfigError, LLMRequestError) as exc:
         logger.warning("连接 LLM 测试失败：{}", exc)
-        return ConnectionTestResult(ok=False, message=str(exc))
+        return ConnectionTestResult(ok=False, code=exc.code, detail=exc.detail)

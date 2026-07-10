@@ -1,0 +1,87 @@
+{
+  "page": {
+    "title": "写作",
+    "fallbackTitle": "写作",
+    "subtitle": "选择章节进行正文创作，支持自动保存与 AI 协作。",
+    "emptyWork": {
+      "body": "请先在作品页选择一个作品，再开始写作。",
+      "goToWorks": "前往作品页"
+    },
+    "emptyChapters": {
+      "body": "该作品还没有章节。请先在大纲页生成章节后再来写作。",
+      "goToOutline": "前往大纲页"
+    },
+    "chapterSelectAria": "选择章节",
+    "chapterSelectPlaceholder": "选择章节",
+    "chapterOption": "第 {{number}} 章",
+    "assistantIdleTitle": "写作助手",
+    "assistantIdleHint": "选择一个章节后即可与 AI 协作。"
+  },
+  "editor": {
+    "generateDraft": "AI 生成初稿",
+    "includeRecap": "含前情提要",
+    "includeRecapTooltip": "生成时附带上一章的前情提要；若无缓存会自动总结一次",
+    "quoteToChat": "引用到对话",
+    "quoteToChatTooltip": "将选中文字引用到 AI 对话",
+    "rewriteSelection": "重写选中",
+    "rewriteSelectionTooltip": "让 AI 重写选中段落",
+    "focusMode": "专注模式",
+    "exitFocusMode": "退出专注模式",
+    "placeholder": "在此撰写本章正文…（输入 @ 引用设定，Ctrl/Cmd+Z 撤销）",
+    "wordCount": "本章 {{chapter}} 字 · 全书 {{total}} 字"
+  },
+  "assistant": {
+    "title": "写作助手",
+    "recap": "前情提要",
+    "closeRecapAria": "关闭前情提要",
+    "emptyHint": "向 AI 提问、请求续写或润色建议；可用 @ 引用设定。",
+    "quoteLabel": "引用：{{text}}",
+    "removeQuoteAria": "移除引用",
+    "inputPlaceholder": "输入消息，@ 可引用设定…",
+    "clearMemory": "清空记忆",
+    "send": "发送"
+  },
+  "clearDialog": {
+    "title": "清空对话记忆",
+    "body": "将删除本章写作助手下的全部对话记录，且无法恢复。",
+    "confirm": "清空"
+  },
+  "staleRecapDialog": {
+    "title": "前一章节有改动",
+    "body": "前一章节在生成提要后被修改，是否重新总结？",
+    "confirm": "重新总结",
+    "cancel": "使用旧提要"
+  },
+  "rewrite": {
+    "title": "局部重写",
+    "instructionLabel": "重写要求（可选）",
+    "instructionPlaceholder": "例如：更紧张、精简对话、改为第一人称…",
+    "strengthen": "强化衔接",
+    "strengthenTooltip": "将选区前后各 2 个自然段作为上下文，让重写与前后文更连贯（仍只替换选区）",
+    "original": "原文",
+    "rewritten": "重写",
+    "generate": "重写",
+    "regenerate": "重来",
+    "apply": "应用替换"
+  },
+  "toast": {
+    "loadChaptersFailed": "无法加载章节列表",
+    "loadContentFailed": "无法加载章节正文",
+    "inserted": "已插入到本章正文末尾",
+    "draftGenerated": "本章正文已生成",
+    "generateDraftFailed": "生成正文失败",
+    "loadChatFailed": "无法加载对话历史",
+    "chatFailed": "AI 回复失败，请检查 LLM 连接",
+    "memoryCleared": "对话记忆已清空",
+    "clearMemoryFailed": "清空对话记忆失败",
+    "generateRecapFailed": "生成前情提要失败",
+    "noRecapFirstChapter": "这是第一章，没有前情提要",
+    "getRecapFailed": "获取前情提要失败",
+    "rewriteFailed": "重写失败，请检查 LLM 连接"
+  },
+  "errors": {
+    "noPreviousChapter": "当前章节没有前一章节",
+    "previousEmpty": "前一章节尚无正文，无法生成前情提要",
+    "chapterIdRequired": "需要指定章节"
+  }
+}

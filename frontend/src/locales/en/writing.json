@@ -1,0 +1,87 @@
+{
+  "page": {
+    "title": "Writing",
+    "fallbackTitle": "Writing",
+    "subtitle": "Pick a chapter to draft the manuscript, with autosave and AI collaboration.",
+    "emptyWork": {
+      "body": "Select a work on the Works page before writing.",
+      "goToWorks": "Go to Works"
+    },
+    "emptyChapters": {
+      "body": "This work has no chapters yet. Generate chapters on the Outline page first.",
+      "goToOutline": "Go to Outline"
+    },
+    "chapterSelectAria": "Select chapter",
+    "chapterSelectPlaceholder": "Select chapter",
+    "chapterOption": "Chapter {{number}}",
+    "assistantIdleTitle": "Writing assistant",
+    "assistantIdleHint": "Select a chapter to collaborate with AI."
+  },
+  "editor": {
+    "generateDraft": "AI draft",
+    "includeRecap": "Include recap",
+    "includeRecapTooltip": "Include the previous chapter’s recap; generates one automatically if none is cached",
+    "quoteToChat": "Quote to chat",
+    "quoteToChatTooltip": "Send the selected text to the AI chat as a quote",
+    "rewriteSelection": "Rewrite selection",
+    "rewriteSelectionTooltip": "Ask AI to rewrite the selected passage",
+    "focusMode": "Focus mode",
+    "exitFocusMode": "Exit focus mode",
+    "placeholder": "Write this chapter here… (type @ to mention settings; Ctrl/Cmd+Z to undo)",
+    "wordCount": "Chapter {{chapter}} words · Work {{total}} words"
+  },
+  "assistant": {
+    "title": "Writing assistant",
+    "recap": "Recap",
+    "closeRecapAria": "Close recap",
+    "emptyHint": "Ask AI for ideas, continuations, or polish tips; use @ to mention settings.",
+    "quoteLabel": "Quote: {{text}}",
+    "removeQuoteAria": "Remove quote",
+    "inputPlaceholder": "Type a message; @ mentions settings…",
+    "clearMemory": "Clear memory",
+    "send": "Send"
+  },
+  "clearDialog": {
+    "title": "Clear chat memory",
+    "body": "This deletes all writing-assistant messages for this chapter. It cannot be undone.",
+    "confirm": "Clear"
+  },
+  "staleRecapDialog": {
+    "title": "Previous chapter changed",
+    "body": "The previous chapter was edited after this recap was generated. Summarize again?",
+    "confirm": "Resummarize",
+    "cancel": "Keep old recap"
+  },
+  "rewrite": {
+    "title": "Rewrite passage",
+    "instructionLabel": "Rewrite instructions (optional)",
+    "instructionPlaceholder": "e.g. more tense, trim dialogue, switch to first person…",
+    "strengthen": "Strengthen continuity",
+    "strengthenTooltip": "Include two paragraphs before and after the selection as context so the rewrite fits better (only the selection is replaced)",
+    "original": "Original",
+    "rewritten": "Rewrite",
+    "generate": "Rewrite",
+    "regenerate": "Redo",
+    "apply": "Apply"
+  },
+  "toast": {
+    "loadChaptersFailed": "Failed to load chapters",
+    "loadContentFailed": "Failed to load chapter content",
+    "inserted": "Inserted at the end of this chapter",
+    "draftGenerated": "Chapter draft generated",
+    "generateDraftFailed": "Failed to generate draft",
+    "loadChatFailed": "Failed to load chat history",
+    "chatFailed": "AI reply failed; check the LLM connection",
+    "memoryCleared": "Chat memory cleared",
+    "clearMemoryFailed": "Failed to clear chat memory",
+    "generateRecapFailed": "Failed to generate recap",
+    "noRecapFirstChapter": "This is the first chapter; there is no recap",
+    "getRecapFailed": "Failed to load recap",
+    "rewriteFailed": "Rewrite failed; check the LLM connection"
+  },
+  "errors": {
+    "noPreviousChapter": "This chapter has no previous chapter",
+    "previousEmpty": "The previous chapter has no body text to summarize",
+    "chapterIdRequired": "A chapter is required"
+  }
+}

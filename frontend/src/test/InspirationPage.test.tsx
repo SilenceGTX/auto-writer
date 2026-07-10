@@ -1,4 +1,6 @@
 /** Integration test for the inspiration page (card list, search, detail modal). */
+import "../i18n";
+import i18n from "../i18n";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
@@ -7,6 +9,7 @@ import type { Inspiration, Tag } from "../api";
 import { AppProvider } from "../context/AppContext";
 import { ToastProvider } from "../components/Toast";
 import { InspirationPage } from "../pages/InspirationPage";
+import { LOCALE_STORAGE_KEY } from "../utils/locale";
 
 const sampleTags = vi.hoisted(
   () => [{ id: 1, name: "转折", color: "#4f46e5" }] as Tag[],
@@ -57,9 +60,11 @@ function renderPage() {
 }
 
 describe("InspirationPage", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     localStorage.clear();
+    localStorage.setItem(LOCALE_STORAGE_KEY, "zh");
+    await i18n.changeLanguage("zh");
   });
 
   it("renders inspiration cards from the API", async () => {
@@ -73,9 +78,17 @@ describe("InspirationPage", () => {
     const card = await screen.findByText("一个关于背叛的转折");
     await userEvent.click(card);
 
-    await waitFor(() => expect(screen.getByText("灵感详情")).toBeInTheDocument());
-    expect(screen.getByRole("button", { name: /复制/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /回插到正文末尾/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /来源跳转/ })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText(i18n.t("inspiration:modal.title"))).toBeInTheDocument(),
+    );
+    expect(
+      screen.getByRole("button", { name: i18n.t("inspiration:modal.copy") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: i18n.t("inspiration:modal.insertBack") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: i18n.t("inspiration:modal.jumpSource") }),
+    ).toBeInTheDocument();
   });
 });

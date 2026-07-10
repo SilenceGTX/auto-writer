@@ -72,6 +72,7 @@ async def test_llm_test_endpoint_ok(client, monkeypatch):
     assert response.status_code == 200
     body = response.json()
     assert body["ok"] is True
+    assert body["code"] == "success"
     assert body["sample"] == "pong"
 
 
@@ -82,4 +83,6 @@ async def test_llm_test_endpoint_missing_url(client):
         json={"id": "test-profile", "url": "", "api_token": "", "model": ""},
     )
     assert response.status_code == 200
-    assert response.json()["ok"] is False
+    body = response.json()
+    assert body["ok"] is False
+    assert body["code"] == "missing_url"

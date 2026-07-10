@@ -1,4 +1,4 @@
-/** Global application context: theme and current-work selection, persisted to localStorage. */
+/** Global application context: theme, locale, and current-work selection. */
 import {
   createContext,
   useCallback,
@@ -9,6 +9,16 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
+import i18n from "../i18n";
+import { setApiLocale } from "../apiLocale";
+import {
+  applyHtmlLang,
+  detectBrowserLocale,
+  LOCALE_STORAGE_KEY,
+  readStoredLocale,
+  type AppLocale,
+  isAppLocale,
+} from "../utils/locale";
 
 const THEME_KEY = "aw.theme";
 const CURRENT_WORK_KEY = "aw.currentWorkId";
@@ -16,6 +26,8 @@ const CURRENT_WORK_KEY = "aw.currentWorkId";
 interface AppContextValue {
   isDark: boolean;
   toggleTheme: () => void;
+  locale: AppLocale;
+  setLocale: (locale: AppLocale) => void;
   currentWorkId: number | null;
   setCurrentWorkId: (workId: number | null) => void;
   /** Text queued for "一键回插" insertion into the writing editor (G3 闭环). */
@@ -43,23 +55,40 @@ function readInitialWorkId(): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
-/** Provide global theme and current-work state to the application tree. */
+/** Read locale from storage or the browser before settings load from the API. */
+function readInitialLocale(): AppLocale {
+  return readStoredLocale() ?? detectBrowserLocale();
+}
+
+/** Provide global theme, locale, and current-work state to the application tree. */
 export function AppProvider(props: { children: ReactNode }): ReactElement {
   const [isDark, setIsDark] = useState<boolean>(readInitialTheme);
+  const [locale, setLocaleState] = useState<AppLocale>(readInitialLocale);
   const [currentWorkId, setCurrentWorkIdState] = useState<number | null>(readInitialWorkId);
   const [pendingInsert, setPendingInsert] = useState<string | null>(null);
   const [pendingHighlight, setPendingHighlight] = useState<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem(THEME_KEY, isDark ? "dark" : "light");
-    // Apply the theme class to <html> as well so HeroUI components rendered in
-    // portals (modals, popovers) outside .app-root still pick up the theme.
     const root = document.documentElement;
     root.classList.toggle("dark", isDark);
     root.classList.toggle("light", !isDark);
   }, [isDark]);
 
+  useEffect(() => {
+    void i18n.changeLanguage(locale);
+    applyHtmlLang(locale);
+    setApiLocale(locale);
+    localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+  }, [locale]);
+
   const toggleTheme = useCallback(() => setIsDark((current) => !current), []);
+
+  const setLocale = useCallback((next: AppLocale) => {
+    if (isAppLocale(next)) {
+      setLocaleState(next);
+    }
+  }, []);
 
   const setCurrentWorkId = useCallback((workId: number | null) => {
     setCurrentWorkIdState(workId);
@@ -74,6 +103,8 @@ export function AppProvider(props: { children: ReactNode }): ReactElement {
     () => ({
       isDark,
       toggleTheme,
+      locale,
+      setLocale,
       currentWorkId,
       setCurrentWorkId,
       pendingInsert,
@@ -81,7 +112,16 @@ export function AppProvider(props: { children: ReactNode }): ReactElement {
       pendingHighlight,
       setPendingHighlight,
     }),
-    [isDark, toggleTheme, currentWorkId, setCurrentWorkId, pendingInsert, pendingHighlight],
+    [
+      isDark,
+      toggleTheme,
+      locale,
+      setLocale,
+      currentWorkId,
+      setCurrentWorkId,
+      pendingInsert,
+      pendingHighlight,
+    ],
   );
 
   return <AppContext.Provider value={value}>{props.children}</AppContext.Provider>;

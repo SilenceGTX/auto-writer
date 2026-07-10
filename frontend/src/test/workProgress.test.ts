@@ -26,12 +26,12 @@ function makeWork(overrides: Partial<Work>): Work {
 }
 
 describe("computeProgress", () => {
-  it("reports 前期筹备 when no chapter has body text", () => {
+  it("reports prep state when no chapter has body text", () => {
     const result = computeProgress(
       makeWork({ actual_chapter_count: 20, chapter_count: 20, written_chapter_count: 0 }),
     );
     expect(result.isPrep).toBe(true);
-    expect(result.label).toBe("前期筹备");
+    expect(result.label).toBe("");
     expect(result.percent).toBe(0);
   });
 

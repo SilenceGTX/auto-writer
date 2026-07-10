@@ -4,6 +4,7 @@
  * the mention detection / search state is owned by ``useEntityMentions``.
  */
 import type { ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import type { WorldEntity } from "../api";
 
 interface MentionPopoverProps {
@@ -14,12 +15,14 @@ interface MentionPopoverProps {
 
 /** Render the `@` mention results list (search/empty states included). */
 export function MentionPopover(props: MentionPopoverProps): ReactElement {
+  const { t } = useTranslation("common");
+
   return (
     <div className="mention-popover" role="listbox">
-      <div className="mention-popover-head">引用设定条目</div>
-      {props.loading && <div className="mention-empty">搜索中…</div>}
+      <div className="mention-popover-head">{t("mention.title")}</div>
+      {props.loading && <div className="mention-empty">{t("mention.searching")}</div>}
       {!props.loading && props.results.length === 0 && (
-        <div className="mention-empty">未找到设定条目</div>
+        <div className="mention-empty">{t("mention.notFound")}</div>
       )}
       {!props.loading &&
         props.results.map((entity) => (

@@ -6,6 +6,7 @@
  */
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@heroui/react";
 import { Download } from "lucide-react";
@@ -14,11 +15,13 @@ import { useApp } from "../context/AppContext";
 import { useAssistant } from "../context/AssistantContext";
 import { useToast } from "../components/Toast";
 import { WorkTitleSelect } from "../components/WorkTitleSelect";
+import { translateReviewApiError } from "../utils/reviewApiError";
 import { ReviewReader } from "./review/ReviewReader";
 import { ReviewAssistant } from "./review/ReviewAssistant";
 
 /** Render the manuscript review workspace for the current work. */
 export function ReviewPage(): ReactElement {
+  const { t } = useTranslation(["review", "common", "errors"]);
   const navigate = useNavigate();
   const { notify } = useToast();
   const { currentWorkId, pendingHighlight, setPendingHighlight } = useApp();
@@ -60,9 +63,9 @@ export function ReviewPage(): ReactElement {
         requestedExists ? requested : (current ?? data.chapters[0]?.id ?? null),
       );
     } catch {
-      notify("无法加载章节列表", "error");
+      notify(t("review:toast.loadChaptersFailed"), "error");
     }
-  }, [currentWorkId, notify, searchParams]);
+  }, [currentWorkId, notify, searchParams, t]);
 
   useEffect(() => {
     void loadOutline();
@@ -90,7 +93,7 @@ export function ReviewPage(): ReactElement {
         const chapter = await getChapter(selectedId);
         if (active) setContent(chapter.content ?? "");
       } catch {
-        if (active) notify("无法加载章节正文", "error");
+        if (active) notify(t("review:toast.loadContentFailed"), "error");
       } finally {
         if (active) setLoading(false);
       }
@@ -98,7 +101,7 @@ export function ReviewPage(): ReactElement {
     return () => {
       active = false;
     };
-  }, [selectedId, notify]);
+  }, [selectedId, notify, t]);
 
   function handleQuote(text: string): void {
     setQuoted(text);
@@ -117,9 +120,10 @@ export function ReviewPage(): ReactElement {
     setExporting(true);
     try {
       await downloadWorkChapterExport(currentWorkId);
-      notify("作品导出已开始下载", "success");
+      notify(t("review:toast.exportStarted"), "success");
     } catch (error) {
-      notify(error instanceof ApiError ? error.message : "导出失败", "error");
+      const message = error instanceof ApiError ? error.message : null;
+      notify(translateReviewApiError(message, t, "review:toast.exportFailed"), "error");
     } finally {
       setExporting(false);
     }
@@ -129,10 +133,10 @@ export function ReviewPage(): ReactElement {
     return (
       <section className="workspace-page">
         <div className="outline-empty">
-          <h1>审阅</h1>
-          <p>请先在作品页选择一个作品，再进入审阅。</p>
+          <h1>{t("review:page.title")}</h1>
+          <p>{t("review:page.emptyWork.body")}</p>
           <Button color="primary" onPress={() => navigate("/works")}>
-            前往作品页
+            {t("review:page.emptyWork.goToWorks")}
           </Button>
         </div>
       </section>
@@ -155,8 +159,8 @@ export function ReviewPage(): ReactElement {
     <section className="workspace-page review-page">
       <div className="page-header">
         <div>
-          <WorkTitleSelect fallback={outline?.title ?? "审阅"} />
-          <p>通读全文，并借助 AI 提出修改建议。</p>
+          <WorkTitleSelect fallback={outline?.title ?? t("review:page.fallbackTitle")} />
+          <p>{t("review:page.subtitle")}</p>
         </div>
         {chapters.length > 0 ? (
           <Button
@@ -165,21 +169,20 @@ export function ReviewPage(): ReactElement {
             isLoading={exporting}
             onPress={() => void handleExportChapters()}
           >
-            导出作品
+            {t("review:page.export")}
           </Button>
         ) : null}
       </div>
 
       {chapters.length === 0 ? (
         <div className="outline-empty">
-          <p>该作品还没有章节。请先在大纲页生成章节并完成写作后再来审阅。</p>
+          <p>{t("review:page.emptyChapters.body")}</p>
           <Button color="primary" onPress={() => navigate("/outline")}>
-            前往大纲页
+            {t("review:page.emptyChapters.goToOutline")}
           </Button>
         </div>
       ) : (
         <ReviewReader
-          workId={currentWorkId}
           chapters={chapters}
           selectedId={selectedId}
           onSelect={handleSelectChapter}

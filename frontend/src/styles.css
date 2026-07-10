@@ -471,8 +471,8 @@ textarea {
   gap: 10px;
 }
 
-.form-actions-stacked .add-inspiration-btn {
-  margin-right: 0;
+.form-actions-stacked .selection-action-btn {
+  margin-right: auto;
   align-self: flex-start;
 }
 
@@ -482,11 +482,95 @@ textarea {
   gap: 8px;
 }
 
-.form-actions-stacked .form-actions-inline-tools .add-inspiration-btn,
-.form-actions-stacked .form-actions-inline-tools .add-entity-btn,
-.form-actions-stacked .form-actions-inline-tools .link-entity-btn {
+.form-actions-stacked .form-actions-inline-tools .selection-action-btn {
   margin-right: 0;
   align-self: flex-start;
+}
+
+.selection-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 2.25rem;
+  height: 2rem;
+  padding: 0 10px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.selection-action-btn svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  flex-shrink: 0;
+}
+
+.selection-action-plus {
+  flex-shrink: 0;
+}
+
+.selection-action-inspiration {
+  color: #b45309;
+}
+
+.selection-action-inspiration:hover {
+  background: #fef3c7;
+  border-color: #f59e0b;
+}
+
+.selection-action-entity {
+  color: #6d28d9;
+}
+
+.selection-action-entity:hover {
+  background: #ede9fe;
+  border-color: #8b5cf6;
+}
+
+.selection-action-link {
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.selection-action-link:hover {
+  background: #dbeafe;
+  border-color: #3b82f6;
+}
+
+.app-root.dark .selection-action-btn {
+  border-color: #26334d;
+}
+
+.app-root.dark .selection-action-inspiration {
+  color: #fbbf24;
+}
+
+.app-root.dark .selection-action-inspiration:hover {
+  background: #3a2e10;
+  border-color: #b45309;
+}
+
+.app-root.dark .selection-action-entity {
+  color: #c4b5fd;
+}
+
+.app-root.dark .selection-action-entity:hover {
+  background: #2a2240;
+  border-color: #7c3aed;
+}
+
+.app-root.dark .selection-action-link {
+  color: #93c5fd;
+}
+
+.app-root.dark .selection-action-link:hover {
+  background: #1e3a5f;
+  border-color: #2563eb;
 }
 
 .entity-form-embedded {
@@ -499,8 +583,17 @@ textarea {
 .form-actions-row {
   display: flex;
   justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Keep Cancel / Save / Write Chapter on one row in the narrow assistant panel. */
+.form-actions-row > button {
+  flex: 0 1 auto;
+  min-width: 0 !important;
+  padding-inline: 0.65rem;
 }
 
 .detail-stats {
@@ -1288,96 +1381,6 @@ textarea {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.add-inspiration-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin-right: auto;
-  padding: 6px 10px;
-  border: 1px solid #d8dee8;
-  border-radius: 8px;
-  background: transparent;
-  color: #b45309;
-  font-size: 0.82rem;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.add-inspiration-btn:hover {
-  background: #fef3c7;
-  border-color: #f59e0b;
-}
-
-.app-root.dark .add-inspiration-btn {
-  border-color: #26334d;
-  color: #fbbf24;
-}
-
-.app-root.dark .add-inspiration-btn:hover {
-  background: #3a2e10;
-  border-color: #b45309;
-}
-
-.add-entity-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 10px;
-  border: 1px solid #d8dee8;
-  border-radius: 8px;
-  background: transparent;
-  color: #6d28d9;
-  font-size: 0.82rem;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.add-entity-btn:hover {
-  background: #ede9fe;
-  border-color: #8b5cf6;
-}
-
-.app-root.dark .add-entity-btn {
-  border-color: #26334d;
-  color: #c4b5fd;
-}
-
-.app-root.dark .add-entity-btn:hover {
-  background: #2a2240;
-  border-color: #7c3aed;
-}
-
-.link-entity-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 2rem;
-  padding: 6px 10px;
-  border: 1px solid #d8dee8;
-  border-radius: 8px;
-  background: transparent;
-  color: #1d4ed8;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.link-entity-btn:hover {
-  background: #dbeafe;
-  border-color: #3b82f6;
-}
-
-.app-root.dark .link-entity-btn {
-  border-color: #26334d;
-  color: #93c5fd;
-}
-
-.app-root.dark .link-entity-btn:hover {
-  background: #1e3a5f;
-  border-color: #2563eb;
 }
 
 /* Writing page */
