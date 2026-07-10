@@ -169,11 +169,6 @@ export function WritingAssistant(props: WritingAssistantProps): ReactElement {
             </button>
           </div>
           <p>{recap}</p>
-          <AddInspirationButton
-            source={{ source_page: "writing", work_id: props.workId, chapter_id: props.chapterId }}
-            getFallbackText={() => recap}
-            labelKey="selectionActions.addInspiration.saveFallback"
-          />
         </div>
       )}
 
