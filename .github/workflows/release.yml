@@ -51,8 +51,12 @@ jobs:
       - name: Verify release sources
         shell: bash
         run: |
+          set -euo pipefail
+          echo "HEAD=$(git rev-parse --short HEAD)"
           test -f backend/app/services/assistant_conversation_service.py
-          grep -q "清空记忆" frontend/src/pages/writing/WritingAssistant.tsx
+          test -f backend/app/prompts/loader.py
+          grep -q 'writing:assistant.clearMemory' frontend/src/pages/writing/WritingAssistant.tsx
+          grep -q '"clearMemory"' frontend/src/locales/zh/writing.json
 
       - name: Resolve version
         id: version
