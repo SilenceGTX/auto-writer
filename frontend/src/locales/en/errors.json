@@ -9,6 +9,7 @@
     "parseError": "Could not parse LLM response",
     "jsonParseFailed": "Could not parse JSON from the LLM response",
     "connectionFailed": "Could not reach LLM service: {{detail}}",
+    "timeout": "LLM request timed out ({{seconds}}s): {{detail}}",
     "httpError": "LLM returned an error ({{status}}): {{detail}}",
     "aiFailed": "AI request failed: {{detail}}"
   }

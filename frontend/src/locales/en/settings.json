@@ -37,6 +37,7 @@
       "success": "Connected",
       "missing_url": "LLM endpoint URL is not configured",
       "connection_failed": "Could not reach LLM service: {{detail}}",
+      "timeout": "LLM request timed out: {{detail}}",
       "http_error": "LLM returned an error: {{detail}}",
       "parse_error": "Could not parse LLM response",
       "config_error": "Invalid LLM configuration",

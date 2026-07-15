@@ -37,6 +37,7 @@
       "success": "连接成功",
       "missing_url": "尚未配置 LLM 接口地址",
       "connection_failed": "无法连接 LLM 服务：{{detail}}",
+      "timeout": "LLM 请求超时：{{detail}}",
       "http_error": "LLM 返回错误：{{detail}}",
       "parse_error": "无法解析 LLM 响应内容",
       "config_error": "LLM 配置无效",

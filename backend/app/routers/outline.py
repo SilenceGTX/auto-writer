@@ -219,24 +219,52 @@ async def generate_chapter_outlines(
     if not chapters:
         raise HTTPException(status_code=400, detail="请先生成阶段树并分配章节")
 
+    expected_numbers = [c.chapter_number for c in chapters]
+    logger.debug(
+        "生成章节大纲开始 work_id={} locale={} 阶段数={} 章节数={} 编号={}",
+        work_id,
+        locale,
+        len(stages),
+        len(chapters),
+        expected_numbers,
+    )
+
     stage_payload: list[dict[str, object]] = []
     for stage in stages:
         numbers = [c.chapter_number for c in chapters if c.stage_id == stage.id]
         stage_payload.append(
             {"name": stage.name, "overview": stage.overview, "chapter_numbers": numbers}
         )
+        logger.debug(
+            "生成章节大纲阶段 payload name={!r} 章节={} overview_len={}",
+            stage.name,
+            numbers,
+            len(stage.overview or ""),
+        )
 
+    content = ""
     try:
         connection, system_prompt, params = await resolve_llm_context(
             db, "outline_chapters", locale=locale
         )
+        logger.debug(
+            "生成章节大纲 LLM 上下文 profile_id={} model={} params_keys={}",
+            connection.profile_id or "-",
+            connection.model or "(default)",
+            sorted(params.keys()) if isinstance(params, dict) else type(params).__name__,
+        )
         texts = [work.summary or ""] + [stage.overview or "" for stage in stages]
         reference_block = await reference_block_for_texts(db, work_id, texts, locale=locale)
+        logger.debug(
+            "生成章节大纲引用块长度={} 扫描文本段数={}",
+            len(reference_block),
+            len(texts),
+        )
         user_prompt = with_references(
             build_chapter_generation_prompt(
                 work_info_block(work, locale=locale),
                 stage_payload,
-                [c.chapter_number for c in chapters],
+                expected_numbers,
                 structure_name=work.structure.name if work.structure else None,
                 locale=locale,
             ),
@@ -247,31 +275,84 @@ async def generate_chapter_outlines(
             {"role": "user", "content": user_prompt},
         ]
         content = await chat_completion(connection, messages, params, task="outline_chapters")
+        logger.debug(
+            "生成章节大纲 LLM 原始响应 len={} preview=\n{}",
+            len(content),
+            content[:800],
+        )
         parsed = extract_json(content)
     except LLMConfigError as exc:
+        logger.debug("生成章节大纲失败（配置） work_id={} error={}", work_id, exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except (LLMRequestError, ValueError) as exc:
+        logger.debug(
+            "生成章节大纲失败（请求/解析） work_id={} error_type={} error={} "
+            "response_len={} response_preview=\n{}",
+            work_id,
+            type(exc).__name__,
+            exc,
+            len(content),
+            content[:800] if content else "(empty)",
+        )
         raise HTTPException(status_code=502, detail=f"AI 生成失败：{exc}") from exc
 
+    if not isinstance(parsed, list):
+        logger.debug(
+            "生成章节大纲：期望 JSON 数组，实际类型={} value_preview={!r}",
+            type(parsed).__name__,
+            str(parsed)[:400],
+        )
+        raise HTTPException(
+            status_code=502,
+            detail="AI 生成失败：无法从 LLM 响应中解析 JSON",
+        )
+
     by_number: dict[int, dict] = {}
+    skipped_items = 0
     for item in parsed:
         if not isinstance(item, dict):
+            skipped_items += 1
+            logger.debug("生成章节大纲：跳过非对象项 type={}", type(item).__name__)
             continue
         try:
             by_number[int(item.get("chapter_number"))] = item
         except (TypeError, ValueError):
+            skipped_items += 1
+            logger.debug(
+                "生成章节大纲：跳过无效 chapter_number raw={!r} keys={}",
+                item.get("chapter_number"),
+                list(item.keys()),
+            )
             continue
 
+    returned_numbers = sorted(by_number.keys())
+    missing = [number for number in expected_numbers if number not in by_number]
+    unexpected = [number for number in returned_numbers if number not in expected_numbers]
+    logger.debug(
+        "生成章节大纲解析结果 returned={} missing={} unexpected={} skipped_items={}",
+        returned_numbers,
+        missing,
+        unexpected,
+        skipped_items,
+    )
+
+    updated = 0
     for chapter in chapters:
         item = by_number.get(chapter.chapter_number)
         if item is None:
             continue
         chapter.title = item.get("title") or chapter.title
         chapter.summary = item.get("summary") or chapter.summary
+        updated += 1
 
     work.actual_chapter_count = len(chapters)
     await db.commit()
-    logger.info("生成章节大纲 work_id={} 章节数={}", work_id, len(chapters))
+    logger.info(
+        "生成章节大纲 work_id={} 章节数={} 已更新={}",
+        work_id,
+        len(chapters),
+        updated,
+    )
     return await _load_outline(db, work_id)
 
 

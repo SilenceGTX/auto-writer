@@ -13,7 +13,11 @@ from dataclasses import dataclass
 import httpx
 from loguru import logger
 
+# Short budget for connection tests (small max_tokens). Generation often needs
+# much longer—chapter outlines especially—so those use the long request timeout.
+_CONNECT_TIMEOUT_SECONDS = 30.0
 _TEST_TIMEOUT_SECONDS = 30.0
+_REQUEST_TIMEOUT_SECONDS = 300.0
 _STREAM_TIMEOUT_SECONDS = 300.0
 
 
@@ -107,36 +111,123 @@ def _payload(
     return body
 
 
+def _http_timeout(total_seconds: float) -> httpx.Timeout:
+    """Build an httpx timeout with a bounded connect phase."""
+    return httpx.Timeout(total_seconds, connect=_CONNECT_TIMEOUT_SECONDS)
+
+
+def _format_http_error(exc: BaseException) -> str:
+    """Return a detailed, non-empty description of an httpx/network failure."""
+    parts = [type(exc).__name__]
+    message = str(exc).strip()
+    if message:
+        parts.append(message)
+    else:
+        parts.append(repr(exc))
+    request = getattr(exc, "request", None)
+    if request is not None:
+        parts.append(f"method={request.method} url={request.url}")
+    cause = exc.__cause__ or exc.__context__
+    if cause is not None and cause is not exc:
+        cause_msg = str(cause).strip() or repr(cause)
+        parts.append(f"cause={type(cause).__name__}: {cause_msg}")
+    return " | ".join(parts)
+
+
+def _error_code_for_http_error(exc: httpx.HTTPError) -> str:
+    """Map an httpx failure to a stable error code for frontend mapping."""
+    if isinstance(exc, httpx.TimeoutException):
+        return "timeout"
+    return "connection_failed"
+
+
+def _log_http_failure(
+    *,
+    url: str,
+    task: str | None,
+    model: str,
+    timeout: httpx.Timeout,
+    body: dict,
+    messages: list[dict[str, str]],
+    has_token: bool,
+    exc: httpx.HTTPError,
+) -> None:
+    """Log connection/timeout failures with enough context to diagnose flaky hosts."""
+    message_chars = sum(len(message.get("content") or "") for message in messages)
+    logger.error(
+        "连接 LLM 失败 type={} detail={} url={} task={} model={} "
+        "timeout(connect={}, read={}, write={}, pool={}) "
+        "messages={} message_chars={} max_tokens={} has_token={}",
+        type(exc).__name__,
+        _format_http_error(exc),
+        url,
+        task or "-",
+        model,
+        timeout.connect,
+        timeout.read,
+        timeout.write,
+        timeout.pool,
+        len(messages),
+        message_chars,
+        body.get("max_tokens"),
+        has_token,
+    )
+    logger.debug("连接 LLM 失败堆栈", exc_info=exc)
+
+
 async def chat_completion(
     connection: LLMConnection,
     messages: list[dict[str, str]],
     params: dict | None = None,
     *,
     task: str | None = None,
+    timeout_seconds: float | None = None,
 ) -> str:
     """Call the chat-completions endpoint and return the message content."""
     body = _payload(connection, messages, params, stream=False)
     model = connection.model or "(default)"
+    timeout = _http_timeout(timeout_seconds or _REQUEST_TIMEOUT_SECONDS)
+    message_chars = sum(len(message.get("content") or "") for message in messages)
     logger.debug(
-        "LLM task={} profile_id={} model={}",
+        "LLM task={} profile_id={} model={} timeout={}s messages={} message_chars={} max_tokens={}",
         task or "-",
         connection.profile_id or "-",
         model,
+        timeout.read,
+        len(messages),
+        message_chars,
+        body.get("max_tokens"),
     )
-    logger.info("调用 LLM url={} model={}", connection.url, model)
+    logger.info("调用 LLM url={} model={} task={}", connection.url, model, task or "-")
     try:
-        async with httpx.AsyncClient(timeout=_TEST_TIMEOUT_SECONDS) as client:
+        async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(connection.url, headers=_headers(connection), json=body)
     except httpx.HTTPError as exc:
-        logger.error("连接 LLM 失败 url={} error={}", connection.url, exc)
-        raise LLMRequestError(
-            f"无法连接 LLM 服务：{exc}",
-            code="connection_failed",
-            detail=str(exc),
-        ) from exc
+        _log_http_failure(
+            url=connection.url,
+            task=task,
+            model=model,
+            timeout=timeout,
+            body=body,
+            messages=messages,
+            has_token=bool(connection.api_token),
+            exc=exc,
+        )
+        detail = _format_http_error(exc)
+        code = _error_code_for_http_error(exc)
+        if code == "timeout":
+            message = f"LLM 请求超时（{timeout.read}s）：{detail}"
+        else:
+            message = f"无法连接 LLM 服务：{detail}"
+        raise LLMRequestError(message, code=code, detail=detail) from exc
 
     if response.status_code != httpx.codes.OK:
-        logger.warning("LLM 返回错误 status={} body={}", response.status_code, response.text[:200])
+        logger.warning(
+            "LLM 返回错误 status={} task={} body={}",
+            response.status_code,
+            task or "-",
+            response.text[:500],
+        )
         raise LLMRequestError(
             f"LLM 返回错误（{response.status_code}）：{response.text[:200]}",
             code="http_error",
@@ -147,10 +238,19 @@ async def chat_completion(
         data = response.json()
         content = data["choices"][0]["message"]["content"]
     except (KeyError, IndexError, ValueError) as exc:
-        logger.error("无法解析 LLM 响应：{}", response.text[:200])
+        logger.error(
+            "无法解析 LLM 响应 task={} body={}",
+            task or "-",
+            response.text[:500],
+        )
         raise LLMRequestError("无法解析 LLM 响应内容", code="parse_error") from exc
 
-    logger.info("LLM 调用成功 model={} 字符数={}", model, len(content))
+    logger.info(
+        "LLM 调用成功 model={} task={} 字符数={}",
+        model,
+        task or "-",
+        len(content),
+    )
     return content
 
 
@@ -161,8 +261,9 @@ async def stream_chat_completion(
 ) -> AsyncIterator[str]:
     """Stream content deltas from the chat-completions endpoint (SSE)."""
     body = _payload(connection, messages, params, stream=True)
+    timeout = _http_timeout(_STREAM_TIMEOUT_SECONDS)
     try:
-        async with httpx.AsyncClient(timeout=_STREAM_TIMEOUT_SECONDS) as client:
+        async with httpx.AsyncClient(timeout=timeout) as client:
             async with client.stream(
                 "POST", connection.url, headers=_headers(connection), json=body
             ) as response:
@@ -178,11 +279,14 @@ async def stream_chat_completion(
                     if delta:
                         yield delta
     except httpx.HTTPError as exc:
-        raise LLMRequestError(
-            f"无法连接 LLM 服务：{exc}",
-            code="connection_failed",
-            detail=str(exc),
-        ) from exc
+        detail = _format_http_error(exc)
+        code = _error_code_for_http_error(exc)
+        logger.error("流式连接 LLM 失败 detail={}", detail)
+        if code == "timeout":
+            message = f"LLM 请求超时（{timeout.read}s）：{detail}"
+        else:
+            message = f"无法连接 LLM 服务：{detail}"
+        raise LLMRequestError(message, code=code, detail=detail) from exc
 
 
 def _parse_sse_delta(line: str) -> str:
@@ -202,4 +306,10 @@ def _parse_sse_delta(line: str) -> str:
 async def test_connection(connection: LLMConnection) -> str:
     """Issue a minimal completion to verify connectivity and authentication."""
     messages = [{"role": "user", "content": "ping"}]
-    return await chat_completion(connection, messages, {"max_tokens": 16})
+    return await chat_completion(
+        connection,
+        messages,
+        {"max_tokens": 16},
+        task="connection_test",
+        timeout_seconds=_TEST_TIMEOUT_SECONDS,
+    )
