@@ -16,6 +16,37 @@ _JSON_OBJECT = re.compile(r"\{.*\}", re.DOTALL)
 _PREVIEW_CHARS = 800
 
 
+def response_tail(text: str, chars: int = _PREVIEW_CHARS) -> str:
+    """Return the last ``chars`` of *text* for truncated-output debugging."""
+    if not text:
+        return "(empty)"
+    if len(text) <= chars:
+        return text
+    return text[-chars:]
+
+
+def log_llm_parse_failure(
+    *,
+    context: str,
+    content: str,
+    error: BaseException | None = None,
+) -> None:
+    """Log usage, finish_reason, and both ends of a response that failed to parse."""
+    usage = getattr(content, "usage", None)
+    finish_reason = getattr(content, "finish_reason", None)
+    logger.error(
+        "{}：LLM JSON 解析失败 error={} finish_reason={} usage={} "
+        "response_len={} head=\n{}\ntail=\n{}",
+        context,
+        error,
+        finish_reason,
+        usage,
+        len(content) if content else 0,
+        (content[:_PREVIEW_CHARS] if content else "(empty)"),
+        response_tail(content or ""),
+    )
+
+
 def extract_json(text: str) -> Any:
     """Parse the first JSON array/object found in an LLM response.
 

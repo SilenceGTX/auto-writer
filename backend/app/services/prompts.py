@@ -327,10 +327,15 @@ def build_chapter_generation_prompt(
     stages: list[dict[str, object]],
     chapter_numbers: list[int],
     *,
+    target_stage_name: str,
     structure_name: str | None = None,
     locale: str | None = None,
 ) -> str:
-    """Build the user prompt asking the LLM to generate per-chapter outlines."""
+    """Build the user prompt asking the LLM to generate one stage's chapter outlines.
+
+    *stages* should still list the full outline context; *chapter_numbers* and
+    *target_stage_name* narrow the generation request to a single stage.
+    """
     loc = _locale(locale)
     chapters_text = join_items(loc, [chapter_label(loc, number) for number in chapter_numbers])
     return render_template(
@@ -340,6 +345,7 @@ def build_chapter_generation_prompt(
         stage_rows=_stage_rows(loc, stages, structure_name=structure_name),
         chapters_text=chapters_text,
         chapter_count=len(chapter_numbers),
+        target_stage_name=target_stage_name,
     )
 
 

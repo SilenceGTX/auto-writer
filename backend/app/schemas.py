@@ -239,7 +239,7 @@ class StagePreference(BaseModel):
     top_p: float = Field(default=0.9, ge=0, le=1)
     presence_penalty: float = Field(default=0.0, ge=-2, le=2)
     frequency_penalty: float = Field(default=0.0, ge=-2, le=2)
-    max_tokens: int | None = Field(default=2048, ge=1)
+    max_tokens: int | None = Field(default=4096, ge=1)
 
 
 def _default_review_stage_preference() -> StagePreference:

@@ -28,14 +28,26 @@ from app.schemas import (
     WorkStageUpdate,
 )
 from app.services.generation_context import resolve_llm_context, work_info_block
-from app.services.llm_service import LLMConfigError, LLMRequestError, chat_completion
-from app.services.outline_service import allocate_chapter_counts, extract_json
+from app.services.llm_service import (
+    OUTLINE_TIMEOUT_SECONDS,
+    LLMConfigError,
+    LLMRequestError,
+    chat_completion,
+)
+from app.services.outline_service import (
+    allocate_chapter_counts,
+    extract_json,
+    log_llm_parse_failure,
+)
 from app.services.prompts import (
     build_chapter_generation_prompt,
     build_stage_generation_prompt,
 )
 from app.services.references import reference_block_for_texts, with_references
-from app.services.story_structure_i18n import index_stage_generation_results
+from app.services.story_structure_i18n import (
+    index_stage_generation_results,
+    translate_preset_stage_name,
+)
 
 router = APIRouter(tags=["outline"])
 
@@ -145,6 +157,7 @@ async def generate_stages(
     if not stage_names:
         raise HTTPException(status_code=400, detail="请先为作品选择包含阶段的故事结构")
 
+    content = ""
     try:
         connection, system_prompt, params = await resolve_llm_context(
             db, "outline_stages", locale=locale
@@ -166,11 +179,20 @@ async def generate_stages(
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
-        content = await chat_completion(connection, messages, params, task="outline_stages")
+        content = await chat_completion(
+            connection,
+            messages,
+            params,
+            task="outline_stages",
+            timeout_seconds=OUTLINE_TIMEOUT_SECONDS,
+        )
         parsed = extract_json(content)
     except LLMConfigError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except (LLMRequestError, ValueError) as exc:
+    except LLMRequestError as exc:
+        raise HTTPException(status_code=502, detail=f"AI 生成失败：{exc}") from exc
+    except ValueError as exc:
+        log_llm_parse_failure(context=f"生成阶段树 work_id={work_id}", content=content, error=exc)
         raise HTTPException(status_code=502, detail=f"AI 生成失败：{exc}") from exc
 
     by_name = index_stage_generation_results(parsed, structure.name if structure else None)
@@ -212,7 +234,7 @@ async def generate_chapter_outlines(
     db: AsyncSession = Depends(get_db),
     locale: PromptLocale = Depends(get_request_locale),
 ) -> OutlineRead:
-    """Generate per-chapter titles and summaries, then lock the outline."""
+    """Generate per-chapter titles and summaries stage-by-stage, then lock the outline."""
     work = await _get_work(db, work_id)
     stages = await _ordered_stages(db, work_id)
     chapters = await _ordered_chapters(db, work_id)
@@ -220,6 +242,7 @@ async def generate_chapter_outlines(
         raise HTTPException(status_code=400, detail="请先生成阶段树并分配章节")
 
     expected_numbers = [c.chapter_number for c in chapters]
+    structure_name = work.structure.name if work.structure else None
     logger.debug(
         "生成章节大纲开始 work_id={} locale={} 阶段数={} 章节数={} 编号={}",
         work_id,
@@ -230,11 +253,13 @@ async def generate_chapter_outlines(
     )
 
     stage_payload: list[dict[str, object]] = []
+    stage_chapter_numbers: list[tuple[WorkStage, list[int]]] = []
     for stage in stages:
         numbers = [c.chapter_number for c in chapters if c.stage_id == stage.id]
         stage_payload.append(
             {"name": stage.name, "overview": stage.overview, "chapter_numbers": numbers}
         )
+        stage_chapter_numbers.append((stage, numbers))
         logger.debug(
             "生成章节大纲阶段 payload name={!r} 章节={} overview_len={}",
             stage.name,
@@ -242,88 +267,135 @@ async def generate_chapter_outlines(
             len(stage.overview or ""),
         )
 
+    by_number: dict[int, dict] = {}
+    skipped_items = 0
     content = ""
     try:
         connection, system_prompt, params = await resolve_llm_context(
             db, "outline_chapters", locale=locale
         )
         logger.debug(
-            "生成章节大纲 LLM 上下文 profile_id={} model={} params_keys={}",
+            "生成章节大纲 LLM 上下文 profile_id={} model={} params_keys={} max_tokens={}",
             connection.profile_id or "-",
             connection.model or "(default)",
             sorted(params.keys()) if isinstance(params, dict) else type(params).__name__,
+            params.get("max_tokens") if isinstance(params, dict) else None,
         )
         texts = [work.summary or ""] + [stage.overview or "" for stage in stages]
         reference_block = await reference_block_for_texts(db, work_id, texts, locale=locale)
+        work_info = work_info_block(work, locale=locale, include_chapter_counts=False)
         logger.debug(
             "生成章节大纲引用块长度={} 扫描文本段数={}",
             len(reference_block),
             len(texts),
         )
-        user_prompt = with_references(
-            build_chapter_generation_prompt(
-                work_info_block(work, locale=locale),
-                stage_payload,
-                expected_numbers,
-                structure_name=work.structure.name if work.structure else None,
-                locale=locale,
-            ),
-            reference_block,
-        )
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ]
-        content = await chat_completion(connection, messages, params, task="outline_chapters")
-        logger.debug(
-            "生成章节大纲 LLM 原始响应 len={} preview=\n{}",
-            len(content),
-            content[:800],
-        )
-        parsed = extract_json(content)
+
+        for stage, numbers in stage_chapter_numbers:
+            if not numbers:
+                logger.debug("生成章节大纲：跳过无章节阶段 name={!r}", stage.name)
+                continue
+
+            target_stage_name = translate_preset_stage_name(
+                structure_name, stage.name, locale
+            )
+            user_prompt = with_references(
+                build_chapter_generation_prompt(
+                    work_info,
+                    stage_payload,
+                    numbers,
+                    target_stage_name=target_stage_name,
+                    structure_name=structure_name,
+                    locale=locale,
+                ),
+                reference_block,
+            )
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ]
+            logger.info(
+                "生成章节大纲阶段调用 work_id={} stage={!r} chapters={} count={}",
+                work_id,
+                stage.name,
+                numbers,
+                len(numbers),
+            )
+            content = await chat_completion(
+                connection,
+                messages,
+                params,
+                task="outline_chapters",
+                timeout_seconds=OUTLINE_TIMEOUT_SECONDS,
+            )
+            logger.debug(
+                "生成章节大纲阶段响应 stage={!r} len={} finish_reason={} usage={} preview=\n{}",
+                stage.name,
+                len(content),
+                getattr(content, "finish_reason", None),
+                getattr(content, "usage", None),
+                content[:800],
+            )
+            try:
+                parsed = extract_json(content)
+            except ValueError as exc:
+                log_llm_parse_failure(
+                    context=f"生成章节大纲 work_id={work_id} stage={stage.name!r}",
+                    content=content,
+                    error=exc,
+                )
+                raise
+
+            if not isinstance(parsed, list):
+                log_llm_parse_failure(
+                    context=(
+                        f"生成章节大纲 work_id={work_id} stage={stage.name!r} "
+                        f"非数组 type={type(parsed).__name__}"
+                    ),
+                    content=content,
+                )
+                raise ValueError("无法从 LLM 响应中解析 JSON")
+
+            for item in parsed:
+                if not isinstance(item, dict):
+                    skipped_items += 1
+                    logger.debug(
+                        "生成章节大纲：跳过非对象项 stage={!r} type={}",
+                        stage.name,
+                        type(item).__name__,
+                    )
+                    continue
+                try:
+                    number = int(item.get("chapter_number"))
+                except (TypeError, ValueError):
+                    skipped_items += 1
+                    logger.debug(
+                        "生成章节大纲：跳过无效 chapter_number stage={!r} raw={!r}",
+                        stage.name,
+                        item.get("chapter_number"),
+                    )
+                    continue
+                if number not in numbers:
+                    skipped_items += 1
+                    logger.debug(
+                        "生成章节大纲：跳过非本阶段章节 stage={!r} chapter_number={}",
+                        stage.name,
+                        number,
+                    )
+                    continue
+                by_number[number] = item
     except LLMConfigError as exc:
         logger.debug("生成章节大纲失败（配置） work_id={} error={}", work_id, exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except (LLMRequestError, ValueError) as exc:
+    except LLMRequestError as exc:
         logger.debug(
-            "生成章节大纲失败（请求/解析） work_id={} error_type={} error={} "
-            "response_len={} response_preview=\n{}",
+            "生成章节大纲失败（请求） work_id={} error_type={} error={}",
             work_id,
             type(exc).__name__,
             exc,
-            len(content),
-            content[:800] if content else "(empty)",
         )
         raise HTTPException(status_code=502, detail=f"AI 生成失败：{exc}") from exc
-
-    if not isinstance(parsed, list):
-        logger.debug(
-            "生成章节大纲：期望 JSON 数组，实际类型={} value_preview={!r}",
-            type(parsed).__name__,
-            str(parsed)[:400],
-        )
-        raise HTTPException(
-            status_code=502,
-            detail="AI 生成失败：无法从 LLM 响应中解析 JSON",
-        )
-
-    by_number: dict[int, dict] = {}
-    skipped_items = 0
-    for item in parsed:
-        if not isinstance(item, dict):
-            skipped_items += 1
-            logger.debug("生成章节大纲：跳过非对象项 type={}", type(item).__name__)
-            continue
-        try:
-            by_number[int(item.get("chapter_number"))] = item
-        except (TypeError, ValueError):
-            skipped_items += 1
-            logger.debug(
-                "生成章节大纲：跳过无效 chapter_number raw={!r} keys={}",
-                item.get("chapter_number"),
-                list(item.keys()),
-            )
-            continue
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=f"AI 生成失败：{exc}") from exc
 
     returned_numbers = sorted(by_number.keys())
     missing = [number for number in expected_numbers if number not in by_number]
@@ -348,10 +420,11 @@ async def generate_chapter_outlines(
     work.actual_chapter_count = len(chapters)
     await db.commit()
     logger.info(
-        "生成章节大纲 work_id={} 章节数={} 已更新={}",
+        "生成章节大纲 work_id={} 章节数={} 已更新={} 阶段调用数={}",
         work_id,
         len(chapters),
         updated,
+        sum(1 for _, numbers in stage_chapter_numbers if numbers),
     )
     return await _load_outline(db, work_id)
 

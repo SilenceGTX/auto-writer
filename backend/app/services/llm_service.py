@@ -18,7 +18,35 @@ from loguru import logger
 _CONNECT_TIMEOUT_SECONDS = 30.0
 _TEST_TIMEOUT_SECONDS = 30.0
 _REQUEST_TIMEOUT_SECONDS = 300.0
+# Per-call budget for outline stage/chapter generation (not the whole multi-stage HTTP request).
+OUTLINE_TIMEOUT_SECONDS = 120.0
 _STREAM_TIMEOUT_SECONDS = 300.0
+
+
+class ChatCompletionResult(str):
+    """Chat completion text with optional finish_reason and token usage."""
+
+    finish_reason: str | None
+    usage: dict | None
+
+    def __new__(
+        cls,
+        content: str,
+        *,
+        finish_reason: str | None = None,
+        usage: dict | None = None,
+    ) -> "ChatCompletionResult":
+        return str.__new__(cls, content)
+
+    def __init__(
+        self,
+        content: str,
+        *,
+        finish_reason: str | None = None,
+        usage: dict | None = None,
+    ) -> None:
+        self.finish_reason = finish_reason
+        self.usage = usage
 
 
 class LLMConfigError(Exception):
@@ -182,8 +210,8 @@ async def chat_completion(
     *,
     task: str | None = None,
     timeout_seconds: float | None = None,
-) -> str:
-    """Call the chat-completions endpoint and return the message content."""
+) -> ChatCompletionResult:
+    """Call the chat-completions endpoint and return content with metadata."""
     body = _payload(connection, messages, params, stream=False)
     model = connection.model or "(default)"
     timeout = _http_timeout(timeout_seconds or _REQUEST_TIMEOUT_SECONDS)
@@ -236,8 +264,11 @@ async def chat_completion(
 
     try:
         data = response.json()
-        content = data["choices"][0]["message"]["content"]
-    except (KeyError, IndexError, ValueError) as exc:
+        choice = data["choices"][0]
+        content = choice["message"]["content"]
+        finish_reason = choice.get("finish_reason")
+        usage = data.get("usage") if isinstance(data.get("usage"), dict) else None
+    except (KeyError, IndexError, ValueError, TypeError) as exc:
         logger.error(
             "无法解析 LLM 响应 task={} body={}",
             task or "-",
@@ -245,13 +276,26 @@ async def chat_completion(
         )
         raise LLMRequestError("无法解析 LLM 响应内容", code="parse_error") from exc
 
-    logger.info(
-        "LLM 调用成功 model={} task={} 字符数={}",
-        model,
-        task or "-",
-        len(content),
-    )
-    return content
+    result = ChatCompletionResult(content, finish_reason=finish_reason, usage=usage)
+    if finish_reason == "length":
+        logger.warning(
+            "LLM 输出可能被截断 model={} task={} finish_reason={} usage={} 字符数={}",
+            model,
+            task or "-",
+            finish_reason,
+            usage,
+            len(result),
+        )
+    else:
+        logger.info(
+            "LLM 调用成功 model={} task={} finish_reason={} usage={} 字符数={}",
+            model,
+            task or "-",
+            finish_reason,
+            usage,
+            len(result),
+        )
+    return result
 
 
 async def stream_chat_completion(
@@ -306,10 +350,11 @@ def _parse_sse_delta(line: str) -> str:
 async def test_connection(connection: LLMConnection) -> str:
     """Issue a minimal completion to verify connectivity and authentication."""
     messages = [{"role": "user", "content": "ping"}]
-    return await chat_completion(
+    result = await chat_completion(
         connection,
         messages,
         {"max_tokens": 16},
         task="connection_test",
         timeout_seconds=_TEST_TIMEOUT_SECONDS,
     )
+    return str(result)
