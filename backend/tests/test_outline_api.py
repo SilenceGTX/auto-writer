@@ -36,7 +36,15 @@ def _patch_llm(monkeypatch, payload) -> None:
     """Patch the outline router's chat_completion to return canned JSON."""
 
     async def fake_completion(connection, messages, params=None, **kwargs):
-        return json.dumps(payload, ensure_ascii=False)
+        data: object = payload
+        if (
+            isinstance(payload, list)
+            and payload
+            and isinstance(payload[0], dict)
+            and "chapter_number" in payload[0]
+        ):
+            data = {"chapters": payload}
+        return json.dumps(data, ensure_ascii=False)
 
     import app.routers.outline as outline_router
 
@@ -95,21 +103,22 @@ async def test_generate_chapters_fills_summaries_and_locks(client, monkeypatch):
     calls: list[str] = []
 
     async def stage_wise_completion(connection, messages, params=None, **kwargs):
+        assert kwargs.get("response_format") == {"type": "json_object"}
         user_prompt = messages[-1]["content"]
         calls.append(user_prompt)
         if "请只为阶段「铺垫」" in user_prompt:
             return json.dumps(
-                [{"chapter_number": 1, "title": "第一章", "summary": "起"}],
+                {"chapters": [{"chapter_number": 1, "title": "第一章", "summary": "起"}]},
                 ensure_ascii=False,
             )
         if "请只为阶段「对抗」" in user_prompt:
             return json.dumps(
-                [{"chapter_number": 2, "title": "第二章", "summary": "承"}],
+                {"chapters": [{"chapter_number": 2, "title": "第二章", "summary": "承"}]},
                 ensure_ascii=False,
             )
         if "请只为阶段「解决」" in user_prompt:
             return json.dumps(
-                [{"chapter_number": 3, "title": "第三章", "summary": "合"}],
+                {"chapters": [{"chapter_number": 3, "title": "第三章", "summary": "合"}]},
                 ensure_ascii=False,
             )
         raise AssertionError(f"unexpected stage prompt:\n{user_prompt[:400]}")
@@ -127,8 +136,54 @@ async def test_generate_chapters_fills_summaries_and_locks(client, monkeypatch):
     assert len(calls) == 3
     assert all("各阶段概述与章节归属" in prompt for prompt in calls)
     assert all("【当前任务】" in prompt for prompt in calls)
+    assert all('{"chapters":' in prompt or '{"chapters":[...]}' in prompt for prompt in calls)
+    assert all("完整闭合" in prompt for prompt in calls)
     assert all("预计章节数" not in prompt for prompt in calls)
     assert all("实际章节数" not in prompt for prompt in calls)
+
+
+async def test_generate_chapters_retries_incomplete_then_succeeds(client, monkeypatch):
+    """Incomplete chapter coverage is retried within a stage before succeeding."""
+    structure_id = await _three_act_structure_id(client)
+    work = await _create_work(client, structure_id=structure_id, planned=2)
+    _patch_llm(
+        monkeypatch,
+        [
+            {"name": "铺垫", "chapter_count": 2, "overview": "a"},
+            {"name": "对抗", "chapter_count": 0, "overview": "b"},
+            {"name": "解决", "chapter_count": 0, "overview": "c"},
+        ],
+    )
+    await client.post(f"/api/works/{work['id']}/outline/stages:generate")
+
+    calls = {"n": 0}
+
+    async def flaky_then_ok(connection, messages, params=None, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return json.dumps(
+                {"chapters": [{"chapter_number": 1, "title": "只给一章", "summary": "x"}]},
+                ensure_ascii=False,
+            )
+        return json.dumps(
+            {
+                "chapters": [
+                    {"chapter_number": 1, "title": "第一章", "summary": "起"},
+                    {"chapter_number": 2, "title": "第二章", "summary": "承"},
+                ]
+            },
+            ensure_ascii=False,
+        )
+
+    import app.routers.outline as outline_router
+
+    monkeypatch.setattr(outline_router, "chat_completion", flaky_then_ok)
+    response = await client.post(f"/api/works/{work['id']}/outline/chapters:generate")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["chapters"][0]["title"] == "第一章"
+    assert data["chapters"][1]["title"] == "第二章"
+    assert calls["n"] == 2
 
 
 async def test_set_stage_chapter_count_adds_and_removes(client, monkeypatch):
@@ -241,11 +296,28 @@ async def test_outline_lock_blocks_planned_count_change(client, monkeypatch):
     work = await _create_work(client, structure_id=structure_id, planned=3)
     _patch_llm(
         monkeypatch,
-        [{"name": "铺垫", "chapter_count": 1, "overview": "a"}],
+        [
+            {"name": "铺垫", "chapter_count": 1, "overview": "a"},
+            {"name": "对抗", "chapter_count": 1, "overview": "b"},
+            {"name": "解决", "chapter_count": 1, "overview": "c"},
+        ],
     )
     await client.post(f"/api/works/{work['id']}/outline/stages:generate")
-    _patch_llm(monkeypatch, [{"chapter_number": 1, "title": "t", "summary": "s"}])
-    await client.post(f"/api/works/{work['id']}/outline/chapters:generate")
+
+    async def chapter_completion(connection, messages, params=None, **kwargs):
+        user_prompt = messages[-1]["content"]
+        if "请只为阶段「铺垫」" in user_prompt:
+            items = [{"chapter_number": 1, "title": "t1", "summary": "s1"}]
+        elif "请只为阶段「对抗」" in user_prompt:
+            items = [{"chapter_number": 2, "title": "t2", "summary": "s2"}]
+        else:
+            items = [{"chapter_number": 3, "title": "t3", "summary": "s3"}]
+        return json.dumps({"chapters": items}, ensure_ascii=False)
+
+    import app.routers.outline as outline_router
+
+    monkeypatch.setattr(outline_router, "chat_completion", chapter_completion)
+    assert (await client.post(f"/api/works/{work['id']}/outline/chapters:generate")).status_code == 200
 
     response = await client.patch(f"/api/works/{work['id']}", json={"planned_chapter_count": 9})
     assert response.status_code == 409
@@ -319,6 +391,23 @@ def test_extract_json_raises_on_garbage():
     """A response with no JSON raises a ValueError."""
     with pytest.raises(ValueError):
         outline_service.extract_json("no json here")
+
+
+def test_extract_chapter_outline_items_accepts_object_and_array():
+    """Chapter outlines may be wrapped in ``chapters`` or returned as an array."""
+    from app.services.outline_service import (
+        extract_chapter_outline_items,
+        index_chapter_outline_items,
+    )
+
+    wrapped = extract_chapter_outline_items(
+        '{"chapters":[{"chapter_number":1,"title":"A","summary":"s"}]}'
+    )
+    assert wrapped[0]["title"] == "A"
+    bare = extract_chapter_outline_items('[{"chapter_number":2,"title":"B","summary":"t"}]')
+    assert bare[0]["chapter_number"] == 2
+    indexed = index_chapter_outline_items(wrapped + bare, allowed_numbers=[1, 2])
+    assert set(indexed) == {1, 2}
 
 
 def test_response_tail_and_parse_failure_helpers():

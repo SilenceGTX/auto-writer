@@ -128,6 +128,7 @@ def _payload(
     params: dict | None,
     *,
     stream: bool,
+    response_format: dict | None = None,
 ) -> dict:
     """Assemble the chat-completion request body from messages and params."""
     body: dict = {"messages": messages, "stream": stream}
@@ -136,6 +137,8 @@ def _payload(
     for key in ("temperature", "top_p", "presence_penalty", "frequency_penalty", "max_tokens"):
         if params and params.get(key) is not None:
             body[key] = params[key]
+    if response_format is not None:
+        body["response_format"] = response_format
     return body
 
 
@@ -210,14 +213,18 @@ async def chat_completion(
     *,
     task: str | None = None,
     timeout_seconds: float | None = None,
+    response_format: dict | None = None,
 ) -> ChatCompletionResult:
     """Call the chat-completions endpoint and return content with metadata."""
-    body = _payload(connection, messages, params, stream=False)
+    body = _payload(
+        connection, messages, params, stream=False, response_format=response_format
+    )
     model = connection.model or "(default)"
     timeout = _http_timeout(timeout_seconds or _REQUEST_TIMEOUT_SECONDS)
     message_chars = sum(len(message.get("content") or "") for message in messages)
     logger.debug(
-        "LLM task={} profile_id={} model={} timeout={}s messages={} message_chars={} max_tokens={}",
+        "LLM task={} profile_id={} model={} timeout={}s messages={} message_chars={} "
+        "max_tokens={} response_format={}",
         task or "-",
         connection.profile_id or "-",
         model,
@@ -225,6 +232,7 @@ async def chat_completion(
         len(messages),
         message_chars,
         body.get("max_tokens"),
+        body.get("response_format"),
     )
     logger.info("调用 LLM url={} model={} task={}", connection.url, model, task or "-")
     try:

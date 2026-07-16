@@ -35,8 +35,12 @@ from app.services.llm_service import (
     chat_completion,
 )
 from app.services.outline_service import (
+    CHAPTER_OUTLINE_MAX_ATTEMPTS,
+    CHAPTER_OUTLINE_RESPONSE_FORMAT,
     allocate_chapter_counts,
+    extract_chapter_outline_items,
     extract_json,
+    index_chapter_outline_items,
     log_llm_parse_failure,
 )
 from app.services.prompts import (
@@ -268,8 +272,8 @@ async def generate_chapter_outlines(
         )
 
     by_number: dict[int, dict] = {}
-    skipped_items = 0
     content = ""
+    response_format: dict | None = CHAPTER_OUTLINE_RESPONSE_FORMAT
     try:
         connection, system_prompt, params = await resolve_llm_context(
             db, "outline_chapters", locale=locale
@@ -313,76 +317,92 @@ async def generate_chapter_outlines(
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ]
-            logger.info(
-                "生成章节大纲阶段调用 work_id={} stage={!r} chapters={} count={}",
-                work_id,
-                stage.name,
-                numbers,
-                len(numbers),
-            )
-            content = await chat_completion(
-                connection,
-                messages,
-                params,
-                task="outline_chapters",
-                timeout_seconds=OUTLINE_TIMEOUT_SECONDS,
-            )
-            logger.debug(
-                "生成章节大纲阶段响应 stage={!r} len={} finish_reason={} usage={} preview=\n{}",
-                stage.name,
-                len(content),
-                getattr(content, "finish_reason", None),
-                getattr(content, "usage", None),
-                content[:800],
-            )
-            try:
-                parsed = extract_json(content)
-            except ValueError as exc:
-                log_llm_parse_failure(
-                    context=f"生成章节大纲 work_id={work_id} stage={stage.name!r}",
-                    content=content,
-                    error=exc,
-                )
-                raise
 
-            if not isinstance(parsed, list):
-                log_llm_parse_failure(
-                    context=(
-                        f"生成章节大纲 work_id={work_id} stage={stage.name!r} "
-                        f"非数组 type={type(parsed).__name__}"
-                    ),
-                    content=content,
+            stage_by_number: dict[int, dict] | None = None
+            for attempt in range(1, CHAPTER_OUTLINE_MAX_ATTEMPTS + 1):
+                logger.info(
+                    "生成章节大纲阶段调用 work_id={} stage={!r} chapters={} count={} "
+                    "attempt={}/{} response_format={}",
+                    work_id,
+                    stage.name,
+                    numbers,
+                    len(numbers),
+                    attempt,
+                    CHAPTER_OUTLINE_MAX_ATTEMPTS,
+                    response_format,
                 )
-                raise ValueError("无法从 LLM 响应中解析 JSON")
-
-            for item in parsed:
-                if not isinstance(item, dict):
-                    skipped_items += 1
-                    logger.debug(
-                        "生成章节大纲：跳过非对象项 stage={!r} type={}",
-                        stage.name,
-                        type(item).__name__,
-                    )
-                    continue
                 try:
-                    number = int(item.get("chapter_number"))
-                except (TypeError, ValueError):
-                    skipped_items += 1
-                    logger.debug(
-                        "生成章节大纲：跳过无效 chapter_number stage={!r} raw={!r}",
-                        stage.name,
-                        item.get("chapter_number"),
+                    content = await chat_completion(
+                        connection,
+                        messages,
+                        params,
+                        task="outline_chapters",
+                        timeout_seconds=OUTLINE_TIMEOUT_SECONDS,
+                        response_format=response_format,
                     )
-                    continue
-                if number not in numbers:
-                    skipped_items += 1
-                    logger.debug(
-                        "生成章节大纲：跳过非本阶段章节 stage={!r} chapter_number={}",
-                        stage.name,
-                        number,
+                except LLMRequestError as exc:
+                    # Some OpenAI-compatible hosts reject response_format; fall back once.
+                    if response_format is not None and exc.code == "http_error":
+                        logger.warning(
+                            "response_format 不被支持，改为普通补全重试 stage={!r} error={}",
+                            stage.name,
+                            exc,
+                        )
+                        response_format = None
+                        content = await chat_completion(
+                            connection,
+                            messages,
+                            params,
+                            task="outline_chapters",
+                            timeout_seconds=OUTLINE_TIMEOUT_SECONDS,
+                            response_format=None,
+                        )
+                    else:
+                        raise
+
+                logger.debug(
+                    "生成章节大纲阶段响应 stage={!r} attempt={} len={} finish_reason={} "
+                    "usage={} preview=\n{}",
+                    stage.name,
+                    attempt,
+                    len(content),
+                    getattr(content, "finish_reason", None),
+                    getattr(content, "usage", None),
+                    content[:800],
+                )
+                try:
+                    items = extract_chapter_outline_items(content)
+                    indexed = index_chapter_outline_items(items, allowed_numbers=numbers)
+                    missing = [number for number in numbers if number not in indexed]
+                    if missing:
+                        raise ValueError(
+                            f"章节条数不足：需要 {len(numbers)} 章，"
+                            f"有效 {len(indexed)} 章，missing={missing}"
+                        )
+                    stage_by_number = indexed
+                    break
+                except ValueError as exc:
+                    log_llm_parse_failure(
+                        context=(
+                            f"生成章节大纲 work_id={work_id} stage={stage.name!r} "
+                            f"attempt={attempt}/{CHAPTER_OUTLINE_MAX_ATTEMPTS}"
+                        ),
+                        content=content,
+                        error=exc,
                     )
-                    continue
-                by_number[number] = item
+                    if attempt >= CHAPTER_OUTLINE_MAX_ATTEMPTS:
+                        raise
+                    logger.warning(
+                        "生成章节大纲阶段将重试 stage={!r} attempt={}/{} error={}",
+                        stage.name,
+                        attempt,
+                        CHAPTER_OUTLINE_MAX_ATTEMPTS,
+                        exc,
+                    )
+
+            if stage_by_number is None:
+                raise ValueError("无法从 LLM 响应中解析 JSON")
+            by_number.update(stage_by_number)
     except LLMConfigError as exc:
         logger.debug("生成章节大纲失败（配置） work_id={} error={}", work_id, exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -401,11 +421,10 @@ async def generate_chapter_outlines(
     missing = [number for number in expected_numbers if number not in by_number]
     unexpected = [number for number in returned_numbers if number not in expected_numbers]
     logger.debug(
-        "生成章节大纲解析结果 returned={} missing={} unexpected={} skipped_items={}",
+        "生成章节大纲解析结果 returned={} missing={} unexpected={}",
         returned_numbers,
         missing,
         unexpected,
-        skipped_items,
     )
 
     updated = 0

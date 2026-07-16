@@ -90,6 +90,49 @@ def extract_json(text: str) -> Any:
     raise ValueError("无法从 LLM 响应中解析 JSON")
 
 
+# Retries for one stage when JSON is invalid or chapter coverage is incomplete.
+CHAPTER_OUTLINE_MAX_ATTEMPTS = 3
+
+# Prefer JSON mode when the endpoint supports OpenAI-compatible response_format.
+CHAPTER_OUTLINE_RESPONSE_FORMAT = {"type": "json_object"}
+
+
+def extract_chapter_outline_items(text: str) -> list[Any]:
+    """Parse chapter-outline LLM output as a list of chapter objects.
+
+    Accepts ``{"chapters": [...]}`` (preferred with JSON mode) or a bare array
+    for backward compatibility with older model replies.
+    """
+    parsed = extract_json(text)
+    if isinstance(parsed, dict):
+        items = parsed.get("chapters")
+        if not isinstance(items, list):
+            raise ValueError("无法从 LLM 响应中解析 JSON：缺少 chapters 数组")
+        return items
+    if isinstance(parsed, list):
+        return parsed
+    raise ValueError("无法从 LLM 响应中解析 JSON：期望对象或数组")
+
+
+def index_chapter_outline_items(
+    items: list[Any], *, allowed_numbers: list[int]
+) -> dict[int, dict]:
+    """Map valid chapter items to ``chapter_number`` within *allowed_numbers*."""
+    allowed = set(allowed_numbers)
+    by_number: dict[int, dict] = {}
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        try:
+            number = int(item.get("chapter_number"))
+        except (TypeError, ValueError):
+            continue
+        if number not in allowed:
+            continue
+        by_number[number] = item
+    return by_number
+
+
 def allocate_chapter_counts(num_stages: int, total: int) -> list[int]:
     """Distribute ``total`` chapters across stages as evenly as possible.
 
