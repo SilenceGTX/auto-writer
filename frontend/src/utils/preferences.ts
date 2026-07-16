@@ -29,9 +29,6 @@ export const LENGTH_LEVELS: PreferenceLevel[] = [
   { key: "detailed", values: { max_tokens: 16384 } },
 ];
 
-/** Upper bound for the length slider / advanced max_tokens field. */
-export const MAX_TOKENS_SLIDER_MAX = 16384;
-
 /** Default stage preference matching the backend defaults. */
 export const DEFAULT_STAGE_PREFERENCE: StagePreference = {
   temperature: 0.7,

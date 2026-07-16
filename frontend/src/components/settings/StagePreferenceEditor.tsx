@@ -7,7 +7,6 @@ import {
   CREATIVITY_LEVELS,
   FOCUS_LEVELS,
   LENGTH_LEVELS,
-  MAX_TOKENS_SLIDER_MAX,
   applyLevel,
   detectLevel,
   type PreferenceLevel,
@@ -135,7 +134,6 @@ export function StagePreferenceEditor(props: StagePreferenceEditorProps): ReactE
               label="max_tokens"
               type="number"
               min={1}
-              max={MAX_TOKENS_SLIDER_MAX}
               value={value.max_tokens === null ? "" : String(value.max_tokens)}
               onValueChange={(raw) => setField("max_tokens", raw)}
             />
