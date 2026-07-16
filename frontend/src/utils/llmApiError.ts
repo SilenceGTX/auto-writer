@@ -12,6 +12,7 @@ const LLM_EXACT_MESSAGES: Record<string, string> = {
 
 const AI_PREFIXES = ["AI 生成失败：", "AI 调用失败："] as const;
 const CONNECTION_FAILED_PREFIX = "无法连接 LLM 服务：";
+const TIMEOUT_PREFIX = "LLM 请求超时（";
 const HTTP_ERROR_PREFIX = "LLM 返回错误（";
 
 /** Translate a nested LLM detail (config / connection / HTTP / parse). */
@@ -24,6 +25,18 @@ export function translateLlmDetail(detail: string, t: TFunction): string {
     return t("errors:llm.connectionFailed", {
       detail: detail.slice(CONNECTION_FAILED_PREFIX.length),
     });
+  }
+  if (detail.startsWith(TIMEOUT_PREFIX)) {
+    const rest = detail.slice(TIMEOUT_PREFIX.length);
+    const close = rest.indexOf("）：");
+    if (close !== -1) {
+      // Backend sends e.g. "300.0s"; i18n templates append the unit again.
+      const seconds = rest.slice(0, close).replace(/s$/i, "");
+      return t("errors:llm.timeout", {
+        seconds,
+        detail: rest.slice(close + 2),
+      });
+    }
   }
   if (detail.startsWith(HTTP_ERROR_PREFIX)) {
     const rest = detail.slice(HTTP_ERROR_PREFIX.length);
@@ -53,7 +66,11 @@ export function translateLlmWrappedError(
   if (exactKey) {
     return t(exactKey);
   }
-  if (message.startsWith(CONNECTION_FAILED_PREFIX) || message.startsWith(HTTP_ERROR_PREFIX)) {
+  if (
+    message.startsWith(CONNECTION_FAILED_PREFIX) ||
+    message.startsWith(TIMEOUT_PREFIX) ||
+    message.startsWith(HTTP_ERROR_PREFIX)
+  ) {
     return translateLlmDetail(message, t);
   }
   return null;

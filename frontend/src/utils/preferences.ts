@@ -24,10 +24,13 @@ export const FOCUS_LEVELS: PreferenceLevel[] = [
 ];
 
 export const LENGTH_LEVELS: PreferenceLevel[] = [
-  { key: "concise", values: { max_tokens: 512 } },
-  { key: "standard", values: { max_tokens: 2048 } },
-  { key: "detailed", values: { max_tokens: 4096 } },
+  { key: "concise", values: { max_tokens: 2048 } },
+  { key: "standard", values: { max_tokens: 4096 } },
+  { key: "detailed", values: { max_tokens: 16384 } },
 ];
+
+/** Upper bound for the length slider / advanced max_tokens field. */
+export const MAX_TOKENS_SLIDER_MAX = 16384;
 
 /** Default stage preference matching the backend defaults. */
 export const DEFAULT_STAGE_PREFERENCE: StagePreference = {
@@ -35,7 +38,7 @@ export const DEFAULT_STAGE_PREFERENCE: StagePreference = {
   top_p: 0.9,
   presence_penalty: 0.0,
   frequency_penalty: 0.0,
-  max_tokens: 2048,
+  max_tokens: 4096,
 };
 
 /** Default review-stage preference (more conservative than writing). */

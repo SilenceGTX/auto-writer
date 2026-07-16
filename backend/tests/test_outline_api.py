@@ -92,14 +92,31 @@ async def test_generate_chapters_fills_summaries_and_locks(client, monkeypatch):
     )
     await client.post(f"/api/works/{work['id']}/outline/stages:generate")
 
-    _patch_llm(
-        monkeypatch,
-        [
-            {"chapter_number": 1, "title": "第一章", "summary": "起"},
-            {"chapter_number": 2, "title": "第二章", "summary": "承"},
-            {"chapter_number": 3, "title": "第三章", "summary": "合"},
-        ],
-    )
+    calls: list[str] = []
+
+    async def stage_wise_completion(connection, messages, params=None, **kwargs):
+        user_prompt = messages[-1]["content"]
+        calls.append(user_prompt)
+        if "请只为阶段「铺垫」" in user_prompt:
+            return json.dumps(
+                [{"chapter_number": 1, "title": "第一章", "summary": "起"}],
+                ensure_ascii=False,
+            )
+        if "请只为阶段「对抗」" in user_prompt:
+            return json.dumps(
+                [{"chapter_number": 2, "title": "第二章", "summary": "承"}],
+                ensure_ascii=False,
+            )
+        if "请只为阶段「解决」" in user_prompt:
+            return json.dumps(
+                [{"chapter_number": 3, "title": "第三章", "summary": "合"}],
+                ensure_ascii=False,
+            )
+        raise AssertionError(f"unexpected stage prompt:\n{user_prompt[:400]}")
+
+    import app.routers.outline as outline_router
+
+    monkeypatch.setattr(outline_router, "chat_completion", stage_wise_completion)
     response = await client.post(f"/api/works/{work['id']}/outline/chapters:generate")
     assert response.status_code == 200
     data = response.json()
@@ -107,6 +124,11 @@ async def test_generate_chapters_fills_summaries_and_locks(client, monkeypatch):
     assert data["actual_chapter_count"] == 3
     assert data["chapters"][0]["title"] == "第一章"
     assert data["chapters"][2]["summary"] == "合"
+    assert len(calls) == 3
+    assert all("各阶段概述与章节归属" in prompt for prompt in calls)
+    assert all("【当前任务】" in prompt for prompt in calls)
+    assert all("预计章节数" not in prompt for prompt in calls)
+    assert all("实际章节数" not in prompt for prompt in calls)
 
 
 async def test_set_stage_chapter_count_adds_and_removes(client, monkeypatch):
@@ -297,3 +319,21 @@ def test_extract_json_raises_on_garbage():
     """A response with no JSON raises a ValueError."""
     with pytest.raises(ValueError):
         outline_service.extract_json("no json here")
+
+
+def test_response_tail_and_parse_failure_helpers():
+    """Parse-failure helpers expose usage metadata and response tails."""
+    from app.services.llm_service import ChatCompletionResult
+    from app.services.outline_service import log_llm_parse_failure, response_tail
+
+    assert response_tail("short") == "short"
+    assert response_tail("x" * 900).startswith("x")
+    assert len(response_tail("x" * 900)) == 800
+
+    result = ChatCompletionResult(
+        '[{"chapter_number": 1, "title": "A", "summary": "half',
+        finish_reason="stop",
+        usage={"completion_tokens": 120, "prompt_tokens": 800},
+    )
+    log_llm_parse_failure(context="unit-test", content=result, error=ValueError("bad json"))
+

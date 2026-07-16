@@ -53,6 +53,26 @@ async def test_chat_completion_error_status(monkeypatch):
         await chat_completion(connection, [{"role": "user", "content": "ping"}])
 
 
+async def test_chat_completion_timeout_message(monkeypatch):
+    """Timeouts surface a non-empty type/detail instead of a blank error=."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("simulated read timeout", request=request)
+
+    _patch_transport(monkeypatch, handler)
+    connection = LLMConnection(url="https://x/chat", api_token="secret", model="m")
+    with pytest.raises(LLMRequestError) as exc_info:
+        await chat_completion(
+            connection,
+            [{"role": "user", "content": "ping"}],
+            task="outline_chapters",
+            timeout_seconds=12.0,
+        )
+    assert exc_info.value.code == "timeout"
+    assert "ReadTimeout" in str(exc_info.value)
+    assert "12" in str(exc_info.value)
+
+
 async def test_llm_test_endpoint_ok(client, monkeypatch):
     """POST /api/llm/test reports success when the endpoint responds."""
 

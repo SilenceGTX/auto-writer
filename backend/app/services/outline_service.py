@@ -9,8 +9,42 @@ import json
 import re
 from typing import Any
 
+from loguru import logger
+
 _JSON_ARRAY = re.compile(r"\[.*\]", re.DOTALL)
 _JSON_OBJECT = re.compile(r"\{.*\}", re.DOTALL)
+_PREVIEW_CHARS = 800
+
+
+def response_tail(text: str, chars: int = _PREVIEW_CHARS) -> str:
+    """Return the last ``chars`` of *text* for truncated-output debugging."""
+    if not text:
+        return "(empty)"
+    if len(text) <= chars:
+        return text
+    return text[-chars:]
+
+
+def log_llm_parse_failure(
+    *,
+    context: str,
+    content: str,
+    error: BaseException | None = None,
+) -> None:
+    """Log usage, finish_reason, and both ends of a response that failed to parse."""
+    usage = getattr(content, "usage", None)
+    finish_reason = getattr(content, "finish_reason", None)
+    logger.error(
+        "{}：LLM JSON 解析失败 error={} finish_reason={} usage={} "
+        "response_len={} head=\n{}\ntail=\n{}",
+        context,
+        error,
+        finish_reason,
+        usage,
+        len(content) if content else 0,
+        (content[:_PREVIEW_CHARS] if content else "(empty)"),
+        response_tail(content or ""),
+    )
 
 
 def extract_json(text: str) -> Any:
@@ -22,15 +56,37 @@ def extract_json(text: str) -> Any:
     cleaned = text.strip()
     try:
         return json.loads(cleaned)
-    except (ValueError, TypeError):
-        pass
+    except (ValueError, TypeError) as exc:
+        logger.debug(
+            "extract_json: 整段 JSON 解析失败 ({}: {})，尝试从正文中截取数组/对象",
+            type(exc).__name__,
+            exc,
+        )
     for pattern in (_JSON_ARRAY, _JSON_OBJECT):
         match = pattern.search(cleaned)
         if match:
+            snippet = match.group(0)
             try:
-                return json.loads(match.group(0))
-            except ValueError:
+                parsed = json.loads(snippet)
+                logger.debug(
+                    "extract_json: 从截取片段解析成功 pattern={} 长度={}",
+                    pattern.pattern,
+                    len(snippet),
+                )
+                return parsed
+            except ValueError as exc:
+                logger.debug(
+                    "extract_json: 截取片段仍无法解析 pattern={} error={} preview=\n{}",
+                    pattern.pattern,
+                    exc,
+                    snippet[:_PREVIEW_CHARS],
+                )
                 continue
+    logger.debug(
+        "extract_json: 无法从 LLM 响应中解析 JSON，原文预览 (len={}):\n{}",
+        len(cleaned),
+        cleaned[:_PREVIEW_CHARS],
+    )
     raise ValueError("无法从 LLM 响应中解析 JSON")
 
 

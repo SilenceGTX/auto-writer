@@ -33,6 +33,8 @@ describe("preferences", () => {
     expect(strict.frequency_penalty).toBe(0.6);
 
     const concise = applyLevel(DEFAULT_STAGE_PREFERENCE, LENGTH_LEVELS[0]);
-    expect(concise.max_tokens).toBe(512);
+    expect(concise.max_tokens).toBe(2048);
+    expect(LENGTH_LEVELS[2].values.max_tokens).toBe(16384);
+    expect(DEFAULT_STAGE_PREFERENCE.max_tokens).toBe(4096);
   });
 });

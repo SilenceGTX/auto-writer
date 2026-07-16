@@ -5,7 +5,9 @@ Stage overviews and chapter assignments:
 - Stage "{{ row.name }}" ({{ row.numbers_text }}) overview: {{ row.overview }}
 {% endfor %}
 
-Write a title and content summary for each of the following {{ chapter_count }} chapters (what each chapter should cover): {{ chapters_text }}
-Return exactly one object per chapter; each `chapter_number` must match the list above, and the JSON array length must be exactly {{ chapter_count }}.
+[Current task] Generate chapter outlines only for stage "{{ target_stage_name }}".
+Chapters for this stage: {{ chapters_text }} ({{ chapter_count }} chapters total).
+Do not output chapters that belong to other stages.
+Return exactly one object per chapter listed above; each `chapter_number` must match this stage's chapter numbers, and the JSON array length must be exactly {{ chapter_count }}.
 Return only a JSON array with no explanation or Markdown code fences, in this shape:
 [{"chapter_number": integer, "title": "chapter title", "summary": "chapter summary"}]

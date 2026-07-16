@@ -56,7 +56,9 @@ async def resolve_llm_context(
     return connection, system_prompt, params
 
 
-def work_info_block(work: Work, *, locale: PromptLocale = "zh") -> str:
+def work_info_block(
+    work: Work, *, locale: PromptLocale = "zh", include_chapter_counts: bool = True
+) -> str:
     """Build the work-information prompt block for a work (with its structure)."""
     structure = work.structure
     stages = json.loads(structure.stages) if structure else []
@@ -71,7 +73,7 @@ def work_info_block(work: Work, *, locale: PromptLocale = "zh") -> str:
         structure_description=translate_preset_structure_description(
             structure_name or "", structure.description if structure else None, locale
         ),
-        planned_chapter_count=work.planned_chapter_count,
-        actual_chapter_count=work.actual_chapter_count,
+        planned_chapter_count=work.planned_chapter_count if include_chapter_counts else None,
+        actual_chapter_count=work.actual_chapter_count if include_chapter_counts else None,
         summary=work.summary,
     )

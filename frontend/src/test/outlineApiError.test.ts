@@ -49,4 +49,17 @@ describe("translateOutlineApiError", () => {
       ),
     ).toBe("AI request failed: Could not reach LLM service: timeout");
   });
+
+  it("translates timeout failures nested under AI generation errors", () => {
+    const t = i18n.t.bind(i18n);
+    expect(
+      translateOutlineApiError(
+        "AI 生成失败：LLM 请求超时（300.0s）：ReadTimeout | simulated",
+        t,
+        "outline:toast.generateChaptersFailed",
+      ),
+    ).toBe(
+      "AI request failed: LLM request timed out (300.0s): ReadTimeout | simulated",
+    );
+  });
 });

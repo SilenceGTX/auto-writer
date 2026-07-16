@@ -34,7 +34,7 @@ _DEFAULT_STAGE_PREFERENCE = {
     "top_p": 0.9,
     "presence_penalty": 0.0,
     "frequency_penalty": 0.0,
-    "max_tokens": 2048,
+    "max_tokens": 4096,
 }
 
 _DEFAULT_EMPTY_PROFILE = {
