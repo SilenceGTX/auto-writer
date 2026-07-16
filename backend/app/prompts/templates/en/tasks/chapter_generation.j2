@@ -8,6 +8,10 @@ Stage overviews and chapter assignments:
 [Current task] Generate chapter outlines only for stage "{{ target_stage_name }}".
 Chapters for this stage: {{ chapters_text }} ({{ chapter_count }} chapters total).
 Do not output chapters that belong to other stages.
-Return exactly one object per chapter listed above; each `chapter_number` must match this stage's chapter numbers, and the JSON array length must be exactly {{ chapter_count }}.
-Return only a JSON array with no explanation or Markdown code fences, in this shape:
-[{"chapter_number": integer, "title": "chapter title", "summary": "chapter summary"}]
+
+Output requirements (all must be satisfied):
+1. Return only one complete, parseable JSON object—no Markdown code fences and no explanatory prose.
+2. The root object must be shaped as {"chapters":[...]} where `chapters` is an array.
+3. The `chapters` array length must be exactly {{ chapter_count }}; return one entry per chapter listed above, each `chapter_number` matching this stage's chapter numbers with no omissions, duplicates, or extras.
+4. Each element must be: {"chapter_number": integer, "title": "chapter title", "summary": "chapter summary"}.
+5. The JSON must be fully closed (all brackets and quotes balanced). If space is tight, shorten summaries as needed, but never return truncated JSON and never drop required chapters.
