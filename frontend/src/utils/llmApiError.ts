@@ -30,8 +30,10 @@ export function translateLlmDetail(detail: string, t: TFunction): string {
     const rest = detail.slice(TIMEOUT_PREFIX.length);
     const close = rest.indexOf("）：");
     if (close !== -1) {
+      // Backend sends e.g. "300.0s"; i18n templates append the unit again.
+      const seconds = rest.slice(0, close).replace(/s$/i, "");
       return t("errors:llm.timeout", {
-        seconds: rest.slice(0, close),
+        seconds,
         detail: rest.slice(close + 2),
       });
     }
