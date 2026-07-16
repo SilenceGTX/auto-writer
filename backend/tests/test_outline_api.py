@@ -317,7 +317,8 @@ async def test_outline_lock_blocks_planned_count_change(client, monkeypatch):
     import app.routers.outline as outline_router
 
     monkeypatch.setattr(outline_router, "chat_completion", chapter_completion)
-    assert (await client.post(f"/api/works/{work['id']}/outline/chapters:generate")).status_code == 200
+    generate = await client.post(f"/api/works/{work['id']}/outline/chapters:generate")
+    assert generate.status_code == 200
 
     response = await client.patch(f"/api/works/{work['id']}", json={"planned_chapter_count": 9})
     assert response.status_code == 409
